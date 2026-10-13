@@ -1,0 +1,361 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { loadKakaoMaps, type KakaoMap as MapInstance } from "@/lib/kakao-sdk";
+import { createRestAreaMarkers } from "@/lib/kakao-markers";
+import { createMapCard } from "@/lib/map-card";
+import { MapFitPolicy, type MapFitRequest } from "@/lib/map-fit-policy";
+import { hasCoordinates, type RestArea } from "@/lib/rest-areas";
+import { scopeLabel } from "@/lib/geo-search";
+import {
+  createLocationMapLayer,
+  type MobileMapLocation,
+  type MobileMapMemory,
+} from "@/lib/kakao-location";
+import Icon from "./icon";
+
+const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
+export default function KakaoMap({
+  areas,
+  selectedId,
+  onSelect,
+  onDetails,
+  audience = "admin",
+  showCard = true,
+  deferFit = false,
+  fitRequest,
+  dataVersion,
+  cardViewport,
+  viewportVersion,
+  mobileLocation,
+}: {
+  areas: RestArea[];
+  selectedId: number | null;
+  onSelect: (id: number | null) => void;
+  onDetails: (id: number) => void;
+  audience?: "admin" | "mobile";
+  showCard?: boolean;
+  deferFit?: boolean;
+  fitRequest?: MapFitRequest;
+  dataVersion?: string;
+  cardViewport?: (canvas: DOMRect) => DOMRect;
+  viewportVersion?: string;
+  mobileLocation?: MobileMapLocation;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const layer = useRef<ReturnType<typeof createRestAreaMarkers> | null>(null);
+  const fitPolicy = useRef<{ map: MapInstance; policy: MapFitPolicy } | null>(
+    null,
+  );
+  const lastSelection = useRef<{ map: MapInstance | null; id: number | null }>({
+    map: null,
+    id: null,
+  });
+  const locationLayer = useRef<ReturnType<
+    typeof createLocationMapLayer
+  > | null>(null);
+  const mobileMemory = useRef<MobileMapMemory>({});
+  const mobileEnabled = !!mobileLocation;
+  const { cameraReady, radiusReady, zoomChanged, mapMoved, research } = mobileLocation ?? {};
+  const [map, setMap] = useState<MapInstance | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const card = useCallback(
+    (area: RestArea) =>
+      createMapCard(
+        area,
+        audience,
+        () => onSelect(null),
+        () => onDetails(area.id),
+      ),
+    [audience, onSelect, onDetails],
+  );
+  useEffect(() => {
+    if (!appKey) {
+      return;
+    }
+    let cancelled = false;
+    let observer: ResizeObserver | undefined;
+    loadKakaoMaps(appKey)
+      .then((sdk) => {
+        if (cancelled || !container.current) return;
+        const saved = mobileEnabled ? mobileMemory.current.viewport : undefined;
+        const instance = new sdk.Map(container.current, {
+          center: new sdk.LatLng(
+            saved?.center.latitude ?? 36.4,
+            saved?.center.longitude ?? 127.8,
+          ),
+          level: saved?.level ?? 13,
+        });
+        observer = new ResizeObserver(() => {
+          const center = instance.getCenter();
+          instance.relayout();
+          instance.setCenter(center);
+        });
+        observer.observe(container.current);
+        setMap(instance);
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) {
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "카카오맵을 불러오지 못했습니다.",
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
+  }, [attempt, mobileEnabled]);
+  useEffect(() => {
+    const sdk = window.kakao?.maps;
+    if (!map || !sdk) return;
+    const current = createRestAreaMarkers(
+      sdk,
+      map,
+      areas,
+      onSelect,
+      card,
+      () => {
+        const bounds = container.current!.getBoundingClientRect();
+        return cardViewport ? cardViewport(bounds) : bounds;
+      },
+    );
+    layer.current = current;
+    return () => {
+      current.dispose();
+      layer.current = null;
+    };
+  }, [map, areas, onSelect, card, cardViewport]);
+  useEffect(() => {
+    const sdk = window.kakao?.maps;
+    if (!map || !sdk || !cameraReady || !radiusReady || !zoomChanged || !mapMoved || !research)
+      return;
+    const current = createLocationMapLayer(
+      sdk,
+      map,
+      {
+        cameraReady,
+        radiusReady,
+        zoomChanged,
+        mapMoved,
+        research,
+        dragStart: () => {
+          layer.current?.select(null);
+          onSelect(null);
+        },
+        zoomStart: () => layer.current?.suspendCardAdjustment(),
+      },
+      mobileMemory.current,
+    );
+    locationLayer.current = current;
+    return () => {
+      current.dispose();
+      locationLayer.current = null;
+    };
+  }, [map, cameraReady, radiusReady, zoomChanged, mapMoved, research, onSelect]);
+  const position = mobileLocation?.position;
+  const scope = mobileLocation?.scope;
+  const cameraRequest = mobileLocation?.cameraRequest;
+  const locationRadius = mobileLocation?.locationRadius;
+  useEffect(() => {
+    if (scope)
+      locationLayer.current?.update(
+        position ?? null,
+        scope,
+        cameraRequest ?? null,
+        locationRadius ?? null,
+      );
+  }, [
+    map,
+    position,
+    scope,
+    cameraRequest,
+    locationRadius,
+    cameraReady,
+    radiusReady,
+    zoomChanged,
+    mapMoved,
+    research,
+    onSelect,
+  ]);
+  const fitSource = fitRequest ? dataVersion : areas;
+  useEffect(() => {
+    if (!map) return;
+    if (mobileEnabled) {
+      if (scope?.kind === "all" && dataVersion && areas.some(hasCoordinates))
+        locationLayer.current?.fitInitialResults(() => layer.current?.fit());
+      return;
+    }
+    if (fitPolicy.current?.map !== map)
+      fitPolicy.current = { map, policy: new MapFitPolicy() };
+    if (fitPolicy.current.policy.update(fitSource, fitRequest, deferFit))
+      layer.current?.fit();
+  }, [
+    map,
+    fitSource,
+    fitRequest,
+    deferFit,
+    mobileEnabled,
+    scope,
+    dataVersion,
+    areas,
+  ]);
+  useEffect(() => {
+    const move =
+      lastSelection.current.map !== map ||
+      lastSelection.current.id !== selectedId;
+    layer.current?.select(selectedId, showCard, move);
+    lastSelection.current = { map, id: selectedId };
+  }, [map, areas, selectedId, showCard, onSelect, card, cardViewport]);
+  useEffect(() => {
+    layer.current?.adjustCard();
+  }, [map, viewportVersion]);
+  useEffect(() => {
+    if (selectedId === null) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        onSelect(null);
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [selectedId, onSelect]);
+  const ready = !!map && !error;
+  return (
+    <section className="map-panel" aria-label="휴게소 위치 지도">
+      <div ref={container} className="map-canvas" />
+      {!ready && (
+        <div className="map-placeholder" role="status">
+          <div className="placeholder-icon">
+            <Icon name="pin" size={36} />
+          </div>
+          <h2>
+            {!appKey
+              ? "카카오맵을 연결해주세요"
+              : error
+                ? "지도를 불러오지 못했어요"
+                : "지도를 불러오는 중이에요"}
+          </h2>
+          {!appKey ? (
+            <>
+              <p>
+                <code>.env.local</code>에 JavaScript 키를 설정해주세요.
+              </p>
+              <code className="setting-name">
+                NEXT_PUBLIC_KAKAO_MAP_APP_KEY
+              </code>
+            </>
+          ) : error ? (
+            <>
+              <p>{error}</p>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setError(null);
+                  setMap(null);
+                  setAttempt((value) => value + 1);
+                }}
+              >
+                다시 시도
+              </button>
+            </>
+          ) : (
+            <span className="loading-dots">•••</span>
+          )}
+        </div>
+      )}
+      {(ready || mobileLocation) && (
+        <div
+          className={`map-topbar ${mobileLocation ? "mobile-navigation" : ""}`}
+        >
+          {mobileLocation ? (
+            <>
+              <div className="mobile-navigation-row">
+                <span className="map-scope-label" role="status">
+                  {scopeLabel(mobileLocation.locationRadius ?? mobileLocation.scope)}
+                  {mobileLocation.locationRadius && mobileLocation.scope.kind === "bounds" && (
+                    <small className="map-scope-mode">지도 영역 검색</small>
+                  )}
+                </span>
+                <button
+                  className="map-button"
+                  onClick={() => {
+                    onSelect(null);
+                    mobileLocation.locate();
+                  }}
+                  disabled={mobileLocation.requesting}
+                >
+                  <Icon name="locate" size={17} />
+                  {mobileLocation.requesting ? "위치 확인 중" : "내 위치"}
+                </button>
+              </div>
+              {ready && mobileLocation.researchAvailable && (
+                <button
+                  className="map-button map-research-button"
+                  onClick={() => {
+                    onSelect(null);
+                    locationLayer.current?.research();
+                  }}
+                >
+                  <Icon name="refresh" size={16} />
+                  지도 내 재검색
+                </button>
+              )}
+              {mobileLocation.error && (
+                <p className="map-location-error" role="status">
+                  {mobileLocation.error.message}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="map-hint">마커를 눌러 휴게소 정보 보기</span>
+              <button
+                className="map-button"
+                onClick={() => {
+                  onSelect(null);
+                  layer.current?.fit();
+                }}
+                disabled={!areas.some(hasCoordinates)}
+              >
+                <Icon name="fit" size={17} />
+                결과 전체 보기
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {ready && (
+        <>
+          <div className="map-legend">
+            <span>
+              <i />
+              일반
+            </span>
+            <span>
+              <i className="legend-lounge" />
+              화물차 라운지
+            </span>
+          </div>
+          <div className="zoom-controls" aria-label="지도 확대 및 축소">
+            <button
+              aria-label="지도 확대"
+              onClick={() => map.setLevel(Math.max(1, map.getLevel() - 1))}
+            >
+              +
+            </button>
+            <button
+              aria-label="지도 축소"
+              onClick={() => map.setLevel(Math.min(14, map.getLevel() + 1))}
+            >
+              −
+            </button>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
