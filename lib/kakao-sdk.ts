@@ -60,7 +60,25 @@ export interface KakaoPolyline {
   setMap(map: KakaoMap | null): void;
 }
 
+export interface KakaoCluster {
+  getMarkers(): KakaoMarker[];
+  getBounds(): KakaoBounds;
+  getClusterMarker(): KakaoOverlay;
+}
+export interface KakaoClusterer {
+  addMarkers(markers: KakaoMarker[], nodraw?: boolean): void;
+  addMarker(marker: KakaoMarker, nodraw?: boolean): void;
+  removeMarker(marker: KakaoMarker, nodraw?: boolean): void;
+  redraw(): void;
+  clear(): void;
+}
+
 export interface KakaoMaps {
+  MarkerClusterer?: new (options: {
+    map: KakaoMap; gridSize: number; minLevel: number; minClusterSize: number;
+    averageCenter: boolean; disableClickZoom: boolean;
+    styles?: Record<string, string>[];
+  }) => KakaoClusterer;
   load(callback: () => void): void;
   Map: new (
     container: HTMLElement,
@@ -76,7 +94,7 @@ export interface KakaoMaps {
     options?: { offset: object },
   ) => KakaoMarkerImage;
   Marker: new (options: {
-    map: KakaoMap;
+    map?: KakaoMap;
     position: KakaoLatLng;
     title: string;
     image: KakaoMarkerImage;
@@ -109,15 +127,15 @@ export interface KakaoMaps {
     zIndex: number;
   }) => KakaoPolyline;
   event: {
-    addListener(
-      target: KakaoMarker | KakaoMap,
+    addListener<T = never>(
+      target: KakaoMarker | KakaoMap | KakaoClusterer,
       name: string,
-      callback: () => void,
+      callback: (event: T) => void,
     ): void;
-    removeListener(
-      target: KakaoMarker | KakaoMap,
+    removeListener<T = never>(
+      target: KakaoMarker | KakaoMap | KakaoClusterer,
       name: string,
-      callback: () => void,
+      callback: (event: T) => void,
     ): void;
   };
 }
@@ -131,7 +149,7 @@ declare global {
 let loading: Promise<KakaoMaps> | null = null;
 
 export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
-  if (window.kakao?.maps.Map) return Promise.resolve(window.kakao.maps);
+  if (window.kakao?.maps.Map && window.kakao.maps.MarkerClusterer) return Promise.resolve(window.kakao.maps);
   if (loading) return loading;
 
   loading = new Promise<KakaoMaps>((resolve, reject) => {
@@ -150,7 +168,7 @@ export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
       );
     }
     script.async = true;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=clusterer`;
     script.onerror = fail;
     script.onload = () => {
       if (settled) return;

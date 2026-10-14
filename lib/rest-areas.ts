@@ -88,9 +88,9 @@ export function nullableBoolean(value: unknown): boolean | null {
   return null;
 }
 
-export function hasCoordinates(
-  area: RestArea,
-): area is RestArea & { latitude: number; longitude: number } {
+export function hasCoordinates<T extends { latitude: number | null; longitude: number | null }>(
+  area: T,
+): area is T & { latitude: number; longitude: number } {
   return area.latitude !== null && area.longitude !== null;
 }
 

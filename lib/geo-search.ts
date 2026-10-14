@@ -1,4 +1,5 @@
-import { hasCoordinates, type RestArea } from "./rest-areas.ts";
+import { hasCoordinates } from "./rest-areas.ts";
+export type LocatedItem = { id: number; latitude: number | null; longitude: number | null };
 
 export type GeoPoint = { latitude: number; longitude: number };
 export type GeoBounds = {
@@ -56,7 +57,7 @@ export function radiusForLevel(level: number, referenceLevel: number): number {
 }
 
 export function areaDistance(
-  area: RestArea,
+  area: LocatedItem,
   position: GeoPoint | null,
 ): number | null {
   return position && hasCoordinates(area)
@@ -64,7 +65,7 @@ export function areaDistance(
     : null;
 }
 
-export function filterByGeoScope<T extends RestArea>(
+export function filterByGeoScope<T extends LocatedItem>(
   areas: T[],
   scope: GeoSearchScope,
   position: GeoPoint | null,
