@@ -1,7 +1,10 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { loadKakaoMaps, type KakaoMap as MapInstance } from "@/lib/kakao-sdk";
-import { createRestAreaMarkers } from "@/lib/kakao-markers";
+import { createPlaceMarkers } from "@/lib/kakao-place-markers";
+import { restPlace, stationPlace, type MapPlace } from "@/lib/map-places";
+import type { GasStation } from "@/lib/gas-stations";
+import { createStationMapCard } from "@/lib/station-map-card";
 import { createHighwayRouteLayer } from "@/lib/kakao-highway-route";
 import { createHighwayRouteViewport } from "@/lib/kakao-route-viewport";
 import { useHighwayRoute } from "@/hooks/use-highway-route";
@@ -17,6 +20,7 @@ import {
 import Icon from "./icon";
 
 const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
+const emptyStations: GasStation[] = [];
 export default function KakaoMap({
   areas,
   selectedId,
@@ -32,6 +36,13 @@ export default function KakaoMap({
   mobileLocation,
   selectedRouteName = null,
   onClearRoute,
+  stations = emptyStations,
+  selectedStationId = null,
+  onStationSelect,
+  onStationDetails,
+  stationsLoading = false,
+  stationError,
+  onRetryStations,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -47,9 +58,24 @@ export default function KakaoMap({
   mobileLocation?: MobileMapLocation;
   selectedRouteName?: string | null;
   onClearRoute?: () => void;
+  stations?: GasStation[];
+  selectedStationId?: number | null;
+  onStationSelect?: (id: number | null) => void;
+  onStationDetails?: (id: number) => void;
+  stationsLoading?: boolean;
+  stationError?: string | null;
+  onRetryStations?: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
-  const layer = useRef<ReturnType<typeof createRestAreaMarkers> | null>(null);
+  const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
+  const places = useMemo(() => [...areas.map(restPlace), ...stations.map(stationPlace)], [areas, stations]);
+  const positionedItems = useMemo(() => places.map((place) => place.record), [places]);
+  const [clusterChoice, setClusterChoice] = useState<{ source: MapPlace[]; items: MapPlace[] } | null>(null);
+  const chooseCluster = useCallback((items: MapPlace[]) => setClusterChoice({ source: places, items }), [places]);
+  const selectPlace = useCallback((place: MapPlace) => {
+    if (place.kind === "station") onStationSelect?.(place.record.id);
+    else onSelect(place.record.id);
+  }, [onSelect, onStationSelect]);
   const fitPolicy = useRef<{ map: MapInstance; policy: MapFitPolicy } | null>(
     null,
   );
@@ -57,9 +83,9 @@ export default function KakaoMap({
     map: MapInstance;
     view: ReturnType<typeof createHighwayRouteViewport>;
   } | null>(null);
-  const lastSelection = useRef<{ map: MapInstance | null; id: number | null }>({
+  const lastSelection = useRef<{ map: MapInstance | null; key: string | null }>({
     map: null,
-    id: null,
+    key: null,
   });
   const locationLayer = useRef<ReturnType<
     typeof createLocationMapLayer
@@ -72,14 +98,15 @@ export default function KakaoMap({
   const [attempt, setAttempt] = useState(0);
   const highway = useHighwayRoute(selectedRouteName, !!map && !error);
   const card = useCallback(
-    (area: RestArea) =>
-      createMapCard(
-        area,
+    (place: MapPlace) => place.kind === "station"
+      ? createStationMapCard(place.record, () => onStationSelect?.(null), () => onStationDetails?.(place.record.id))
+      : createMapCard(
+        place.record,
         audience,
         () => onSelect(null),
-        () => onDetails(area.id),
+        () => onDetails(place.record.id),
       ),
-    [audience, onSelect, onDetails],
+    [audience, onSelect, onDetails, onStationSelect, onStationDetails],
   );
   useEffect(() => {
     if (!appKey) {
@@ -123,23 +150,24 @@ export default function KakaoMap({
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
-    const current = createRestAreaMarkers(
+    const current = createPlaceMarkers(
       sdk,
       map,
-      areas,
-      onSelect,
+      places,
+      selectPlace,
       card,
       () => {
         const bounds = container.current!.getBoundingClientRect();
         return cardViewport ? cardViewport(bounds) : bounds;
       },
+      chooseCluster,
     );
     layer.current = current;
     return () => {
       current.dispose();
       layer.current = null;
     };
-  }, [map, areas, onSelect, card, cardViewport]);
+  }, [map, places, selectPlace, card, cardViewport, chooseCluster]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
@@ -173,7 +201,7 @@ export default function KakaoMap({
       current.dispose();
       locationLayer.current = null;
     };
-  }, [map, cameraReady, radiusReady, zoomChanged, mapMoved, research, onSelect]);
+  }, [map, cameraReady, radiusReady, zoomChanged, mapMoved, research, onSelect, onStationSelect]);
   const position = mobileLocation?.position;
   const scope = mobileLocation?.scope;
   const cameraRequest = mobileLocation?.cameraRequest;
@@ -200,6 +228,7 @@ export default function KakaoMap({
     mapMoved,
     research,
     onSelect,
+    onStationSelect,
   ]);
   const fitSource = fitRequest ? dataVersion : areas;
   useEffect(() => {
@@ -209,7 +238,8 @@ export default function KakaoMap({
         !selectedRouteName &&
         scope?.kind === "all" &&
         dataVersion &&
-        areas.some(hasCoordinates)
+        !stationsLoading &&
+        positionedItems.some(hasCoordinates)
       )
         locationLayer.current?.fitInitialResults(() => layer.current?.fit());
       return;
@@ -230,6 +260,8 @@ export default function KakaoMap({
     scope,
     dataVersion,
     areas,
+    positionedItems,
+    stationsLoading,
     selectedRouteName,
   ]);
   useEffect(() => {
@@ -240,25 +272,28 @@ export default function KakaoMap({
     routeViewport.current.view.update(
       selectedRouteName,
       highway.route,
-      areas,
+      positionedItems,
       (action) => {
         if (locationLayer.current) locationLayer.current.fitRoute(action);
         else action();
       },
     );
-  }, [map, selectedRouteName, highway.route, areas]);
+  }, [map, selectedRouteName, highway.route, positionedItems]);
+  const selectedKey = selectedStationId !== null
+    ? places.find((place) => place.kind === "station" && place.record.id === selectedStationId)?.key ?? null
+    : selectedId !== null ? `rest:${selectedId}` : null;
   useEffect(() => {
     const move =
       lastSelection.current.map !== map ||
-      lastSelection.current.id !== selectedId;
-    layer.current?.select(selectedId, showCard, move);
-    lastSelection.current = { map, id: selectedId };
-  }, [map, areas, selectedId, showCard, onSelect, card, cardViewport]);
+      lastSelection.current.key !== selectedKey;
+    layer.current?.select(selectedKey, showCard, move);
+    lastSelection.current = { map, key: selectedKey };
+  }, [map, places, selectedKey, showCard, card, cardViewport]);
   useEffect(() => {
     layer.current?.adjustCard();
   }, [map, viewportVersion]);
   useEffect(() => {
-    if (selectedId === null) return;
+    if (selectedKey === null) return;
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
@@ -267,7 +302,7 @@ export default function KakaoMap({
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [selectedId, onSelect]);
+  }, [selectedKey, onSelect, onStationSelect]);
   const ready = !!map && !error;
   return (
     <section className="map-panel" aria-label="휴게소 위치 지도">
@@ -362,7 +397,7 @@ export default function KakaoMap({
             </>
           ) : (
             <>
-              <span className="map-hint">마커를 눌러 휴게소 정보 보기</span>
+              <span className="map-hint">마커를 눌러 장소 정보 보기</span>
               <button
                 className="map-button"
                 onClick={() => {
@@ -371,13 +406,13 @@ export default function KakaoMap({
                     routeViewport.current?.view.update(
                       selectedRouteName,
                       highway.route,
-                      areas,
+                      positionedItems,
                       undefined,
                       true,
                     );
                   else layer.current?.fit();
                 }}
-                disabled={!highway.route && !areas.some(hasCoordinates)}
+                disabled={!highway.route && !positionedItems.some(hasCoordinates)}
               >
                 <Icon name="fit" size={17} />
                 결과 전체 보기
@@ -392,6 +427,7 @@ export default function KakaoMap({
               </button>
             </div>
           )}
+          {stationError && <div className="map-route-error" role="status"><span>{stationError}</span><button type="button" className="map-button" onClick={onRetryStations}>주유소 다시 조회</button></div>}
         </div>
       )}
       {ready && (
@@ -405,6 +441,7 @@ export default function KakaoMap({
               <i className="legend-lounge" />
               화물차 라운지
             </span>
+            {stations.length > 0 && <span><i className="legend-station" />GS 주유소</span>}
             {highway.route && (
               <span>
                 <i className="legend-route" />
@@ -428,6 +465,7 @@ export default function KakaoMap({
           </div>
         </>
       )}
+      {ready && clusterChoice?.source === places && <div className="map-cluster-list" role="dialog" aria-label="겹친 위치의 장소 선택"><div><strong>이 위치의 장소 {clusterChoice.items.length}개</strong><button className="icon-button" aria-label="장소 목록 닫기" onClick={() => setClusterChoice(null)}><Icon name="close" /></button></div><ul>{clusterChoice.items.map((place) => <li key={place.key}><button onClick={() => { selectPlace(place); setClusterChoice(null); }}>{place.record.name}<small>{place.kind === "station" ? "GS 주유소" : "휴게소"}</small></button></li>)}</ul></div>}
     </section>
   );
 }

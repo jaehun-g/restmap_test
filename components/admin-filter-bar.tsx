@@ -17,6 +17,8 @@ export default function AdminFilterBar({
   search,
   onReset,
   disabled,
+  includeStations = false,
+  hideRestFilters = false,
 }: {
   areas: RestArea[];
   filters: RestAreaFilters;
@@ -24,6 +26,8 @@ export default function AdminFilterBar({
   search: ReturnType<typeof useSearchQuery>;
   onReset: () => void;
   disabled: boolean;
+  includeStations?: boolean;
+  hideRestFilters?: boolean;
 }) {
   const routeValue = filters.missingRoute
     ? "missing"
@@ -33,7 +37,7 @@ export default function AdminFilterBar({
   return (
     <section className="admin-filter-bar" aria-label="휴게소 검색·필터">
       <div className="admin-filter-controls">
-        <SearchBox search={search} disabled={disabled} />
+        <SearchBox search={search} disabled={disabled} includeStations={includeStations} />
         <label className="filter-select">
           노선
           <select
@@ -51,7 +55,7 @@ export default function AdminFilterBar({
             }
           >
             <option value="all">전체 노선</option>
-            <option value="missing">노선 미등록</option>
+            {!hideRestFilters && <option value="missing">휴게소 노선 미등록</option>}
             {routeOptions(areas).map(({ name }) => (
               <option key={name} value={`route:${name}`}>
                 {name}
@@ -59,13 +63,13 @@ export default function AdminFilterBar({
             ))}
           </select>
         </label>
-        <details className="facility-picker">
+        {!hideRestFilters && <details className="facility-picker">
           <summary
             onClick={(event) => {
               if (disabled) event.preventDefault();
             }}
           >
-            편의시설{" "}
+            휴게소 편의시설{" "}
             {filters.facilities.length
               ? `(${filters.facilities.length})`
               : "전체"}{" "}
@@ -92,9 +96,9 @@ export default function AdminFilterBar({
               </label>
             ))}
           </div>
-        </details>
-        <label className="filter-select">
-          라운지
+        </details>}
+        {!hideRestFilters && <label className="filter-select">
+          휴게소 라운지
           <select
             aria-label="화물차 라운지 필터"
             value={filters.lounge}
@@ -111,7 +115,7 @@ export default function AdminFilterBar({
             <option value="absent">없음</option>
             <option value="unknown">미확인</option>
           </select>
-        </label>
+        </label>}
         <button
           className="button secondary"
           disabled={disabled}

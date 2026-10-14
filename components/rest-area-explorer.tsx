@@ -3,9 +3,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRestAreas } from "@/hooks/use-rest-areas";
 import { useSearchQuery } from "@/hooks/use-search-query";
 import { useMobileLocation } from "@/hooks/use-mobile-location";
+import { useGasStations } from "@/hooks/use-gas-stations";
+import { stationQueryString } from "@/lib/gas-station-query";
+import { stationHours, type StationServiceKey } from "@/lib/gas-stations";
+import { filterStations, restPlace, stationPlace, type PlaceView } from "@/lib/map-places";
 import { filterMobileRestAreas, initialFilters } from "@/lib/rest-area-filters";
 import {
   areaDistance,
+  filterByGeoScope,
   formatDistance,
   scopeLabel,
 } from "@/lib/geo-search";
@@ -20,6 +25,9 @@ import QueryState from "./query-state";
 import SearchBox from "./search-box";
 import MobileFilterSheet from "./mobile-filter-sheet";
 import Icon from "./icon";
+import PlaceControls from "./place-controls";
+import GasStationDetails from "./gas-station-details";
+const noAreas: ReturnType<typeof filterMobileRestAreas> = [];
 
 type Panel = "collapsed" | "list" | "detail" | "routes" | "facilities";
 export default function MobileExplorer() {
@@ -27,8 +35,12 @@ export default function MobileExplorer() {
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
+  const [placeView, setPlaceView] = useState<PlaceView>("all");
+  const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
+  const gas = useGasStations(placeView === "rest" ? null : stationQueryString(filters.routeName, location.scope));
   const [panel, setPanel] = useState<Panel>("collapsed");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -77,29 +89,52 @@ export default function MobileExplorer() {
       ),
     [areas, filters, search.query, location.scope, location.position],
   );
-  const selected = results.find((area) => area.id === selectedId);
+  const stationResults = useMemo(() => filterByGeoScope(filterStations(gas.stations, search.query, stationFilters), { kind: "all" }, location.position), [gas.stations, search.query, stationFilters, location.position]);
+  const visibleAreas = placeView === "station" ? noAreas : results;
+  const listPlaces = useMemo(() => {
+    const places = [...visibleAreas.map(restPlace), ...stationResults.map(stationPlace)];
+    if (location.position) places.sort((left, right) => {
+      const a = areaDistance(left.record, location.position) ?? Infinity, b = areaDistance(right.record, location.position) ?? Infinity;
+      return a === b ? left.key.localeCompare(right.key) : a - b;
+    });
+    return places;
+  }, [visibleAreas, stationResults, location.position]);
+  const selected = visibleAreas.find((area) => area.id === selectedId);
+  const selectedStation = stationResults.find((station) => station.id === selectedStationId);
   const effectivePanel =
-    panel === "detail" && !selected && !loading ? "list" : panel;
+    panel === "detail" && !selected && !selectedStation && !loading && !gas.loading ? "list" : panel;
   const expanded = effectivePanel !== "collapsed";
-  const mapped = results.filter(hasCoordinates).length;
+  const mapped = listPlaces.filter((place) => hasCoordinates(place.record)).length;
+  const resultCount = listPlaces.length;
   const filtered = Boolean(
     search.input ||
     filters.routeName ||
     filters.facilities.length ||
-    filters.lounge !== "all",
+    filters.lounge !== "all" || stationFilters.length || placeView !== "all",
   );
   const select = useCallback((id: number | null) => {
+    setSelectedStationId(null);
     setSelectedId(id);
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
+    setSelectedStationId(null);
     setSelectedId(id);
     setPanel("detail");
   }, []);
   const collapse = useCallback(() => {
     setPanel("collapsed");
     setSelectedId(null);
+    setSelectedStationId(null);
   }, []);
+  const selectStation = useCallback((id: number | null) => { setSelectedId(null); setSelectedStationId(id); setPanel("collapsed"); }, []);
+  const stationDetails = useCallback((id: number) => { setSelectedId(null); setSelectedStationId(id); setPanel("detail"); }, []);
+  useEffect(() => {
+    if (selectedStationId === null || selectedStation || gas.loading) return;
+    let active = true;
+    queueMicrotask(() => { if (active) setSelectedStationId(null); });
+    return () => { active = false; };
+  }, [selectedStationId, selectedStation, gas.loading]);
   useEffect(() => {
     if (loading || selectedId === null || selected) return;
     let active = true;
@@ -137,16 +172,21 @@ export default function MobileExplorer() {
   const open = (next: Panel, element: HTMLElement) => {
     returnFocus.current = element;
     setSelectedId(null);
+    setSelectedStationId(null);
     setPanel(next);
   };
   const reset = () => {
     search.clear(false);
     setFilters(initialFilters());
     setSelectedId(null);
+    setSelectedStationId(null);
+    setStationFilters([]);
+    setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
     setFilters((current) => ({ ...current, routeName: null }));
     setSelectedId(null);
+    setSelectedStationId(null);
   }, []);
 
   return (
@@ -156,12 +196,13 @@ export default function MobileExplorer() {
           <span className="mobile-brand-mark">
             <Icon name="pin" size={23} />
           </span>
-          <h1>휴게소 찾기</h1>
+          <h1>휴게소·주유소 찾기</h1>
           <span className="mobile-test-label" role="status">
-            {loading ? "조회 중" : `${results.length}개 결과`}
+            {loading || gas.loading ? "조회 중" : `${resultCount}개 결과`}
           </span>
         </div>
-        <SearchBox search={search} />
+        <SearchBox search={search} includeStations={placeView !== "rest"} />
+        <PlaceControls view={placeView} onView={(next) => { setPlaceView(next); setSelectedId(null); setSelectedStationId(null); setPanel("collapsed"); }} services={stationFilters} onServices={setStationFilters} />
         <div className="mobile-filters">
           <button
             className={`filter-chip ${filters.routeName ? "active" : ""}`}
@@ -176,12 +217,12 @@ export default function MobileExplorer() {
               style={{ transform: "rotate(180deg)" }}
             />
           </button>
-          <button
+          {placeView !== "station" && <button
             className={`filter-chip ${filters.facilities.length ? "active" : ""}`}
             onClick={(event) => open("facilities", event.currentTarget)}
             aria-expanded={panel === "facilities"}
           >
-            편의시설
+            휴게소 편의시설
             {filters.facilities.length > 0 && (
               <b>{filters.facilities.length}</b>
             )}
@@ -190,8 +231,8 @@ export default function MobileExplorer() {
               size={13}
               style={{ transform: "rotate(180deg)" }}
             />
-          </button>
-          <button
+          </button>}
+          {placeView !== "station" && <button
             className={`filter-chip lounge-toggle ${filters.lounge === "present" ? "on" : ""}`}
             aria-pressed={filters.lounge === "present"}
             aria-label={
@@ -208,7 +249,7 @@ export default function MobileExplorer() {
           >
             <Icon name="truck" size={14} />
             라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
-          </button>
+          </button>}
         </div>
         {filtered && (
           <div className="mobile-result-info">
@@ -216,11 +257,19 @@ export default function MobileExplorer() {
             <button onClick={reset}>조건 초기화</button>
           </div>
         )}
+        {filters.routeName && placeView !== "rest" && <p className="station-route-note compact">주유소는 선택 노선 주변 2km · 직선거리 기준</p>}
       </header>
       <div className="mobile-content">
         <div className="mobile-map">
           <KakaoMap
-            areas={results}
+            areas={visibleAreas}
+            stations={stationResults}
+            selectedStationId={selectedStation?.id ?? null}
+            onStationSelect={selectStation}
+            onStationDetails={stationDetails}
+            stationsLoading={gas.loading}
+            stationError={gas.error}
+            onRetryStations={() => { void gas.reload(); }}
             selectedRouteName={filters.routeName}
             onClearRoute={clearRoute}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
@@ -228,7 +277,7 @@ export default function MobileExplorer() {
             onDetails={details}
             audience="mobile"
             showCard
-            dataVersion={data?.fetchedAt}
+            dataVersion={data?.fetchedAt ?? gas.data?.fetchedAt}
             cardViewport={cardViewport}
             viewportVersion={effectivePanel}
             mobileLocation={location}
@@ -264,7 +313,7 @@ export default function MobileExplorer() {
                     ? "휴게소를 찾고 있어요"
                     : error
                       ? "휴게소 조회 확인"
-                      : `휴게소 ${results.length}개`}
+                      : `${placeView === "rest" ? "휴게소" : placeView === "station" ? "주유소" : "장소"} ${resultCount}개`}
                 </strong>
                 <small>
                   {error
@@ -292,6 +341,8 @@ export default function MobileExplorer() {
                   }}
                   onClose={collapse}
                 />
+              ) : effectivePanel === "detail" && selectedStation ? (
+                <GasStationDetails key={selectedStation.id} station={selectedStation} onClose={collapse} routeName={filters.routeName} />
               ) : effectivePanel === "detail" && selected ? (
                 <>
                   <button
@@ -319,7 +370,7 @@ export default function MobileExplorer() {
                   <div className="sheet-list-heading">
                     <div>
                       <h2>
-                        휴게소 목록 <span>{results.length}</span>
+                        장소 목록 <span>{resultCount}</span>
                       </h2>
                       <p>
                         {location.position
@@ -336,18 +387,19 @@ export default function MobileExplorer() {
                     </button>
                   </div>
                   <div className="mobile-area-list" aria-busy={loading}>
-                    {loading || error || !areas.length ? (
+                    {!resultCount && (loading || gas.loading || error || gas.error) ? (
                       <QueryState
-                        loading={loading}
-                        error={error}
+                        loading={loading || gas.loading}
+                        error={error ?? gas.error}
                         onRetry={() => {
                           void reload();
+                          void gas.reload();
                         }}
                       />
-                    ) : !results.length ? (
+                    ) : !resultCount ? (
                       <div className="query-state">
                         <Icon name="search" size={25} />
-                        <strong>조건에 맞는 휴게소가 없습니다</strong>
+                        <strong>조건에 맞는 장소가 없습니다</strong>
                         <p>
                           {filters.routeName
                             ? "검색어·편의시설·라운지 조건을 변경하거나 필터를 초기화해보세요."
@@ -359,7 +411,13 @@ export default function MobileExplorer() {
                       </div>
                     ) : (
                       <ul>
-                        {results.map((area) => {
+                        {listPlaces.map((place) => {
+                          if (place.kind === "station") {
+                            const station = place.record;
+                            const distance = areaDistance(station, location.position);
+                            return <li key={place.key}><button className="mobile-area-card" onClick={() => stationDetails(station.id)} aria-label={`${station.name} 주유소 상세정보 보기`}><span className="list-pin is-station"><Icon name="pin" size={19} /></span><span className="mobile-area-info"><strong><span className="mobile-area-name">{station.name}</span>{distance !== null && <small className="mobile-area-distance">{formatDistance(distance)}</small>}<Icon name="chevron" size={16} /></strong><span>GS 주유·충전소{station.services.cargo ? " · 화물 특화" : ""}</span><span>{station.address || stationHours(station)}</span></span></button></li>;
+                          }
+                          const area = place.record;
                           const available = facilityDefinitions.filter(
                             ([key]) => area.facilities[key] === true,
                           );
@@ -369,7 +427,7 @@ export default function MobileExplorer() {
                             location.position,
                           );
                           return (
-                            <li key={area.id}>
+                            <li key={place.key}>
                               <button
                                 className="mobile-area-card"
                                 onClick={() => details(area.id)}

@@ -1920,6 +1920,118 @@ input[type="checkbox"] {
   min-height: 35px;
   font-size: 10px;
 }
+
+.place-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0;
+  position: relative;
+  z-index: 12;
+}
+.place-tabs {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid #dde6f2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px #23416a10;
+}
+.place-tabs button {
+  border: 0;
+  border-radius: 7px;
+  padding: 8px 12px;
+  min-height: 34px;
+  background: transparent;
+  color: #526882;
+  font-size: 11px;
+  font-weight: 650;
+}
+.place-tabs button.active { background: #edf4ff; color: var(--blue); }
+.station-filter-picker { position: relative; }
+.station-filter-picker summary {
+  cursor: pointer;
+  border: 1px solid #cfe5d9;
+  border-radius: 8px;
+  padding: 9px;
+  background: #fff;
+  color: #15845c;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.station-filter-options {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 43px;
+  width: min(280px, 80vw);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 10px;
+  padding: 15px;
+  border: 1px solid #dde6f2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 5px 20px #23416a25;
+}
+.station-filter-options p { grid-column: 1 / -1; font-size: 10px; color: #637995; }
+.station-filter-options label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.station-route-note { color: #526882; background: #f1f7f4; border-radius: 8px; padding: 10px; font-size: 11px; line-height: 1.6; }
+.station-route-note.compact { margin: 6px 0; padding: 5px 8px; font-size: 10px; }
+.list-pin.is-station { background: #e7f5ed; color: #15845c; }
+.map-legend .legend-station { background: #15845c; }
+.place-cluster {
+  width: 76px;
+  min-height: 58px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: #193d6b;
+  box-shadow: 0 3px 12px #18395a40;
+  color: #fff;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.place-cluster strong { font-size: 19px; font-weight: 750; }
+.place-cluster small { font-size: 10px; white-space: nowrap; }
+.place-cluster.has-lounge { border-color: #ffb962; }
+.place-cluster em { font-size: 9px; color: #ffe0b4; font-style: normal; }
+.map-cluster-list {
+  position: absolute;
+  z-index: 15;
+  left: 16px;
+  right: 16px;
+  bottom: 60px;
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #dde6f2;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 5px 25px #18395a35;
+}
+.mobile-map .map-cluster-list { bottom: 130px; }
+.map-cluster-list > div { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.map-cluster-list li button { width: 100%; padding: 10px 5px; display: flex; justify-content: space-between; gap: 8px; border: 0; border-bottom: 1px solid #edf1f6; text-align: left; background: #fff; color: #193d6b; font-size: 12px; }
+.map-cluster-list li small { flex-shrink: 0; color: #637995; }
+.station-table-panel { flex: 1; min-height: 230px; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.station-table-scroll { flex: 1; min-height: 0; overflow: auto; }
+.station-table-scroll table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.station-table-scroll th, .station-table-scroll td { padding: 10px; border-bottom: 1px solid #edf1f6; text-align: left; }
+.station-table-scroll th { position: sticky; top: 0; z-index: 1; background: #f7f9fc; white-space: nowrap; }
+.station-table-scroll th button, .station-table-scroll td button { background: transparent; border: 0; color: #193d6b; font: inherit; text-align: left; }
+.station-table-scroll tr.selected { background: #eaf5ef; }
+.station-pagination { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 10px; border-top: 1px solid var(--line); }
+.station-pagination .button { min-height: 30px; padding: 5px 9px; font-size: 10px; }
+.station-source-details { padding: 10px 0; font-size: 11px; }
+.station-source-details summary { cursor: pointer; color: #526882; }
 .form-error {
   padding: 10px;
   margin: 10px 0;
