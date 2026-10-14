@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import type { useAdminSession } from "@/hooks/use-admin-session";
+import {useState} from "react";
+import type {useAdminSession} from "@/hooks/use-admin-session";
 import Icon from "./icon";
 
 export default function AdminAuthControl({
@@ -23,7 +23,7 @@ export default function AdminAuthControl({
         <button
           className="button secondary"
           disabled={auth.loading}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setOpen(value => !value)}
           aria-expanded={open}
         >
           <Icon name="lock" size={16} />
@@ -33,7 +33,7 @@ export default function AdminAuthControl({
       {open && !auth.authenticated && (
         <form
           className="auth-popover"
-          onSubmit={async (event) => {
+          onSubmit={async event => {
             event.preventDefault();
             const ok = await auth.login(password);
             setPassword("");
@@ -66,7 +66,7 @@ export default function AdminAuthControl({
                   type="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={event => setPassword(event.target.value)}
                   maxLength={1024}
                   required
                 />

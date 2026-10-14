@@ -1,17 +1,17 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { loadKakaoMaps, type KakaoMap as MapInstance } from "@/lib/kakao-sdk";
-import { createPlaceMarkers } from "@/lib/kakao-place-markers";
-import { restPlace, stationPlace, type MapPlace } from "@/lib/map-places";
-import type { GasStation } from "@/lib/gas-stations";
-import { createStationMapCard } from "@/lib/station-map-card";
-import { createHighwayRouteLayer } from "@/lib/kakao-highway-route";
-import { createHighwayRouteViewport } from "@/lib/kakao-route-viewport";
-import { useHighwayRoute } from "@/hooks/use-highway-route";
-import { createMapCard } from "@/lib/map-card";
-import { MapFitPolicy, type MapFitRequest } from "@/lib/map-fit-policy";
-import { hasCoordinates, type RestArea } from "@/lib/rest-areas";
-import { scopeLabel } from "@/lib/geo-search";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {loadKakaoMaps, type KakaoMap as MapInstance} from "@/lib/kakao-sdk";
+import {createPlaceMarkers} from "@/lib/kakao-place-markers";
+import {restPlace, stationPlace, type MapPlace} from "@/lib/map-places";
+import type {GasStation} from "@/lib/gas-stations";
+import {createStationMapCard} from "@/lib/station-map-card";
+import {createHighwayRouteLayer} from "@/lib/kakao-highway-route";
+import {createHighwayRouteViewport} from "@/lib/kakao-route-viewport";
+import {useHighwayRoute} from "@/hooks/use-highway-route";
+import {createMapCard} from "@/lib/map-card";
+import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
+import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
+import {scopeLabel} from "@/lib/geo-search";
 import {
   createLocationMapLayer,
   type MobileMapLocation,
@@ -72,7 +72,7 @@ export default function KakaoMap({
     () => [...areas.map(restPlace), ...stations.map(stationPlace)],
     [areas, stations],
   );
-  const positionedItems = useMemo(() => places.map((place) => place.record), [places]);
+  const positionedItems = useMemo(() => places.map(place => place.record), [places]);
   const clearSelection = useCallback(() => {
     onSelect(null);
     onStationSelect?.(null);
@@ -84,19 +84,19 @@ export default function KakaoMap({
     },
     [onSelect, onStationSelect],
   );
-  const fitPolicy = useRef<{ map: MapInstance; policy: MapFitPolicy } | null>(null);
+  const fitPolicy = useRef<{map: MapInstance; policy: MapFitPolicy} | null>(null);
   const routeViewport = useRef<{
     map: MapInstance;
     view: ReturnType<typeof createHighwayRouteViewport>;
   } | null>(null);
-  const lastSelection = useRef<{ map: MapInstance | null; key: string | null }>({
+  const lastSelection = useRef<{map: MapInstance | null; key: string | null}>({
     map: null,
     key: null,
   });
   const locationLayer = useRef<ReturnType<typeof createLocationMapLayer> | null>(null);
   const mobileMemory = useRef<MobileMapMemory>({});
   const mobileEnabled = !!mobileLocation;
-  const { cameraReady, radiusReady, zoomChanged, mapMoved, research } = mobileLocation ?? {};
+  const {cameraReady, radiusReady, zoomChanged, mapMoved, research} = mobileLocation ?? {};
   const [map, setMap] = useState<MapInstance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -124,7 +124,7 @@ export default function KakaoMap({
     let cancelled = false;
     let observer: ResizeObserver | undefined;
     loadKakaoMaps(appKey)
-      .then((sdk) => {
+      .then(sdk => {
         if (cancelled || !container.current) return;
         const saved = mobileEnabled ? mobileMemory.current.viewport : undefined;
         const instance = new sdk.Map(container.current, {
@@ -246,7 +246,7 @@ export default function KakaoMap({
         locationLayer.current?.fitInitialResults(() => layer.current?.fit());
       return;
     }
-    if (fitPolicy.current?.map !== map) fitPolicy.current = { map, policy: new MapFitPolicy() };
+    if (fitPolicy.current?.map !== map) fitPolicy.current = {map, policy: new MapFitPolicy()};
     if (fitPolicy.current.policy.update(fitSource, fitRequest, deferFit) && !selectedRouteName)
       layer.current?.fit();
   }, [
@@ -266,20 +266,15 @@ export default function KakaoMap({
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
     if (routeViewport.current?.map !== map)
-      routeViewport.current = { map, view: createHighwayRouteViewport(sdk, map) };
-    routeViewport.current.view.update(
-      selectedRouteName,
-      highway.route,
-      positionedItems,
-      (action) => {
-        if (locationLayer.current) locationLayer.current.fitRoute(action);
-        else action();
-      },
-    );
+      routeViewport.current = {map, view: createHighwayRouteViewport(sdk, map)};
+    routeViewport.current.view.update(selectedRouteName, highway.route, positionedItems, action => {
+      if (locationLayer.current) locationLayer.current.fitRoute(action);
+      else action();
+    });
   }, [map, selectedRouteName, highway.route, positionedItems]);
   const selectedKey =
     selectedStationId !== null
-      ? (places.find((place) => place.kind === "station" && place.record.id === selectedStationId)
+      ? (places.find(place => place.kind === "station" && place.record.id === selectedStationId)
           ?.key ?? null)
       : selectedId !== null
         ? `rest:${selectedId}`
@@ -287,7 +282,7 @@ export default function KakaoMap({
   useEffect(() => {
     const move = lastSelection.current.map !== map || lastSelection.current.key !== selectedKey;
     layer.current?.select(selectedKey, showCard, move);
-    lastSelection.current = { map, key: selectedKey };
+    lastSelection.current = {map, key: selectedKey};
   }, [map, places, selectedKey, showCard, card, cardViewport]);
   useEffect(() => {
     layer.current?.adjustCard();
@@ -334,7 +329,7 @@ export default function KakaoMap({
                 onClick={() => {
                   setError(null);
                   setMap(null);
-                  setAttempt((value) => value + 1);
+                  setAttempt(value => value + 1);
                 }}
               >
                 다시 시도

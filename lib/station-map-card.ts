@@ -1,4 +1,4 @@
-import { stationHours, type GasStation } from "./gas-stations.ts";
+import {stationHours, type GasStation} from "./gas-stations.ts";
 export function createStationMapCard(
   station: GasStation,
   onClose: () => void,
@@ -19,7 +19,7 @@ export function createStationMapCard(
   close.type = "button";
   close.textContent = "×";
   close.setAttribute("aria-label", "주유소 요약 닫기");
-  close.addEventListener("click", (event) => {
+  close.addEventListener("click", event => {
     event.stopPropagation();
     onClose();
   });
@@ -39,7 +39,7 @@ export function createStationMapCard(
   details.className = "map-card-details";
   details.type = "button";
   details.textContent = "상세보기 →";
-  details.addEventListener("click", (event) => {
+  details.addEventListener("click", event => {
     event.stopPropagation();
     onDetails();
   });

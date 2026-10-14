@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
-import { sortFields, type SortField } from "@/lib/rest-area-fields";
-import { hasCoordinates, type FacilityKey, type RestAreaRecord } from "@/lib/rest-areas";
+import {useState} from "react";
+import {sortFields, type SortField} from "@/lib/rest-area-fields";
+import {hasCoordinates, type FacilityKey, type RestAreaRecord} from "@/lib/rest-areas";
 import FacilitySummary from "./facility-summary";
 import QueryState from "./query-state";
 import Icon from "./icon";
@@ -42,8 +42,8 @@ export default function AdminRestAreaTable({
 }) {
   const [allColumns, setAllColumns] = useState(false);
   const columns = allColumns
-    ? [...sortFields.filter((field) => field.key !== "id"), { key: "id" as const, label: "DB ID" }]
-    : defaultColumns.map((key) => sortFields.find((field) => field.key === key)!);
+    ? [...sortFields.filter(field => field.key !== "id"), {key: "id" as const, label: "DB ID"}]
+    : defaultColumns.map(key => sortFields.find(field => field.key === key)!);
   const cell = (area: RestAreaRecord, key: SortField) => {
     if (key === "name")
       return (
@@ -51,7 +51,7 @@ export default function AdminRestAreaTable({
           <button
             className="table-area-name"
             aria-pressed={selectedId === area.id}
-            onClick={(event) => {
+            onClick={event => {
               event.stopPropagation();
               onSelect(area.id);
             }}
@@ -108,7 +108,7 @@ export default function AdminRestAreaTable({
           <span className="table-source">
             {sortField === "id"
               ? "DB ID"
-              : sortFields.find((field) => field.key === sortField)?.label}{" "}
+              : sortFields.find(field => field.key === sortField)?.label}{" "}
             · {direction === "asc" ? "오름차순" : "내림차순"}
           </span>
           <button
@@ -145,7 +145,7 @@ export default function AdminRestAreaTable({
                 <th scope="col" className="row-number-cell">
                   No
                 </th>
-                {columns.map(({ key, label }) => (
+                {columns.map(({key, label}) => (
                   <th
                     key={key}
                     aria-sort={
@@ -179,7 +179,7 @@ export default function AdminRestAreaTable({
                   onClick={() => onSelect(area.id)}
                 >
                   <td className="row-number-cell">{rows.length - index}</td>
-                  {columns.map(({ key }) => (
+                  {columns.map(({key}) => (
                     <td
                       key={key}
                       className={

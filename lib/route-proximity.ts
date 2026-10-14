@@ -1,5 +1,5 @@
-import { distanceMeters, type GeoBounds, type GeoPoint } from "./geo-search.ts";
-import type { HighwayRoute } from "./highway-routes.ts";
+import {distanceMeters, type GeoBounds, type GeoPoint} from "./geo-search.ts";
+import type {HighwayRoute} from "./highway-routes.ts";
 
 export const routeStationRadiusMeters = 2000;
 const earthRadius = 6_371_008.8;
@@ -34,10 +34,10 @@ export function expandedBounds(bounds: GeoBounds, meters: number): GeoBounds {
 
 /** 각 분리 구간의 실제 선분에 대한 거리만 계산하며 구간 사이에 가상의 연결선을 만들지 않습니다. */
 export function compileRouteProximity(route: HighwayRoute, meters = routeStationRadiusMeters) {
-  const segments = route.paths.flatMap((path) =>
+  const segments = route.paths.flatMap(path =>
     path.slice(1).map(([latitude, longitude], index) => {
-      const start = { latitude: path[index][0], longitude: path[index][1] };
-      const end = { latitude, longitude };
+      const start = {latitude: path[index][0], longitude: path[index][1]};
+      const end = {latitude, longitude};
       return {
         start,
         end,
@@ -56,7 +56,7 @@ export function compileRouteProximity(route: HighwayRoute, meters = routeStation
     }),
   );
   return (point: GeoPoint): boolean =>
-    segments.some((segment) => {
+    segments.some(segment => {
       const bounds = segment.bounds;
       if (
         point.latitude < bounds.south ||

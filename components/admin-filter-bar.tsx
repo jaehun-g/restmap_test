@@ -1,12 +1,12 @@
 "use client";
-import { facilityDefinitions, type RestArea } from "@/lib/rest-areas";
+import {facilityDefinitions, type RestArea} from "@/lib/rest-areas";
 import {
   routeOptions,
   selectableFacilities,
   type LoungeFilter,
   type RestAreaFilters,
 } from "@/lib/rest-area-filters";
-import type { useSearchQuery } from "@/hooks/use-search-query";
+import type {useSearchQuery} from "@/hooks/use-search-query";
 import SearchBox from "./search-box";
 import Icon from "./icon";
 
@@ -44,7 +44,7 @@ export default function AdminFilterBar({
             aria-label="노선 필터"
             value={routeValue}
             disabled={disabled}
-            onChange={(event) =>
+            onChange={event =>
               onChange({
                 ...filters,
                 routeName: event.target.value.startsWith("route:")
@@ -56,7 +56,7 @@ export default function AdminFilterBar({
           >
             <option value="all">전체 노선</option>
             {!hideRestFilters && <option value="missing">휴게소 노선 미등록</option>}
-            {routeOptions(areas).map(({ name }) => (
+            {routeOptions(areas).map(({name}) => (
               <option key={name} value={`route:${name}`}>
                 {name}
               </option>
@@ -66,7 +66,7 @@ export default function AdminFilterBar({
         {!hideRestFilters && (
           <details className="facility-picker">
             <summary
-              onClick={(event) => {
+              onClick={event => {
                 if (disabled) event.preventDefault();
               }}
             >
@@ -81,12 +81,12 @@ export default function AdminFilterBar({
                     type="checkbox"
                     disabled={disabled}
                     checked={filters.facilities.includes(key)}
-                    onChange={(event) =>
+                    onChange={event =>
                       onChange({
                         ...filters,
                         facilities: event.target.checked
                           ? [...filters.facilities, key]
-                          : filters.facilities.filter((value) => value !== key),
+                          : filters.facilities.filter(value => value !== key),
                       })
                     }
                   />
@@ -103,7 +103,7 @@ export default function AdminFilterBar({
               aria-label="화물차 라운지 필터"
               value={filters.lounge}
               disabled={disabled}
-              onChange={(event) =>
+              onChange={event =>
                 onChange({
                   ...filters,
                   lounge: event.target.value as LoungeFilter,
@@ -131,20 +131,20 @@ export default function AdminFilterBar({
         {(filters.routeName || filters.missingRoute) && (
           <button
             disabled={disabled}
-            onClick={() => onChange({ ...filters, routeName: null, missingRoute: false })}
+            onClick={() => onChange({...filters, routeName: null, missingRoute: false})}
           >
             {filters.routeName || "노선 미등록"}
             <Icon name="close" size={12} />
           </button>
         )}
-        {filters.facilities.map((key) => (
+        {filters.facilities.map(key => (
           <button
             key={key}
             disabled={disabled}
             onClick={() =>
               onChange({
                 ...filters,
-                facilities: filters.facilities.filter((value) => value !== key),
+                facilities: filters.facilities.filter(value => value !== key),
               })
             }
           >
@@ -153,7 +153,7 @@ export default function AdminFilterBar({
           </button>
         ))}
         {filters.lounge !== "all" && (
-          <button disabled={disabled} onClick={() => onChange({ ...filters, lounge: "all" })}>
+          <button disabled={disabled} onClick={() => onChange({...filters, lounge: "all"})}>
             라운지{" "}
             {filters.lounge === "present"
               ? "있음"

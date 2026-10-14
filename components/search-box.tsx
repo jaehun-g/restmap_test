@@ -1,6 +1,6 @@
 "use client";
 import Icon from "./icon";
-import type { useSearchQuery } from "@/hooks/use-search-query";
+import type {useSearchQuery} from "@/hooks/use-search-query";
 
 export default function SearchBox({
   search,
@@ -22,10 +22,10 @@ export default function SearchBox({
           includeStations ? "휴게소명·노선명·주유소명·주소 검색" : "휴게소명과 노선명 검색"
         }
         disabled={disabled}
-        onChange={(event) =>
+        onChange={event =>
           event.target.value === "" ? search.clear() : search.setInput(event.target.value)
         }
-        onKeyDown={(event) => {
+        onKeyDown={event => {
           if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
             search.flush();

@@ -1,4 +1,4 @@
-import { facilityDefinitions, type FacilityKey, type RestArea } from "./rest-areas.ts";
+import {facilityDefinitions, type FacilityKey, type RestArea} from "./rest-areas.ts";
 
 export const scalarFields = [
   {
@@ -79,18 +79,18 @@ export const scalarFields = [
 
 export type ScalarKey = (typeof scalarFields)[number]["key"];
 export type SortField = "id" | ScalarKey | FacilityKey;
-export const sortFields: { key: SortField; label: string }[] = [
-  { key: "id", label: "ID" },
-  ...scalarFields.map(({ key, label }) => ({ key, label })),
-  ...facilityDefinitions.map(([key, label]) => ({ key, label })),
+export const sortFields: {key: SortField; label: string}[] = [
+  {key: "id", label: "ID"},
+  ...scalarFields.map(({key, label}) => ({key, label})),
+  ...facilityDefinitions.map(([key, label]) => ({key, label})),
 ];
 
 export const databaseColumns = [
   "id",
-  ...scalarFields.map((field) => field.column),
+  ...scalarFields.map(field => field.column),
   ...facilityDefinitions.map(([key]) => key),
 ];
-export const selectRestAreaColumns = `SELECT ${databaseColumns.map((column) => `\`${column}\``).join(", ")} FROM test_lounge`;
+export const selectRestAreaColumns = `SELECT ${databaseColumns.map(column => `\`${column}\``).join(", ")} FROM test_lounge`;
 
 export type RestAreaChanges = Partial<Pick<RestArea, ScalarKey>> & {
   facilities?: Partial<RestArea["facilities"]>;
@@ -98,9 +98,7 @@ export type RestAreaChanges = Partial<Pick<RestArea, ScalarKey>> & {
 
 export function changedFields(original: RestArea, draft: RestArea): RestAreaChanges {
   const scalar = Object.fromEntries(
-    scalarFields
-      .filter(({ key }) => original[key] !== draft[key])
-      .map(({ key }) => [key, draft[key]]),
+    scalarFields.filter(({key}) => original[key] !== draft[key]).map(({key}) => [key, draft[key]]),
   );
   const facilities = Object.fromEntries(
     facilityDefinitions
@@ -109,6 +107,6 @@ export function changedFields(original: RestArea, draft: RestArea): RestAreaChan
   );
   return {
     ...scalar,
-    ...(Object.keys(facilities).length ? { facilities } : {}),
+    ...(Object.keys(facilities).length ? {facilities} : {}),
   };
 }

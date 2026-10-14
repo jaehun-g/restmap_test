@@ -1,7 +1,7 @@
 "use client";
-import { useMemo, useState } from "react";
-import { routeOptions, selectableFacilities, type RestAreaFilters } from "@/lib/rest-area-filters";
-import type { RestArea } from "@/lib/rest-areas";
+import {useMemo, useState} from "react";
+import {routeOptions, selectableFacilities, type RestAreaFilters} from "@/lib/rest-area-filters";
+import type {RestArea} from "@/lib/rest-areas";
 import Icon from "./icon";
 
 export default function MobileFilterSheet({
@@ -19,7 +19,7 @@ export default function MobileFilterSheet({
 }) {
   const [routeQuery, setRouteQuery] = useState("");
   const options = useMemo(() => routeOptions(areas), [areas]);
-  const found = options.filter(({ name }) =>
+  const found = options.filter(({name}) =>
     name.toLocaleLowerCase("ko-KR").includes(routeQuery.trim().toLocaleLowerCase("ko-KR")),
   );
   return (
@@ -47,7 +47,7 @@ export default function MobileFilterSheet({
                 aria-label="선택할 노선 검색"
                 placeholder="노선명 검색"
                 value={routeQuery}
-                onChange={(event) => setRouteQuery(event.target.value)}
+                onChange={event => setRouteQuery(event.target.value)}
               />
             </div>
           </div>
@@ -70,7 +70,7 @@ export default function MobileFilterSheet({
                   {filters.routeName === null && <Icon name="check" size={18} />}
                 </button>
               </li>
-              {found.map(({ name, count }) => (
+              {found.map(({name, count}) => (
                 <li key={name}>
                   <button
                     className={filters.routeName === name ? "selected" : ""}
@@ -103,7 +103,7 @@ export default function MobileFilterSheet({
           <div className="facility-sheet-top">
             <span>{filters.facilities.length}개 선택</span>
             <button
-              onClick={() => onChange({ ...filters, facilities: [] })}
+              onClick={() => onChange({...filters, facilities: []})}
               disabled={!filters.facilities.length}
             >
               전체 해제
@@ -116,12 +116,12 @@ export default function MobileFilterSheet({
                   <input
                     type="checkbox"
                     checked={filters.facilities.includes(key)}
-                    onChange={(event) =>
+                    onChange={event =>
                       onChange({
                         ...filters,
                         facilities: event.target.checked
                           ? [...filters.facilities, key]
-                          : filters.facilities.filter((value) => value !== key),
+                          : filters.facilities.filter(value => value !== key),
                       })
                     }
                   />

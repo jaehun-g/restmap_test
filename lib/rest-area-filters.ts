@@ -1,6 +1,6 @@
-import { facilityDefinitions, type FacilityKey, type RestArea } from "./rest-areas.ts";
-import type { SortField } from "./rest-area-fields.ts";
-import { filterByGeoScope, type GeoPoint, type GeoSearchScope } from "./geo-search.ts";
+import {facilityDefinitions, type FacilityKey, type RestArea} from "./rest-areas.ts";
+import type {SortField} from "./rest-area-fields.ts";
+import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
 
 export type LoungeFilter = "all" | "present" | "absent" | "unknown";
 export type RestAreaFilters = {
@@ -31,12 +31,12 @@ export function filterRestAreas<T extends RestArea>(
   query: string,
 ): T[] {
   const terms = searchTerms(query);
-  return areas.filter((area) => {
+  return areas.filter(area => {
     const haystack = `${area.name} ${area.routeName ?? ""}`.toLocaleLowerCase("ko-KR");
-    if (!terms.every((term) => haystack.includes(term))) return false;
+    if (!terms.every(term => haystack.includes(term))) return false;
     if (filters.missingRoute && area.routeName !== null) return false;
     if (filters.routeName !== null && area.routeName !== filters.routeName) return false;
-    if (!filters.facilities.every((key) => area.facilities[key] === true)) return false;
+    if (!filters.facilities.every(key => area.facilities[key] === true)) return false;
     const lounge = area.facilities.has_truck_lounge;
     return (
       filters.lounge === "all" ||
@@ -57,7 +57,7 @@ export function filterMobileRestAreas<T extends RestArea>(
 ): T[] {
   return filterByGeoScope(
     filterRestAreas(areas, filters, query),
-    filters.routeName ? { kind: "all" } : scope,
+    filters.routeName ? {kind: "all"} : scope,
     position,
   );
 }
@@ -68,12 +68,12 @@ const collator = new Intl.Collator("ko-KR", {
 });
 export function routeOptions(areas: RestArea[]) {
   const counts = new Map<string, number>();
-  areas.forEach((area) => {
+  areas.forEach(area => {
     if (area.routeName) counts.set(area.routeName, (counts.get(area.routeName) ?? 0) + 1);
   });
   return [...counts]
     .sort(([a], [b]) => collator.compare(a, b))
-    .map(([name, count]) => ({ name, count }));
+    .map(([name, count]) => ({name, count}));
 }
 
 export function sortRestAreas<T extends RestArea>(

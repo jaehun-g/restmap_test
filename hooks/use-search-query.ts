@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 
 export function useSearchQuery(onApplied?: () => void) {
   const [input, setInput] = useState("");
@@ -33,5 +33,5 @@ export function useSearchQuery(onApplied?: () => void) {
     },
     [apply],
   );
-  return { input, query, setInput, flush, clear };
+  return {input, query, setInput, flush, clear};
 }

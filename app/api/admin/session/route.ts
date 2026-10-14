@@ -1,4 +1,4 @@
-import { connection, NextResponse } from "next/server";
+import {connection, NextResponse} from "next/server";
 import {
   ADMIN_COOKIE,
   SESSION_SECONDS,
@@ -6,9 +6,9 @@ import {
   sameOrigin,
   sessionCookie,
 } from "@/lib/admin-auth";
-import { errorStatus, readJsonRequest } from "@/lib/api-request";
+import {errorStatus, readJsonRequest} from "@/lib/api-request";
 
-const headers = { "Cache-Control": "no-store" };
+const headers = {"Cache-Control": "no-store"};
 export async function GET(request: Request) {
   await connection();
   const expiresAt = adminSessions().verify(
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       authenticated: expiresAt !== null,
       expiresAt,
     },
-    { headers },
+    {headers},
   );
 }
 
@@ -34,10 +34,10 @@ export async function POST(request: Request) {
           message: "동일 출처에서만 인증할 수 있습니다.",
         },
       },
-      { status: 403, headers },
+      {status: 403, headers},
     );
   const body = await readJsonRequest(request);
-  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400, headers });
+  if (!body.ok) return NextResponse.json({error: body.error}, {status: 400, headers});
   const input =
     body.value && typeof body.value === "object" && "password" in body.value
       ? body.value.password
@@ -45,8 +45,8 @@ export async function POST(request: Request) {
   const result = adminSessions().login(input, process.env.ADMIN_PASSWORD);
   if (!result.ok)
     return NextResponse.json(
-      { error: result.error },
-      { status: errorStatus(result.error.code), headers },
+      {error: result.error},
+      {status: errorStatus(result.error.code), headers},
     );
   const response = NextResponse.json(
     {
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       configured: true,
       expiresAt: result.value.expiresAt,
     },
-    { headers },
+    {headers},
   );
   response.cookies.set(ADMIN_COOKIE, result.value.token, {
     httpOnly: true,
@@ -75,10 +75,10 @@ export async function DELETE(request: Request) {
           message: "동일 출처에서만 로그아웃할 수 있습니다.",
         },
       },
-      { status: 403, headers },
+      {status: 403, headers},
     );
   adminSessions().logout(sessionCookie(request.headers.get("cookie")));
-  const response = NextResponse.json({ authenticated: false }, { headers });
+  const response = NextResponse.json({authenticated: false}, {headers});
   response.cookies.set(ADMIN_COOKIE, "", {
     httpOnly: true,
     sameSite: "strict",

@@ -1,4 +1,4 @@
-export type MapFitRequest = { sequence: number; fit: boolean };
+export type MapFitRequest = {sequence: number; fit: boolean};
 
 /** Marker data can change without changing the user's current map center or zoom. */
 export class MapFitPolicy {

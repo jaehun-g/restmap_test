@@ -1,14 +1,14 @@
-import { createHash } from "node:crypto";
-import { databaseColumns } from "./rest-area-fields.ts";
-import { normalizeRestAreas, type Result, type RestAreaRecord } from "./rest-areas.ts";
+import {createHash} from "node:crypto";
+import {databaseColumns} from "./rest-area-fields.ts";
+import {normalizeRestAreas, type Result, type RestAreaRecord} from "./rest-areas.ts";
 
 export function rowRevision(row: Record<string, unknown>): string {
-  const snapshot = databaseColumns.map((key) => {
+  const snapshot = databaseColumns.map(key => {
     const value = row[key];
     return [
       key,
       value instanceof Uint8Array
-        ? { bytes: Buffer.from(value).toString("base64") }
+        ? {bytes: Buffer.from(value).toString("base64")}
         : (value ?? null),
     ];
   });
@@ -20,7 +20,7 @@ export function recordFromRow(row: Record<string, unknown>): Result<RestAreaReco
   return normalized.ok
     ? {
         ok: true,
-        value: { ...normalized.value[0], revision: rowRevision(row) },
+        value: {...normalized.value[0], revision: rowRevision(row)},
       }
     : normalized;
 }

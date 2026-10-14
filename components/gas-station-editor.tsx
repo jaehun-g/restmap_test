@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { stationFields, stationServices, type GasStationRecord } from "@/lib/gas-stations";
+import {useState} from "react";
+import {stationFields, stationServices, type GasStationRecord} from "@/lib/gas-stations";
 import {
   createStationDraft,
   stationDraftDirty,
@@ -36,7 +36,7 @@ export default function GasStationEditor({
   return (
     <form
       className="editor-panel"
-      onKeyDown={(event) => {
+      onKeyDown={event => {
         if (
           event.key === "Enter" &&
           !event.nativeEvent.isComposing &&
@@ -44,7 +44,7 @@ export default function GasStationEditor({
         )
           event.preventDefault();
       }}
-      onSubmit={async (event) => {
+      onSubmit={async event => {
         event.preventDefault();
         if (saving || !authenticated || !dirty) return;
         const request = stationRequestFromDraft(original, original.revision, draft);
@@ -58,7 +58,7 @@ export default function GasStationEditor({
         try {
           const response = await globalThis.fetch(`/api/admin/gas-stations/${original.id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(request.value),
           });
           const body = await response.json();
@@ -92,7 +92,7 @@ export default function GasStationEditor({
         <fieldset disabled={saving}>
           <legend>기본정보</legend>
           <div className="editor-grid">
-            {stationFields.map((field) => (
+            {stationFields.map(field => (
               <label
                 key={field.key}
                 className={
@@ -120,10 +120,10 @@ export default function GasStationEditor({
                         ? "필수"
                         : "미등록"
                   }
-                  onChange={(event) =>
+                  onChange={event =>
                     change({
                       ...draft,
-                      values: { ...draft.values, [field.key]: event.target.value },
+                      values: {...draft.values, [field.key]: event.target.value},
                     })
                   }
                 />
@@ -134,7 +134,7 @@ export default function GasStationEditor({
         <fieldset disabled={saving}>
           <legend>시설·서비스</legend>
           <div className="editor-grid">
-            {stationServices.map(({ key, label }) => (
+            {stationServices.map(({key, label}) => (
               <label key={key}>
                 <span>{label}</span>
                 <select
@@ -145,7 +145,7 @@ export default function GasStationEditor({
                         ? "present"
                         : "absent"
                   }
-                  onChange={(event) =>
+                  onChange={event =>
                     change({
                       ...draft,
                       services: {

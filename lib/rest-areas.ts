@@ -1,5 +1,4 @@
-export type Result<T> =
-  { ok: true; value: T } | { ok: false; error: { code: string; message: string } };
+export type Result<T> = {ok: true; value: T} | {ok: false; error: {code: string; message: string}};
 
 export const facilityDefinitions = [
   ["has_truck_lounge", "화물차 라운지"],
@@ -38,7 +37,7 @@ export type RestAreasResponse = {
   fetchedAt: string;
 };
 
-export type RestAreaRecord = RestArea & { revision: string };
+export type RestAreaRecord = RestArea & {revision: string};
 
 export function visibleFacilities(area: RestArea, audience: "admin" | "mobile") {
   return facilityDefinitions.filter(
@@ -60,7 +59,7 @@ function nullableText(value: unknown): string | null {
   // Decode their UTF-8 bytes without changing the connection or DB settings.
   if (value instanceof Uint8Array) {
     try {
-      value = new TextDecoder("utf-8", { fatal: true }).decode(value);
+      value = new TextDecoder("utf-8", {fatal: true}).decode(value);
     } catch {
       return null;
     }
@@ -81,9 +80,9 @@ export function nullableBoolean(value: unknown): boolean | null {
   return null;
 }
 
-export function hasCoordinates<T extends { latitude: number | null; longitude: number | null }>(
+export function hasCoordinates<T extends {latitude: number | null; longitude: number | null}>(
   area: T,
-): area is T & { latitude: number; longitude: number } {
+): area is T & {latitude: number; longitude: number} {
   return area.latitude !== null && area.longitude !== null;
 }
 
@@ -136,5 +135,5 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
       ) as RestArea["facilities"],
     });
   }
-  return { ok: true, value: items };
+  return {ok: true, value: items};
 }

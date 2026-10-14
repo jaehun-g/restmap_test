@@ -1,15 +1,15 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRestAreas } from "@/hooks/use-rest-areas";
-import { useSearchQuery } from "@/hooks/use-search-query";
-import { useMobileLocation } from "@/hooks/use-mobile-location";
-import { useGasStations } from "@/hooks/use-gas-stations";
-import { stationQueryString } from "@/lib/gas-station-query";
-import { stationHours, type StationServiceKey } from "@/lib/gas-stations";
-import { filterStations, restPlace, stationPlace, type PlaceView } from "@/lib/map-places";
-import { filterMobileRestAreas, initialFilters } from "@/lib/rest-area-filters";
-import { areaDistance, filterByGeoScope, formatDistance, scopeLabel } from "@/lib/geo-search";
-import { facilityDefinitions, hasCoordinates, routeDescription } from "@/lib/rest-areas";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useRestAreas} from "@/hooks/use-rest-areas";
+import {useSearchQuery} from "@/hooks/use-search-query";
+import {useMobileLocation} from "@/hooks/use-mobile-location";
+import {useGasStations} from "@/hooks/use-gas-stations";
+import {stationQueryString} from "@/lib/gas-station-query";
+import {stationHours, type StationServiceKey} from "@/lib/gas-stations";
+import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
+import {filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
+import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
+import {facilityDefinitions, hasCoordinates, routeDescription} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import QueryState from "./query-state";
@@ -22,7 +22,7 @@ const noAreas: ReturnType<typeof filterMobileRestAreas> = [];
 
 type Panel = "collapsed" | "list" | "detail" | "routes" | "facilities";
 export default function MobileExplorer() {
-  const { data, areas, loading, error, reload } = useRestAreas();
+  const {data, areas, loading, error, reload} = useRestAreas();
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
@@ -74,7 +74,7 @@ export default function MobileExplorer() {
     () =>
       filterByGeoScope(
         filterStations(gas.stations, search.query, stationFilters),
-        { kind: "all" },
+        {kind: "all"},
         location.position,
       ),
     [gas.stations, search.query, stationFilters, location.position],
@@ -90,14 +90,14 @@ export default function MobileExplorer() {
       });
     return places;
   }, [visibleAreas, stationResults, location.position]);
-  const selected = visibleAreas.find((area) => area.id === selectedId);
-  const selectedStation = stationResults.find((station) => station.id === selectedStationId);
+  const selected = visibleAreas.find(area => area.id === selectedId);
+  const selectedStation = stationResults.find(station => station.id === selectedStationId);
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
       : panel;
   const expanded = effectivePanel !== "collapsed";
-  const mapped = listPlaces.filter((place) => hasCoordinates(place.record)).length;
+  const mapped = listPlaces.filter(place => hasCoordinates(place.record)).length;
   const resultCount = listPlaces.length;
   const filtered = Boolean(
     search.input ||
@@ -148,7 +148,7 @@ export default function MobileExplorer() {
     queueMicrotask(() => {
       if (active) {
         setSelectedId(null);
-        setPanel((current) => (current === "detail" ? "list" : current));
+        setPanel(current => (current === "detail" ? "list" : current));
       }
     });
     return () => {
@@ -165,7 +165,7 @@ export default function MobileExplorer() {
       return;
     }
     wasOpen.current = true;
-    panelRef.current?.focus({ preventScroll: true });
+    panelRef.current?.focus({preventScroll: true});
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
@@ -190,7 +190,7 @@ export default function MobileExplorer() {
     setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
-    setFilters((current) => ({ ...current, routeName: null }));
+    setFilters(current => ({...current, routeName: null}));
     setSelectedId(null);
     setSelectedStationId(null);
   }, []);
@@ -210,7 +210,7 @@ export default function MobileExplorer() {
         <SearchBox search={search} includeStations={placeView !== "rest"} />
         <PlaceControls
           view={placeView}
-          onView={(next) => {
+          onView={next => {
             setPlaceView(next);
             setSelectedId(null);
             setSelectedStationId(null);
@@ -222,22 +222,22 @@ export default function MobileExplorer() {
         <div className="mobile-filters">
           <button
             className={`filter-chip ${filters.routeName ? "active" : ""}`}
-            onClick={(event) => open("routes", event.currentTarget)}
+            onClick={event => open("routes", event.currentTarget)}
             aria-expanded={panel === "routes"}
             disabled={loading}
           >
             <span>{filters.routeName || "전체 노선"}</span>
-            <Icon name="chevronUp" size={13} style={{ transform: "rotate(180deg)" }} />
+            <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
           </button>
           {placeView !== "station" && (
             <button
               className={`filter-chip ${filters.facilities.length ? "active" : ""}`}
-              onClick={(event) => open("facilities", event.currentTarget)}
+              onClick={event => open("facilities", event.currentTarget)}
               aria-expanded={panel === "facilities"}
             >
               휴게소 편의시설
               {filters.facilities.length > 0 && <b>{filters.facilities.length}</b>}
-              <Icon name="chevronUp" size={13} style={{ transform: "rotate(180deg)" }} />
+              <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </button>
           )}
           {placeView !== "station" && (
@@ -250,7 +250,7 @@ export default function MobileExplorer() {
                   : "라운지 OFF: 전체 휴게소 표시"
               }
               onClick={() => {
-                setFilters((current) => ({
+                setFilters(current => ({
                   ...current,
                   lounge: current.lounge === "present" ? "all" : "present",
                 }));
@@ -315,7 +315,7 @@ export default function MobileExplorer() {
             <button
               ref={summaryRef}
               className="sheet-summary"
-              onClick={(event) => open("list", event.currentTarget)}
+              onClick={event => open("list", event.currentTarget)}
               aria-expanded={false}
             >
               <span className="summary-list-icon">
@@ -349,7 +349,7 @@ export default function MobileExplorer() {
                   kind={effectivePanel}
                   areas={areas}
                   filters={filters}
-                  onChange={(next) => {
+                  onChange={next => {
                     setFilters(next);
                   }}
                   onClose={collapse}
@@ -370,7 +370,7 @@ export default function MobileExplorer() {
                       setPanel("list");
                     }}
                   >
-                    <Icon name="arrow" size={16} style={{ transform: "rotate(180deg)" }} />
+                    <Icon name="arrow" size={16} style={{transform: "rotate(180deg)"}} />
                     휴게소 목록
                   </button>
                   <RestAreaDetails area={selected} onClose={collapse} audience="mobile" />
@@ -421,7 +421,7 @@ export default function MobileExplorer() {
                       </div>
                     ) : (
                       <ul>
-                        {listPlaces.map((place) => {
+                        {listPlaces.map(place => {
                           if (place.kind === "station") {
                             const station = place.record;
                             const distance = areaDistance(station, location.position);

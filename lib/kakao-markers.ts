@@ -1,7 +1,7 @@
-import { createPlaceMarkers } from "./kakao-place-markers.ts";
-import { restPlace } from "./map-places.ts";
-import type { RestArea } from "./rest-areas.ts";
-import type { KakaoMap, KakaoMaps } from "./kakao-sdk.ts";
+import {createPlaceMarkers} from "./kakao-place-markers.ts";
+import {restPlace} from "./map-places.ts";
+import type {RestArea} from "./rest-areas.ts";
+import type {KakaoMap, KakaoMaps} from "./kakao-sdk.ts";
 
 export function createRestAreaMarkers(
   sdk: KakaoMaps,
@@ -15,8 +15,8 @@ export function createRestAreaMarkers(
     sdk,
     map,
     areas.map(restPlace),
-    (place) => onSelect(place.record.id),
-    (place) => createCard(place.record as RestArea),
+    place => onSelect(place.record.id),
+    place => createCard(place.record as RestArea),
     viewport,
   );
   return {

@@ -5,7 +5,7 @@ import type {
   GeoRadius,
   LocationCameraRequest,
 } from "./geo-search.ts";
-import type { KakaoCircle, KakaoMap, KakaoMaps } from "./kakao-sdk.ts";
+import type {KakaoCircle, KakaoMap, KakaoMaps} from "./kakao-sdk.ts";
 
 export type MobileMapLocation = {
   position: GeoPoint | null;
@@ -13,7 +13,7 @@ export type MobileMapLocation = {
   locationRadius: GeoRadius | null;
   cameraRequest: LocationCameraRequest | null;
   requesting: boolean;
-  error: { message: string } | null;
+  error: {message: string} | null;
   researchAvailable: boolean;
   locate: () => void;
   cameraReady: (sequence: number, level: number) => void;
@@ -23,7 +23,7 @@ export type MobileMapLocation = {
   research: (bounds: GeoBounds) => void;
 };
 export type MobileMapMemory = {
-  viewport?: { center: GeoPoint; level: number };
+  viewport?: {center: GeoPoint; level: number};
   cameraSequence?: number;
   initialFitDone?: boolean;
   userMoved?: boolean;
@@ -71,7 +71,7 @@ export function createLocationMapLayer(
   function rememberView() {
     const center = map.getCenter();
     memory.viewport = {
-      center: { latitude: center.getLat(), longitude: center.getLng() },
+      center: {latitude: center.getLat(), longitude: center.getLng()},
       level: map.getLevel(),
     };
   }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { HighwayRouteLoader } from "@/lib/highway-route-loader";
+import {useEffect, useState, useSyncExternalStore} from "react";
+import {HighwayRouteLoader} from "@/lib/highway-route-loader";
 
 export function useHighwayRoute(routeName: string | null, enabled: boolean) {
   const [loader] = useState(() => new HighwayRouteLoader());

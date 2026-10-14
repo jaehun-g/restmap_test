@@ -4,25 +4,25 @@ import {
   type GasStation,
   type StationChanges,
 } from "./gas-stations.ts";
-import type { Result } from "./rest-areas.ts";
-export type StationUpdateRequest = { changes: StationChanges; expectedRevision: string };
+import type {Result} from "./rest-areas.ts";
+export type StationUpdateRequest = {changes: StationChanges; expectedRevision: string};
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const invalid = (message: string): Result<never> => ({
   ok: false,
-  error: { code: "VALIDATION_ERROR", message },
+  error: {code: "VALIDATION_ERROR", message},
 });
 export function validateStationUpdate(input: unknown): Result<StationUpdateRequest> {
   if (
     !object(input) ||
-    Object.keys(input).some((key) => !["changes", "expectedRevision"].includes(key)) ||
+    Object.keys(input).some(key => !["changes", "expectedRevision"].includes(key)) ||
     typeof input.expectedRevision !== "string" ||
     !/^[a-f0-9]{64}$/.test(input.expectedRevision) ||
     !object(input.changes)
   )
     return invalid("수정 요청 형식 또는 revision이 올바르지 않습니다.");
-  const allowed = new Set<string>([...stationFields.map((field) => field.key), "services"]);
-  if (Object.keys(input.changes).some((key) => !allowed.has(key)))
+  const allowed = new Set<string>([...stationFields.map(field => field.key), "services"]);
+  if (Object.keys(input.changes).some(key => !allowed.has(key)))
     return invalid("식별자·내부 코드·결제 항목은 수정할 수 없습니다.");
   const changes: Record<string, unknown> = {};
   for (const field of stationFields) {
@@ -47,7 +47,7 @@ export function validateStationUpdate(input: unknown): Result<StationUpdateReque
       if (
         text &&
         (text.length > field.maxLength ||
-          [...text].some((char) => {
+          [...text].some(char => {
             const code = char.codePointAt(0)!;
             return code === 0 || code > 0xffff || (code >= 0xd800 && code <= 0xdfff);
           }))
@@ -60,7 +60,7 @@ export function validateStationUpdate(input: unknown): Result<StationUpdateReque
   }
   if (Object.hasOwn(input.changes, "services")) {
     if (!object(input.changes.services)) return invalid("시설 수정 형식이 올바르지 않습니다.");
-    const keys = new Set<string>(stationServices.map((field) => field.key));
+    const keys = new Set<string>(stationServices.map(field => field.key));
     const services: Record<string, boolean | null> = {};
     for (const [key, value] of Object.entries(input.changes.services)) {
       if (!keys.has(key) || (value !== null && typeof value !== "boolean"))
@@ -72,7 +72,7 @@ export function validateStationUpdate(input: unknown): Result<StationUpdateReque
   if (!Object.keys(changes).length) return invalid("수정할 필드가 없습니다.");
   return {
     ok: true,
-    value: { changes: changes as StationChanges, expectedRevision: input.expectedRevision },
+    value: {changes: changes as StationChanges, expectedRevision: input.expectedRevision},
   };
 }
 export function validateStationCoordinatePair(
@@ -82,6 +82,6 @@ export function validateStationCoordinatePair(
   const latitude = Object.hasOwn(changes, "latitude") ? changes.latitude : station.latitude;
   const longitude = Object.hasOwn(changes, "longitude") ? changes.longitude : station.longitude;
   return (latitude === null) === (longitude === null)
-    ? { ok: true, value: true }
+    ? {ok: true, value: true}
     : invalid("위도와 경도는 함께 입력하거나 함께 미등록으로 설정해주세요.");
 }

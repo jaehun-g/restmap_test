@@ -1,8 +1,8 @@
-import { scalarFields, selectRestAreaColumns } from "./rest-area-fields.ts";
-import { facilityDefinitions, type Result, type RestAreaRecord } from "./rest-areas.ts";
-import { recordFromRow } from "./rest-area-revision.ts";
-import { validateCoordinatePair, type UpdateRequest } from "./rest-area-validation.ts";
-import { databaseError } from "./db-config.ts";
+import {scalarFields, selectRestAreaColumns} from "./rest-area-fields.ts";
+import {facilityDefinitions, type Result, type RestAreaRecord} from "./rest-areas.ts";
+import {recordFromRow} from "./rest-area-revision.ts";
+import {validateCoordinatePair, type UpdateRequest} from "./rest-area-validation.ts";
+import {databaseError} from "./db-config.ts";
 
 export interface SaveConnection {
   beginTransaction(): Promise<void>;
@@ -56,7 +56,7 @@ export async function saveRestArea(
     if (!pair.ok) return pair;
     const assignments: string[] = [];
     const values: unknown[] = [];
-    for (const { key, column } of scalarFields) {
+    for (const {key, column} of scalarFields) {
       if (Object.hasOwn(request.changes, key) && request.changes[key] !== current.value[key]) {
         assignments.push(`\`${column}\` = ?`);
         values.push(request.changes[key]);
@@ -87,7 +87,7 @@ export async function saveRestArea(
     active = false;
     return updated;
   } catch (error) {
-    return { ok: false, error: databaseError(error, "write") };
+    return {ok: false, error: databaseError(error, "write")};
   } finally {
     if (active) {
       try {

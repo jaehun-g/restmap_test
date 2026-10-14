@@ -1,4 +1,4 @@
-import type { Result } from "./rest-areas.ts";
+import type {Result} from "./rest-areas.ts";
 
 export type DatabaseConfig = {
   host: string;
@@ -12,7 +12,7 @@ export type DatabaseConfig = {
 export function readDatabaseConfig(
   environment: Record<string, string | undefined>,
 ): Result<DatabaseConfig> {
-  const missing = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"].filter((key) =>
+  const missing = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"].filter(key =>
     key === "DB_PASSWORD" ? !environment[key] : !environment[key]?.trim(),
   );
   if (missing.length)

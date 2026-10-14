@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import {createHash} from "node:crypto";
 import {
   normalizeGasStations,
   stationColumns,
@@ -6,18 +6,18 @@ import {
   stationText,
   type GasStationRecord,
 } from "./gas-stations.ts";
-import type { Result } from "./rest-areas.ts";
+import type {Result} from "./rest-areas.ts";
 
 export function stationRevision(row: Record<string, unknown>): string {
   return createHash("sha256")
     .update(
       JSON.stringify(
-        stationColumns.map((key) => {
+        stationColumns.map(key => {
           const value = row[key];
           return [
             key,
             value instanceof Uint8Array
-              ? { bytes: Buffer.from(value).toString("base64") }
+              ? {bytes: Buffer.from(value).toString("base64")}
               : (value ?? null),
           ];
         }),
@@ -39,7 +39,7 @@ export function stationRecordFromRow(
       ...(detail
         ? {
             sourceDetails: Object.fromEntries(
-              stationReadOnlyColumns.map((column) => [column, stationText(row[column])]),
+              stationReadOnlyColumns.map(column => [column, stationText(row[column])]),
             ),
           }
         : {}),

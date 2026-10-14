@@ -10,8 +10,8 @@ import {
 } from "./geo-search.ts";
 
 export type LocationErrorCode = "INSECURE" | "UNSUPPORTED" | "DENIED" | "TIMEOUT" | "UNAVAILABLE";
-type LocationError = { code: LocationErrorCode; message: string };
-type LocationResult = { ok: true; value: GeoPoint } | { ok: false; error: LocationError };
+type LocationError = {code: LocationErrorCode; message: string};
+type LocationResult = {ok: true; value: GeoPoint} | {ok: false; error: LocationError};
 export type LocationState = {
   position: GeoPoint | null;
   scope: GeoSearchScope;
@@ -34,7 +34,7 @@ const messages: Record<LocationErrorCode, string> = {
 };
 const failure = (code: LocationErrorCode): LocationResult => ({
   ok: false,
-  error: { code, message: messages[code] },
+  error: {code, message: messages[code]},
 });
 export const locationOptions: PositionOptions = {
   enableHighAccuracy: true,
@@ -48,17 +48,17 @@ export function readCurrentPosition(environment: {
 }): Promise<LocationResult> {
   if (!environment.secure) return Promise.resolve(failure("INSECURE"));
   if (!environment.geolocation) return Promise.resolve(failure("UNSUPPORTED"));
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
       environment.geolocation!.getCurrentPosition(
-        (result) => {
+        result => {
           const value = {
             latitude: result.coords.latitude,
             longitude: result.coords.longitude,
           };
-          resolve(isGeoPoint(value) ? { ok: true, value } : failure("UNAVAILABLE"));
+          resolve(isGeoPoint(value) ? {ok: true, value} : failure("UNAVAILABLE"));
         },
-        (error) =>
+        error =>
           resolve(
             failure(error.code === 1 ? "DENIED" : error.code === 3 ? "TIMEOUT" : "UNAVAILABLE"),
           ),
@@ -72,7 +72,7 @@ export function readCurrentPosition(environment: {
 
 const initialState: LocationState = {
   position: null,
-  scope: { kind: "all" },
+  scope: {kind: "all"},
   locationRadius: null,
   cameraRequest: null,
   requesting: false,
@@ -96,14 +96,14 @@ export class MobileLocationController {
     };
   };
   private update(changes: Partial<LocationState>) {
-    this.state = { ...this.state, ...changes };
-    this.listeners.forEach((listener) => listener());
+    this.state = {...this.state, ...changes};
+    this.listeners.forEach(listener => listener());
   }
   async requestLocation(read: () => Promise<LocationResult>): Promise<void> {
     if (this.state.requesting) return;
     const request = ++this.requestSequence;
     const intent = ++this.intentSequence;
-    this.update({ requesting: true, error: null });
+    this.update({requesting: true, error: null});
     let result: LocationResult;
     try {
       result = await read();
@@ -112,10 +112,10 @@ export class MobileLocationController {
     }
     if (request !== this.requestSequence) return;
     if (!result.ok) {
-      this.update({ requesting: false, error: result.error });
+      this.update({requesting: false, error: result.error});
       return;
     }
-    const position = { ...result.value };
+    const position = {...result.value};
     const locationRadius: GeoRadius = {
       kind: "radius",
       center: position,
@@ -127,7 +127,7 @@ export class MobileLocationController {
         position,
         requesting: false,
         locationRadius: this.state.locationRadius
-          ? { ...this.state.locationRadius, center: position }
+          ? {...this.state.locationRadius, center: position}
           : locationRadius,
       });
       return;
@@ -147,7 +147,7 @@ export class MobileLocationController {
   }
   cancelPendingRequests() {
     ++this.requestSequence;
-    if (this.state.requesting) this.update({ requesting: false });
+    if (this.state.requesting) this.update({requesting: false});
   }
   cameraReady = (sequence: number, level: number) => {
     if (this.state.cameraRequest?.sequence !== sequence || this.state.scope.kind !== "radius")
@@ -157,27 +157,27 @@ export class MobileLocationController {
   private updateRadius(locationRadius: GeoRadius) {
     this.update({
       locationRadius,
-      ...(this.state.scope.kind === "radius" ? { scope: locationRadius } : {}),
+      ...(this.state.scope.kind === "radius" ? {scope: locationRadius} : {}),
     });
   }
   radiusReady = (level: number) => {
     const radius = this.state.locationRadius;
     if (radius && radius.referenceLevel === null)
-      this.updateRadius({ ...radius, referenceLevel: level });
+      this.updateRadius({...radius, referenceLevel: level});
   };
   zoomChanged = (level: number) => {
     const radius = this.state.locationRadius;
     if (!radius || radius.referenceLevel === null) return;
     const radiusMeters = radiusForLevel(level, radius.referenceLevel);
-    if (radiusMeters !== radius.radiusMeters) this.updateRadius({ ...radius, radiusMeters });
+    if (radiusMeters !== radius.radiusMeters) this.updateRadius({...radius, radiusMeters});
   };
   mapMoved = () => {
-    if (!this.state.researchAvailable) this.update({ researchAvailable: true });
+    if (!this.state.researchAvailable) this.update({researchAvailable: true});
   };
   research = (bounds: GeoBounds) => {
     ++this.intentSequence;
     this.update({
-      scope: { kind: "bounds", bounds: { ...bounds } },
+      scope: {kind: "bounds", bounds: {...bounds}},
       cameraRequest: null,
       researchAvailable: false,
     });

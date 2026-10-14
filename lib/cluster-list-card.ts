@@ -1,4 +1,4 @@
-import type { MapPlace } from "./map-places.ts";
+import type {MapPlace} from "./map-places.ts";
 
 const kindLabel = (place: MapPlace) =>
   place.kind === "station"
@@ -10,7 +10,7 @@ const kindLabel = (place: MapPlace) =>
 /** 클러스터 클릭 시 말풍선으로 띄우는 장소 목록 카드를 만듭니다. */
 export function createClusterListCard(
   places: MapPlace[],
-  handlers: { onPick: (place: MapPlace) => void; onClose: () => void; onZoom?: () => void },
+  handlers: {onPick: (place: MapPlace) => void; onClose: () => void; onZoom?: () => void},
 ): HTMLElement {
   const card = document.createElement("section");
   card.className = "map-info-card cluster-popover";
@@ -25,7 +25,7 @@ export function createClusterListCard(
   close.className = "map-card-close";
   close.textContent = "×";
   close.setAttribute("aria-label", "장소 목록 닫기");
-  close.addEventListener("click", (event) => {
+  close.addEventListener("click", event => {
     event.stopPropagation();
     handlers.onClose();
   });
@@ -41,7 +41,7 @@ export function createClusterListCard(
     const kind = document.createElement("small");
     kind.textContent = kindLabel(place);
     button.append(name, kind);
-    button.addEventListener("click", (event) => {
+    button.addEventListener("click", event => {
       event.stopPropagation();
       handlers.onPick(place);
     });
@@ -54,7 +54,7 @@ export function createClusterListCard(
     zoom.type = "button";
     zoom.className = "map-card-details";
     zoom.textContent = "이 영역 확대 →";
-    zoom.addEventListener("click", (event) => {
+    zoom.addEventListener("click", event => {
       event.stopPropagation();
       handlers.onZoom?.();
     });

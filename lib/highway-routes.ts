@@ -1,5 +1,5 @@
-import type { GeoBounds } from "./geo-search.ts";
-import type { Result } from "./rest-areas.ts";
+import type {GeoBounds} from "./geo-search.ts";
+import type {Result} from "./rest-areas.ts";
 
 export type HighwayCoordinate = [latitude: number, longitude: number];
 export type HighwayRoute = {
@@ -9,7 +9,7 @@ export type HighwayRoute = {
   bounds: GeoBounds;
   paths: HighwayCoordinate[][];
 };
-export type HighwayRouteResponse = { route: HighwayRoute };
+export type HighwayRouteResponse = {route: HighwayRoute};
 
 function invalidRoute(): Result<never> {
   return {
@@ -28,7 +28,7 @@ function record(value: unknown): value is Record<string, unknown> {
 function text(value: unknown): string | null {
   if (value instanceof Uint8Array) {
     try {
-      value = new TextDecoder("utf-8", { fatal: true }).decode(value);
+      value = new TextDecoder("utf-8", {fatal: true}).decode(value);
     } catch {
       return null;
     }
@@ -47,11 +47,11 @@ export function validateHighwayRouteName(value: unknown): Result<string> {
   if (typeof value === "string") {
     const name = value.trim();
     if (name && name.length <= 100 && !/[\u0000-\u001f\u007f]/.test(name))
-      return { ok: true, value: name };
+      return {ok: true, value: name};
   }
   return {
     ok: false,
-    error: { code: "VALIDATION_ERROR", message: "노선명을 올바르게 입력해주세요." },
+    error: {code: "VALIDATION_ERROR", message: "노선명을 올바르게 입력해주세요."},
   };
 }
 
@@ -72,7 +72,7 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
   )
     return invalidRoute();
 
-  const { south, west, north, east } = value.bounds;
+  const {south, west, north, east} = value.bounds;
   if (
     typeof south !== "number" ||
     typeof west !== "number" ||
@@ -97,7 +97,7 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
       if (
         !Array.isArray(point) ||
         point.length !== 2 ||
-        !point.every((coordinate) => typeof coordinate === "number" && Number.isFinite(coordinate))
+        !point.every(coordinate => typeof coordinate === "number" && Number.isFinite(coordinate))
       )
         return invalidRoute();
       const [latitude, longitude] = point as HighwayCoordinate;
@@ -120,7 +120,7 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
       id: value.id,
       routeName: name.value,
       routeNumber: value.routeNumber,
-      bounds: { south, west, north, east },
+      bounds: {south, west, north, east},
       paths,
     },
   };

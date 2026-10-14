@@ -1,12 +1,12 @@
-import { adminSessions, sameOrigin, sessionCookie } from "@/lib/admin-auth";
-import { readJsonRequest, errorStatus } from "@/lib/api-request";
-import { validateStationUpdate } from "@/lib/gas-station-validation";
-import { updateGasStation } from "@/lib/db";
+import {adminSessions, sameOrigin, sessionCookie} from "@/lib/admin-auth";
+import {readJsonRequest, errorStatus} from "@/lib/api-request";
+import {validateStationUpdate} from "@/lib/gas-station-validation";
+import {updateGasStation} from "@/lib/db";
 
-const headers = { "Cache-Control": "no-store" };
+const headers = {"Cache-Control": "no-store"};
 const denied = (code: string, message: string) =>
-  Response.json({ error: { code, message } }, { status: errorStatus(code), headers });
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  Response.json({error: {code, message}}, {status: errorStatus(code), headers});
+export async function PATCH(request: Request, context: {params: Promise<{id: string}>}) {
   if (!sameOrigin(request.url, request.headers.get("origin"), request.headers.get("host")))
     return denied("FORBIDDEN", "동일 출처에서만 저장할 수 있습니다.");
   if (!process.env.ADMIN_PASSWORD)
@@ -21,7 +21,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       "UNAUTHORIZED",
       "관리자 인증이 필요하거나 세션이 만료되었습니다. 입력 초안은 유지됩니다.",
     );
-  const { id } = await context.params;
+  const {id} = await context.params;
   if (
     !/^\d+$/.test(id) ||
     !Number.isSafeInteger(Number(id)) ||
@@ -35,6 +35,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   if (!validated.ok) return denied(validated.error.code, validated.error.message);
   const result = await updateGasStation(Number(id), validated.value);
   return result.ok
-    ? Response.json({ item: result.value }, { headers })
+    ? Response.json({item: result.value}, {headers})
     : denied(result.error.code, result.error.message);
 }

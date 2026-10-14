@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import {useCallback, useEffect, useState} from "react";
 
 type Session = {
   configured: boolean;
@@ -17,7 +17,7 @@ export function useAdminSession() {
   const [error, setError] = useState<string | null>(null);
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/session", { cache: "no-store" });
+      const response = await fetch("/api/admin/session", {cache: "no-store"});
       if (!response.ok) throw new Error("관리자 인증 상태를 확인하지 못했습니다.");
       setSession(await response.json());
       setError(null);
@@ -38,7 +38,7 @@ export function useAdminSession() {
     if (!session.authenticated || !session.expiresAt) return;
     const timer = setTimeout(
       () =>
-        setSession((current) => ({
+        setSession(current => ({
           ...current,
           authenticated: false,
           expiresAt: null,
@@ -53,8 +53,8 @@ export function useAdminSession() {
     try {
       const response = await fetch("/api/admin/session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({password}),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "인증하지 못했습니다.");
@@ -71,9 +71,9 @@ export function useAdminSession() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/session", { method: "DELETE" });
+      const response = await fetch("/api/admin/session", {method: "DELETE"});
       if (!response.ok) throw new Error("로그아웃하지 못했습니다. 다시 시도해주세요.");
-      setSession((current) => ({
+      setSession(current => ({
         ...current,
         authenticated: false,
         expiresAt: null,
@@ -84,5 +84,5 @@ export function useAdminSession() {
       setLoading(false);
     }
   }, []);
-  return { ...session, loading, error, refresh, login, logout };
+  return {...session, loading, error, refresh, login, logout};
 }

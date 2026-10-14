@@ -1,6 +1,6 @@
-import { hasCoordinates } from "./rest-areas.ts";
-import { placeSummary, sortPlacesForList, type MapPlace } from "./map-places.ts";
-import { createClusterListCard } from "./cluster-list-card.ts";
+import {hasCoordinates} from "./rest-areas.ts";
+import {placeSummary, sortPlacesForList, type MapPlace} from "./map-places.ts";
+import {createClusterListCard} from "./cluster-list-card.ts";
 import type {
   KakaoMap,
   KakaoMaps,
@@ -27,10 +27,10 @@ export function createPlaceMarkers(
     active = image("/marker-selected.svg", true);
   const lounge = image("/marker-lounge.svg"),
     loungeActive = image("/marker-lounge-selected.svg", true);
-  const stationImage = places.some((place) => place.kind === "station")
+  const stationImage = places.some(place => place.kind === "station")
     ? image("/marker-station.svg")
     : normal;
-  const stationActive = places.some((place) => place.kind === "station")
+  const stationActive = places.some(place => place.kind === "station")
     ? image("/marker-station-selected.svg", true)
     : active;
   const overlay = new sdk.CustomOverlay({
@@ -59,10 +59,10 @@ export function createPlaceMarkers(
         minClusterSize: 2,
         averageCenter: true,
         disableClickZoom: true,
-        styles: [{ width: "76px", height: "58px", background: "transparent", textAlign: "center" }],
+        styles: [{width: "76px", height: "58px", background: "transparent", textAlign: "center"}],
       })
     : null;
-  const markers = new Map<string, { marker: KakaoMarker; place: MapPlace; click: () => void }>();
+  const markers = new Map<string, {marker: KakaoMarker; place: MapPlace; click: () => void}>();
   const placeByMarker = new Map<KakaoMarker, MapPlace>();
   let card: HTMLElement | null = null,
     frame: number | null = null,
@@ -97,7 +97,7 @@ export function createPlaceMarkers(
     listBounds = bounds;
     listOpen = true;
     const content = createClusterListCard(items, {
-      onPick: (place) => {
+      onPick: place => {
         closeListOverlay();
         onSelect(place);
       },
@@ -121,7 +121,7 @@ export function createPlaceMarkers(
     back.type = "button";
     back.className = "map-card-details cluster-back";
     back.textContent = "← 목록으로";
-    back.addEventListener("click", (event) => {
+    back.addEventListener("click", event => {
       event.stopPropagation();
       if (listItems && listCenter && listBounds) {
         const items = listItems,
@@ -190,7 +190,7 @@ export function createPlaceMarkers(
     const record = place.record;
     if (!hasCoordinates(record)) continue;
     const marker = new sdk.Marker({
-      ...(clusterer ? {} : { map }),
+      ...(clusterer ? {} : {map}),
       position: new sdk.LatLng(record.latitude, record.longitude),
       title: `${record.name}${isLounge(place) ? " · 화물차 라운지" : place.kind === "station" ? " · GS 주유소" : ""}`,
       image: place.kind === "station" ? stationImage : isLounge(place) ? lounge : normal,
@@ -198,11 +198,11 @@ export function createPlaceMarkers(
     marker.setZIndex(baseZ(place));
     const click = () => onSelect(place);
     sdk.event.addListener(marker, "click", click);
-    markers.set(place.key, { marker, place, click });
+    markers.set(place.key, {marker, place, click});
     placeByMarker.set(marker, place);
   }
   const members = (cluster: KakaoCluster) =>
-    cluster.getMarkers().flatMap((marker) => {
+    cluster.getMarkers().flatMap(marker => {
       const place = placeByMarker.get(marker);
       return place ? [place] : [];
     });
@@ -231,7 +231,7 @@ export function createPlaceMarkers(
         "aria-label",
         `${summary.total}개 장소: 휴게소 ${summary.rest}, 주유소 ${summary.station}${summary.lounge ? `, 라운지 ${summary.lounge}` : ""}. 목록 보기`,
       );
-      content.addEventListener("keydown", (event) => {
+      content.addEventListener("keydown", event => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           clusterClick(cluster);
@@ -253,7 +253,7 @@ export function createPlaceMarkers(
   if (clusterer) {
     sdk.event.addListener(clusterer, "clustered", clustered);
     sdk.event.addListener(clusterer, "clusterclick", clusterClick);
-    clusterer.addMarkers([...markers.values()].map(({ marker }) => marker));
+    clusterer.addMarkers([...markers.values()].map(({marker}) => marker));
   }
   return {
     suspendCardAdjustment() {
@@ -268,15 +268,13 @@ export function createPlaceMarkers(
       scheduleAdjustment();
     },
     fit() {
-      const positioned = places.map((place) => place.record).filter(hasCoordinates);
+      const positioned = places.map(place => place.record).filter(hasCoordinates);
       if (positioned.length === 1) {
         map.setCenter(new sdk.LatLng(positioned[0].latitude, positioned[0].longitude));
         map.setLevel(6);
       } else if (positioned.length > 1) {
         const bounds = new sdk.LatLngBounds();
-        positioned.forEach((place) =>
-          bounds.extend(new sdk.LatLng(place.latitude, place.longitude)),
-        );
+        positioned.forEach(place => bounds.extend(new sdk.LatLng(place.latitude, place.longitude)));
         map.setBounds(bounds, 65, 45, 65, 45);
       }
     },
@@ -303,9 +301,9 @@ export function createPlaceMarkers(
       clearCard();
       if (key === null) {
         if (!listOpen) closeList();
-      } else if (listItems && !listItems.some((item) => item.key === key)) closeList();
+      } else if (listItems && !listItems.some(item => item.key === key)) closeList();
       else if (listOpen) closeListOverlay();
-      markers.forEach(({ marker, place }, markerKey) => {
+      markers.forEach(({marker, place}, markerKey) => {
         marker.setImage(
           place.kind === "station"
             ? markerKey === key
@@ -327,7 +325,7 @@ export function createPlaceMarkers(
       if (move) map.panTo(position);
       if (showCard) {
         card = createCard(selected.place);
-        if (listItems && listItems.some((item) => item.key === key)) addBackButton(card);
+        if (listItems && listItems.some(item => item.key === key)) addBackButton(card);
         if (viewport) constrainCard(viewport());
         overlay.setContent(card);
         overlay.setPosition(position);
@@ -347,7 +345,7 @@ export function createPlaceMarkers(
         sdk.event.removeListener(clusterer, "clusterclick", clusterClick);
         clusterer.clear();
       }
-      markers.forEach(({ marker, click }) => {
+      markers.forEach(({marker, click}) => {
         sdk.event.removeListener(marker, "click", click);
         marker.setMap(null);
       });

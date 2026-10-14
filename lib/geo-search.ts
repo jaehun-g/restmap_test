@@ -1,7 +1,7 @@
-import { hasCoordinates } from "./rest-areas.ts";
-export type LocatedItem = { id: number; latitude: number | null; longitude: number | null };
+import {hasCoordinates} from "./rest-areas.ts";
+export type LocatedItem = {id: number; latitude: number | null; longitude: number | null};
 
-export type GeoPoint = { latitude: number; longitude: number };
+export type GeoPoint = {latitude: number; longitude: number};
 export type GeoBounds = {
   south: number;
   west: number;
@@ -9,15 +9,15 @@ export type GeoBounds = {
   east: number;
 };
 export type GeoSearchScope =
-  | { kind: "all" }
+  | {kind: "all"}
   | {
       kind: "radius";
       center: GeoPoint;
       radiusMeters: number;
       referenceLevel: number | null;
     }
-  | { kind: "bounds"; bounds: GeoBounds };
-export type GeoRadius = Extract<GeoSearchScope, { kind: "radius" }>;
+  | {kind: "bounds"; bounds: GeoBounds};
+export type GeoRadius = Extract<GeoSearchScope, {kind: "radius"}>;
 export type LocationCameraRequest = {
   sequence: number;
   center: GeoPoint;
@@ -61,12 +61,12 @@ export function filterByGeoScope<T extends LocatedItem>(
   scope: GeoSearchScope,
   position: GeoPoint | null,
 ): T[] {
-  const results = areas.filter((area) => {
+  const results = areas.filter(area => {
     if (scope.kind === "all") return true;
     if (!hasCoordinates(area)) return false;
     if (scope.kind === "radius")
       return distanceMeters(scope.center, area) <= scope.radiusMeters + 0.000001;
-    const { south, west, north, east } = scope.bounds;
+    const {south, west, north, east} = scope.bounds;
     return (
       area.latitude >= south &&
       area.latitude <= north &&
@@ -76,7 +76,7 @@ export function filterByGeoScope<T extends LocatedItem>(
     );
   });
   if (!position) return results;
-  const distances = new Map(results.map((area) => [area.id, areaDistance(area, position)]));
+  const distances = new Map(results.map(area => [area.id, areaDistance(area, position)]));
   return results.sort((a, b) => {
     const left = distances.get(a.id) ?? Infinity;
     const right = distances.get(b.id) ?? Infinity;
@@ -87,7 +87,7 @@ export function filterByGeoScope<T extends LocatedItem>(
 export function formatDistance(meters: number): string {
   return meters < 1000
     ? `${Math.round(meters)}m`
-    : `${(meters / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 1 })}km`;
+    : `${(meters / 1000).toLocaleString("ko-KR", {maximumFractionDigits: 1})}km`;
 }
 
 export function scopeLabel(scope: GeoSearchScope): string {
@@ -95,7 +95,7 @@ export function scopeLabel(scope: GeoSearchScope): string {
   if (scope.kind === "bounds") return "지도 영역 검색";
   const radius =
     scope.radiusMeters >= 1000
-      ? `${(scope.radiusMeters / 1000).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}km`
+      ? `${(scope.radiusMeters / 1000).toLocaleString("ko-KR", {maximumFractionDigits: 2})}km`
       : `${Math.round(scope.radiusMeters)}m`;
   return `내 위치 기준 반경 ${radius}`;
 }

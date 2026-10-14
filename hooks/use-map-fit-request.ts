@@ -1,6 +1,6 @@
 "use client";
-import { useCallback, useState } from "react";
-import type { MapFitRequest } from "@/lib/map-fit-policy";
+import {useCallback, useState} from "react";
+import type {MapFitRequest} from "@/lib/map-fit-policy";
 
 export function useMapFitRequest() {
   const [fitRequest, setFitRequest] = useState<MapFitRequest>({
@@ -8,13 +8,13 @@ export function useMapFitRequest() {
     fit: true,
   });
   const requestFit = useCallback(() => {
-    setFitRequest((current) => ({ sequence: current.sequence + 1, fit: true }));
+    setFitRequest(current => ({sequence: current.sequence + 1, fit: true}));
   }, []);
   const preserveView = useCallback(() => {
-    setFitRequest((current) => ({
+    setFitRequest(current => ({
       sequence: current.sequence + 1,
       fit: false,
     }));
   }, []);
-  return { fitRequest, requestFit, preserveView };
+  return {fitRequest, requestFit, preserveView};
 }

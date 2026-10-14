@@ -1,19 +1,19 @@
 import "server-only";
-import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
-import { databaseError, readDatabaseConfig } from "./db-config";
+import mysql, {type Pool, type RowDataPacket} from "mysql2/promise";
+import {databaseError, readDatabaseConfig} from "./db-config";
 import {
   hasCoordinates,
   normalizeRestAreas,
   type Result,
   type RestAreasResponse,
 } from "./rest-areas";
-import { rowRevision } from "./rest-area-revision";
-import { selectRestAreaColumns } from "./rest-area-fields";
-import { saveRestArea } from "./rest-area-save";
-import type { UpdateRequest } from "./rest-area-validation";
-import type { RestAreaRecord } from "./rest-areas";
-import { normalizeHighwayRoute, type HighwayRoute } from "./highway-routes";
-import { hasCoordinates as positioned } from "./rest-areas";
+import {rowRevision} from "./rest-area-revision";
+import {selectRestAreaColumns} from "./rest-area-fields";
+import {saveRestArea} from "./rest-area-save";
+import type {UpdateRequest} from "./rest-area-validation";
+import type {RestAreaRecord} from "./rest-areas";
+import {normalizeHighwayRoute, type HighwayRoute} from "./highway-routes";
+import {hasCoordinates as positioned} from "./rest-areas";
 import {
   selectStationColumns,
   stationColumns,
@@ -21,12 +21,12 @@ import {
   type GasStationRecord,
   type GasStationsResponse,
 } from "./gas-stations";
-import { stationRecordFromRow } from "./gas-station-revision";
-import { stationQueryBounds, type GasStationQuery } from "./gas-station-query";
-import { compileRouteProximity, expandedBounds, routeStationRadiusMeters } from "./route-proximity";
-import { filterByGeoScope } from "./geo-search";
-import { saveGasStation } from "./gas-station-save";
-import type { StationUpdateRequest } from "./gas-station-validation";
+import {stationRecordFromRow} from "./gas-station-revision";
+import {stationQueryBounds, type GasStationQuery} from "./gas-station-query";
+import {compileRouteProximity, expandedBounds, routeStationRadiusMeters} from "./route-proximity";
+import {filterByGeoScope} from "./geo-search";
+import {saveGasStation} from "./gas-station-save";
+import type {StationUpdateRequest} from "./gas-station-validation";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -37,7 +37,7 @@ function getPool(): Result<Pool> {
   const config = readDatabaseConfig(process.env);
   if (!config.ok) return config;
   if (!databaseGlobal.restAreaPool) {
-    const { tls, ...connection } = config.value;
+    const {tls, ...connection} = config.value;
     databaseGlobal.restAreaPool = mysql.createPool({
       ...connection,
       charset: "utf8mb4",
@@ -48,10 +48,10 @@ function getPool(): Result<Pool> {
       queueLimit: 10,
       connectTimeout: 8_000,
       enableKeepAlive: true,
-      ...(tls ? { ssl: { rejectUnauthorized: true } } : {}),
+      ...(tls ? {ssl: {rejectUnauthorized: true}} : {}),
     });
   }
-  return { ok: true, value: databaseGlobal.restAreaPool };
+  return {ok: true, value: databaseGlobal.restAreaPool};
 }
 
 export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
@@ -71,12 +71,12 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
           ...area,
           revision: rowRevision(rows[index]),
         })),
-        unmappedCount: parsed.value.filter((area) => !hasCoordinates(area)).length,
+        unmappedCount: parsed.value.filter(area => !hasCoordinates(area)).length,
         fetchedAt: new Date().toISOString(),
       },
     };
   } catch (error) {
-    return { ok: false, error: databaseError(error) };
+    return {ok: false, error: databaseError(error)};
   }
 }
 
@@ -96,7 +96,7 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
     if (!rows.length)
       return {
         ok: false,
-        error: { code: "NOT_FOUND", message: "선택한 노선의 경로를 찾지 못했습니다." },
+        error: {code: "NOT_FOUND", message: "선택한 노선의 경로를 찾지 못했습니다."},
       };
     return normalizeHighwayRoute(rows[0]);
   } catch (reason) {
@@ -105,7 +105,7 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
       error.message = "노선 경로 테이블(test_highway_routes)을 확인해주세요.";
     if (error.code === "DB_QUERY_FAILED")
       error.message = "노선 경로를 조회하지 못했습니다. 잠시 후 다시 시도해주세요.";
-    return { ok: false, error };
+    return {ok: false, error};
   }
 }
 
@@ -132,7 +132,7 @@ export async function queryGasStations(
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
     const [rows] = await pool.value.query<RowDataPacket[]>(
-      { sql: `${selectStationColumns}${where} ORDER BY siteNm, id`, timeout: 10_000 },
+      {sql: `${selectStationColumns}${where} ORDER BY siteNm, id`, timeout: 10_000},
       values,
     );
     const records: GasStationRecord[] = [];
@@ -142,13 +142,13 @@ export async function queryGasStations(
       records.push(parsed.value);
     }
     const items = nearRoute
-      ? records.filter((station) => positioned(station) && nearRoute(station))
+      ? records.filter(station => positioned(station) && nearRoute(station))
       : filterByGeoScope(records, query.scope, null);
     return {
       ok: true,
       value: {
         items,
-        unmappedCount: items.filter((station) => !positioned(station)).length,
+        unmappedCount: items.filter(station => !positioned(station)).length,
         fetchedAt: new Date().toISOString(),
       },
     };
@@ -156,7 +156,7 @@ export async function queryGasStations(
     const error = databaseError(reason);
     if (error.code === "DB_SCHEMA_ERROR")
       error.message = "주유소 테이블(test_gscargo)을 확인해주세요.";
-    return { ok: false, error };
+    return {ok: false, error};
   }
 }
 
@@ -165,17 +165,17 @@ export async function queryGasStation(id: number): Promise<Result<GasStationReco
     const pool = getPool();
     if (!pool.ok) return pool;
     const columns = [...stationColumns, ...stationReadOnlyColumns]
-      .map((column) => `\`${column}\``)
+      .map(column => `\`${column}\``)
       .join(", ");
     const [rows] = await pool.value.query<RowDataPacket[]>(
-      { sql: `SELECT ${columns} FROM test_gscargo WHERE id = ? LIMIT 1`, timeout: 10_000 },
+      {sql: `SELECT ${columns} FROM test_gscargo WHERE id = ? LIMIT 1`, timeout: 10_000},
       [id],
     );
     if (!rows.length)
-      return { ok: false, error: { code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다." } };
+      return {ok: false, error: {code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다."}};
     return stationRecordFromRow(rows[0], true);
   } catch (reason) {
-    return { ok: false, error: databaseError(reason) };
+    return {ok: false, error: databaseError(reason)};
   }
 }
 
@@ -190,7 +190,7 @@ export async function updateGasStation(
     return await saveGasStation(
       {
         beginTransaction: () => connection.beginTransaction(),
-        query: (sql, values) => connection.query({ sql, timeout: 10_000 }, values),
+        query: (sql, values) => connection.query({sql, timeout: 10_000}, values),
         commit: () => connection.commit(),
         rollback: () => connection.rollback(),
         release: () => connection.release(),
@@ -200,7 +200,7 @@ export async function updateGasStation(
       request,
     );
   } catch (reason) {
-    return { ok: false, error: databaseError(reason, "write") };
+    return {ok: false, error: databaseError(reason, "write")};
   }
 }
 
@@ -215,7 +215,7 @@ export async function updateRestArea(
     return await saveRestArea(
       {
         beginTransaction: () => connection.beginTransaction(),
-        query: (sql, values) => connection.query({ sql, timeout: 10_000 }, values),
+        query: (sql, values) => connection.query({sql, timeout: 10_000}, values),
         commit: () => connection.commit(),
         rollback: () => connection.rollback(),
         release: () => connection.release(),
@@ -225,6 +225,6 @@ export async function updateRestArea(
       request,
     );
   } catch (error) {
-    return { ok: false, error: databaseError(error, "write") };
+    return {ok: false, error: databaseError(error, "write")};
   }
 }

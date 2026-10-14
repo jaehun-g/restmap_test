@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { hasCoordinates, type RestAreasResponse, type RestAreaRecord } from "@/lib/rest-areas";
+import {useCallback, useEffect, useRef, useState} from "react";
+import {hasCoordinates, type RestAreasResponse, type RestAreaRecord} from "@/lib/rest-areas";
 
 const emptyAreas: RestAreasResponse["items"] = [];
 
@@ -49,13 +49,13 @@ export function useRestAreas() {
   }, [reload]);
 
   const replaceItem = useCallback((item: RestAreaRecord) => {
-    setData((current) => {
+    setData(current => {
       if (!current) return current;
-      const items = current.items.map((area) => (area.id === item.id ? item : area));
+      const items = current.items.map(area => (area.id === item.id ? item : area));
       return {
         ...current,
         items,
-        unmappedCount: items.filter((area) => !hasCoordinates(area)).length,
+        unmappedCount: items.filter(area => !hasCoordinates(area)).length,
       };
     });
   }, []);

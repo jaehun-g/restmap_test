@@ -1,4 +1,4 @@
-import type { Result } from "./rest-areas.ts";
+import type {Result} from "./rest-areas.ts";
 
 export const stationFields = [
   {
@@ -9,21 +9,21 @@ export const stationFields = [
     maxLength: 150,
     required: true,
   },
-  { key: "phone", column: "telNo", label: "전화번호", kind: "text", maxLength: 30 },
-  { key: "address", column: "zipAddr", label: "주소", kind: "text", maxLength: 255 },
-  { key: "detailAddress", column: "detAddr", label: "상세주소", kind: "text", maxLength: 255 },
-  { key: "latitude", column: "lat", label: "위도", kind: "coordinate", min: -90, max: 90 },
-  { key: "longitude", column: "longi", label: "경도", kind: "coordinate", min: -180, max: 180 },
-  { key: "openTime", column: "businsFrTm", label: "영업 시작", kind: "time", maxLength: 4 },
-  { key: "closeTime", column: "businsToTm", label: "영업 종료", kind: "time", maxLength: 4 },
+  {key: "phone", column: "telNo", label: "전화번호", kind: "text", maxLength: 30},
+  {key: "address", column: "zipAddr", label: "주소", kind: "text", maxLength: 255},
+  {key: "detailAddress", column: "detAddr", label: "상세주소", kind: "text", maxLength: 255},
+  {key: "latitude", column: "lat", label: "위도", kind: "coordinate", min: -90, max: 90},
+  {key: "longitude", column: "longi", label: "경도", kind: "coordinate", min: -180, max: 180},
+  {key: "openTime", column: "businsFrTm", label: "영업 시작", kind: "time", maxLength: 4},
+  {key: "closeTime", column: "businsToTm", label: "영업 종료", kind: "time", maxLength: 4},
 ] as const;
 export const stationServices = [
-  { key: "cargo", column: "cargoYn", label: "화물 특화" },
-  { key: "convenience", column: "cvsYn", label: "편의점" },
-  { key: "self", column: "selfYn", label: "셀프 주유" },
-  { key: "lpg", column: "lpgYn", label: "LPG 충전" },
-  { key: "carWash", column: "carWashYn", label: "세차장" },
-  { key: "ev", column: "evYn", label: "전기차 충전" },
+  {key: "cargo", column: "cargoYn", label: "화물 특화"},
+  {key: "convenience", column: "cvsYn", label: "편의점"},
+  {key: "self", column: "selfYn", label: "셀프 주유"},
+  {key: "lpg", column: "lpgYn", label: "LPG 충전"},
+  {key: "carWash", column: "carWashYn", label: "세차장"},
+  {key: "ev", column: "evYn", label: "전기차 충전"},
 ] as const;
 export type StationServiceKey = (typeof stationServices)[number]["key"];
 export type StationScalarKey = (typeof stationFields)[number]["key"];
@@ -56,8 +56,8 @@ export type StationChanges = Partial<Pick<GasStation, StationScalarKey>> & {
 export const stationColumns = [
   "id",
   "siteCd",
-  ...stationFields.map((field) => field.column),
-  ...stationServices.map((field) => field.column),
+  ...stationFields.map(field => field.column),
+  ...stationServices.map(field => field.column),
   "updated_at",
 ];
 export const stationReadOnlyColumns = [
@@ -76,12 +76,12 @@ export const stationReadOnlyColumns = [
   "hyundaiPayYn",
   "tossPayYn",
 ];
-export const selectStationColumns = `SELECT ${stationColumns.map((column) => `\`${column}\``).join(", ")} FROM test_gscargo`;
+export const selectStationColumns = `SELECT ${stationColumns.map(column => `\`${column}\``).join(", ")} FROM test_gscargo`;
 
 export function stationText(value: unknown): string | null {
   if (value instanceof Uint8Array) {
     try {
-      value = new TextDecoder("utf-8", { fatal: true }).decode(value);
+      value = new TextDecoder("utf-8", {fatal: true}).decode(value);
     } catch {
       return null;
     }
@@ -149,17 +149,17 @@ export function normalizeGasStations(rows: Record<string, unknown>[]): Result<Ga
       openTime: stationText(row.businsFrTm),
       closeTime: stationText(row.businsToTm),
       services: Object.fromEntries(
-        stationServices.map(({ key, column }) => {
+        stationServices.map(({key, column}) => {
           const value = stationText(row[column]);
           return [key, value === "Y" ? true : value === "N" ? false : null];
         }),
       ) as GasStation["services"],
     });
   }
-  return { ok: true, value: items };
+  return {ok: true, value: items};
 }
 export function stationHours(station: Pick<GasStation, "openTime" | "closeTime">): string {
-  const { openTime, closeTime } = station;
+  const {openTime, closeTime} = station;
   if (!openTime || !closeTime || !/^\d{4}$/.test(openTime + "") || !/^\d{4}$/.test(closeTime + ""))
     return "영업시간 정보 없음";
   const display = (value: string) => `${value.slice(0, 2)}:${value.slice(2)}`;

@@ -1,10 +1,10 @@
-import type { Result } from "./rest-areas.ts";
+import type {Result} from "./rest-areas.ts";
 
 /** Bound authenticated and anonymous JSON requests before parsing or opening a DB connection. */
 export async function readJsonRequest(request: Request): Promise<Result<unknown>> {
   const fail = (message: string): Result<never> => ({
     ok: false,
-    error: { code: "VALIDATION_ERROR", message },
+    error: {code: "VALIDATION_ERROR", message},
   });
   if (
     request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
@@ -19,7 +19,7 @@ export async function readJsonRequest(request: Request): Promise<Result<unknown>
   let length = 0;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const {done, value} = await reader.read();
       if (done) break;
       length += value.length;
       if (length > limit) {
@@ -36,7 +36,7 @@ export async function readJsonRequest(request: Request): Promise<Result<unknown>
     }
     return {
       ok: true,
-      value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+      value: JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(bytes)),
     };
   } catch {
     return fail("JSON 형식이 올바르지 않습니다.");

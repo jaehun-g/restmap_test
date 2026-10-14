@@ -1,4 +1,4 @@
-import { facilityDefinitions, routeDescription, type RestArea } from "./rest-areas.ts";
+import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
 
 export function createMapCard(
   area: RestArea,
@@ -21,7 +21,7 @@ export function createMapCard(
   close.type = "button";
   close.textContent = "×";
   close.setAttribute("aria-label", "휴게소 요약 닫기");
-  close.addEventListener("click", (event) => {
+  close.addEventListener("click", event => {
     event.stopPropagation();
     onClose();
   });
@@ -64,7 +64,7 @@ export function createMapCard(
   details.className = "map-card-details";
   details.type = "button";
   details.textContent = "상세보기 →";
-  details.addEventListener("click", (event) => {
+  details.addEventListener("click", event => {
     event.stopPropagation();
     onDetails();
   });

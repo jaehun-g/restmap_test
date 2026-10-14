@@ -5,8 +5,8 @@ import {
   type StationScalarKey,
   type StationChanges,
 } from "./gas-stations.ts";
-import { validateStationUpdate, type StationUpdateRequest } from "./gas-station-validation.ts";
-import type { Result } from "./rest-areas.ts";
+import {validateStationUpdate, type StationUpdateRequest} from "./gas-station-validation.ts";
+import type {Result} from "./rest-areas.ts";
 export type StationDraft = {
   values: Record<StationScalarKey, string>;
   services: GasStation["services"];
@@ -14,16 +14,16 @@ export type StationDraft = {
 export function createStationDraft(station: GasStation): StationDraft {
   return {
     values: Object.fromEntries(
-      stationFields.map(({ key }) => [key, station[key] === null ? "" : String(station[key])]),
+      stationFields.map(({key}) => [key, station[key] === null ? "" : String(station[key])]),
     ) as StationDraft["values"],
-    services: { ...station.services },
+    services: {...station.services},
   };
 }
 export function stationDraftDirty(original: GasStation, draft: StationDraft) {
   return (
     stationFields.some(
-      ({ key }) => draft.values[key] !== (original[key] === null ? "" : String(original[key])),
-    ) || stationServices.some(({ key }) => draft.services[key] !== original.services[key])
+      ({key}) => draft.values[key] !== (original[key] === null ? "" : String(original[key])),
+    ) || stationServices.some(({key}) => draft.services[key] !== original.services[key])
   );
 }
 export function stationRequestFromDraft(
@@ -48,9 +48,9 @@ export function stationRequestFromDraft(
   }
   const services = Object.fromEntries(
     stationServices
-      .filter(({ key }) => draft.services[key] !== original.services[key])
-      .map(({ key }) => [key, draft.services[key]]),
+      .filter(({key}) => draft.services[key] !== original.services[key])
+      .map(({key}) => [key, draft.services[key]]),
   );
   if (Object.keys(services).length) changes.services = services;
-  return validateStationUpdate({ changes: changes as StationChanges, expectedRevision: revision });
+  return validateStationUpdate({changes: changes as StationChanges, expectedRevision: revision});
 }

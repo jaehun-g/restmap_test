@@ -1,18 +1,18 @@
 "use client";
-import { useState } from "react";
-import { scalarFields, type ScalarKey } from "@/lib/rest-area-fields";
-import { facilityDefinitions, type RestAreaRecord } from "@/lib/rest-areas";
-import { editorIsDirty, requestFromDraft, type EditorDraft } from "@/lib/rest-area-editor";
+import {useState} from "react";
+import {scalarFields, type ScalarKey} from "@/lib/rest-area-fields";
+import {facilityDefinitions, type RestAreaRecord} from "@/lib/rest-areas";
+import {editorIsDirty, requestFromDraft, type EditorDraft} from "@/lib/rest-area-editor";
 import Icon from "./icon";
 
-const groups: { label: string; fields: ScalarKey[] }[] = [
-  { label: "기본정보", fields: ["name", "phone", "restAreaType"] },
+const groups: {label: string; fields: ScalarKey[]}[] = [
+  {label: "기본정보", fields: ["name", "phone", "restAreaType"]},
   {
     label: "노선정보",
     fields: ["routeName", "routeNumber", "routeDirection", "directionLabel"],
   },
-  { label: "좌표", fields: ["latitude", "longitude"] },
-  { label: "주차", fields: ["parkingCount"] },
+  {label: "좌표", fields: ["latitude", "longitude"]},
+  {label: "주차", fields: ["parkingCount"]},
 ];
 
 export default function RestAreaEditor({
@@ -40,7 +40,7 @@ export default function RestAreaEditor({
   return (
     <form
       className="editor-panel"
-      onKeyDown={(event) => {
+      onKeyDown={event => {
         if (
           event.key === "Enter" &&
           !event.nativeEvent.isComposing &&
@@ -48,7 +48,7 @@ export default function RestAreaEditor({
         )
           event.preventDefault();
       }}
-      onSubmit={async (event) => {
+      onSubmit={async event => {
         event.preventDefault();
         if (saving || !authenticated || !dirty) return;
         setError(null);
@@ -62,7 +62,7 @@ export default function RestAreaEditor({
         try {
           const response = await fetch(`/api/admin/rest-areas/${original.id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify(payload.value),
           });
           const data = await response.json();
@@ -96,12 +96,12 @@ export default function RestAreaEditor({
             유지됩니다.
           </p>
         )}
-        {groups.map((group) => (
+        {groups.map(group => (
           <fieldset key={group.label} disabled={saving}>
             <legend>{group.label}</legend>
             <div className="editor-grid">
-              {group.fields.map((key) => {
-                const field = scalarFields.find((entry) => entry.key === key)!;
+              {group.fields.map(key => {
+                const field = scalarFields.find(entry => entry.key === key)!;
                 const before = original[key] === null ? "" : String(original[key]);
                 const changed = draft.values[key] !== before;
                 return (
@@ -121,7 +121,7 @@ export default function RestAreaEditor({
                     </span>
                     <input
                       value={draft.values[key]}
-                      onChange={(event) =>
+                      onChange={event =>
                         onChange({
                           ...draft,
                           values: {
@@ -175,7 +175,7 @@ export default function RestAreaEditor({
                         ? "present"
                         : "absent"
                   }
-                  onChange={(event) =>
+                  onChange={event =>
                     onChange({
                       ...draft,
                       facilities: {

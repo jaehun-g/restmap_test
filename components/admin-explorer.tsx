@@ -1,19 +1,19 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "next/link";
-import { useRestAreas } from "@/hooks/use-rest-areas";
-import { useSearchQuery } from "@/hooks/use-search-query";
-import { useAdminSession } from "@/hooks/use-admin-session";
-import { useMapFitRequest } from "@/hooks/use-map-fit-request";
+import {useRestAreas} from "@/hooks/use-rest-areas";
+import {useSearchQuery} from "@/hooks/use-search-query";
+import {useAdminSession} from "@/hooks/use-admin-session";
+import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {
   filterRestAreas,
   initialFilters,
   sortRestAreas,
   type RestAreaFilters,
 } from "@/lib/rest-area-filters";
-import type { SortField } from "@/lib/rest-area-fields";
-import { createEditorDraft, editorIsDirty, type EditorDraft } from "@/lib/rest-area-editor";
-import { hasCoordinates, type RestAreaRecord } from "@/lib/rest-areas";
+import type {SortField} from "@/lib/rest-area-fields";
+import {createEditorDraft, editorIsDirty, type EditorDraft} from "@/lib/rest-area-editor";
+import {hasCoordinates, type RestAreaRecord} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import RestAreaEditor from "./rest-area-editor";
@@ -21,10 +21,10 @@ import AdminRestAreaTable from "./admin-rest-area-table";
 import AdminFilterBar from "./admin-filter-bar";
 import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
-import { useGasStations } from "@/hooks/use-gas-stations";
-import { stationQueryString } from "@/lib/gas-station-query";
-import { filterStations, type PlaceView } from "@/lib/map-places";
-import type { GasStationRecord, StationServiceKey } from "@/lib/gas-stations";
+import {useGasStations} from "@/hooks/use-gas-stations";
+import {stationQueryString} from "@/lib/gas-station-query";
+import {filterStations, type PlaceView} from "@/lib/map-places";
+import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
 import GasStationTable from "./gas-station-table";
 import GasStationDetails from "./gas-station-details";
@@ -32,7 +32,7 @@ import GasStationEditor from "./gas-station-editor";
 const noAreas: RestAreaRecord[] = [];
 
 export default function AdminExplorer() {
-  const { data, areas, loading, error, reload, replaceItem } = useRestAreas();
+  const {data, areas, loading, error, reload, replaceItem} = useRestAreas();
   const view = useMapFitRequest();
   const search = useSearchQuery(view.requestFit);
   const auth = useAdminSession();
@@ -42,7 +42,7 @@ export default function AdminExplorer() {
   const gas = useGasStations(
     placeView === "rest"
       ? null
-      : stationQueryString(filters.missingRoute ? null : filters.routeName, { kind: "all" }),
+      : stationQueryString(filters.missingRoute ? null : filters.routeName, {kind: "all"}),
   );
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
@@ -60,9 +60,9 @@ export default function AdminExplorer() {
   const returnFocus = useRef<HTMLElement | null>(null);
   const dirty = (!!editing && editorIsDirty(editing.base, editing.draft)) || stationDirty;
   const anyEditing = !!editing || !!editingStation;
-  const editState = useRef({ dirty, saving });
+  const editState = useRef({dirty, saving});
   useEffect(() => {
-    editState.current = { dirty, saving };
+    editState.current = {dirty, saving};
   }, [dirty, saving]);
   const results = useMemo(
     () => filterRestAreas(areas, filters, search.query),
@@ -72,13 +72,13 @@ export default function AdminExplorer() {
     () => sortRestAreas(results, sortField, direction),
     [results, sortField, direction],
   );
-  const selected = results.find((area) => area.id === selectedId);
+  const selected = results.find(area => area.id === selectedId);
   const stationResults = useMemo(
     () => filterStations(gas.stations, search.query, stationFilters),
     [gas.stations, search.query, stationFilters],
   );
   const visibleAreas = placeView === "station" ? noAreas : results;
-  const selectedStation = stationResults.find((station) => station.id === selectedStationId);
+  const selectedStation = stationResults.find(station => station.id === selectedStationId);
   const mayLeave = useCallback(
     () =>
       !editState.current.saving &&
@@ -108,7 +108,7 @@ export default function AdminExplorer() {
     editState.current.dirty = false;
     setSelectedStationId(null);
     setSelectedId(null);
-    returnFocus.current?.focus({ preventScroll: true });
+    returnFocus.current?.focus({preventScroll: true});
   }, [mayLeave]);
   const details = useCallback((id: number) => select(id), [select]);
   const selectStation = useCallback(
@@ -148,14 +148,14 @@ export default function AdminExplorer() {
   }, [loading, selectedId, selected, editing]);
   useEffect(() => {
     if (selectedId === null && selectedStationId === null) return;
-    detailRef.current?.focus({ preventScroll: true });
+    detailRef.current?.focus({preventScroll: true});
     document
       .getElementById(
         selectedStationId !== null
           ? `station-row-${selectedStationId}`
           : `rest-area-row-${selectedId}`,
       )
-      ?.scrollIntoView({ block: "nearest" });
+      ?.scrollIntoView({block: "nearest"});
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
@@ -176,8 +176,8 @@ export default function AdminExplorer() {
   }, [dirty]);
   const mapped =
     visibleAreas.filter(hasCoordinates).length + stationResults.filter(hasCoordinates).length;
-  const missingRoute = areas.filter((area) => area.routeName === null).length;
-  const unknownLounge = areas.filter((area) => area.facilities.has_truck_lounge === null).length;
+  const missingRoute = areas.filter(area => area.routeName === null).length;
+  const unknownLounge = areas.filter(area => area.facilities.has_truck_lounge === null).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
     setDirection(next);
@@ -269,7 +269,7 @@ export default function AdminExplorer() {
             disabled={anyEditing}
             className={filters.missingRoute ? "active" : ""}
             onClick={() => {
-              setFilters((current) => ({
+              setFilters(current => ({
                 ...current,
                 routeName: null,
                 missingRoute: !current.missingRoute,
@@ -285,7 +285,7 @@ export default function AdminExplorer() {
             disabled={anyEditing}
             className={filters.lounge === "unknown" ? "active" : ""}
             onClick={() => {
-              setFilters((current) => ({
+              setFilters(current => ({
                 ...current,
                 lounge: current.lounge === "unknown" ? "all" : "unknown",
               }));
@@ -300,16 +300,16 @@ export default function AdminExplorer() {
       </section>
       <PlaceControls
         view={placeView}
-        onView={(next) => {
+        onView={next => {
           if (!mayLeave()) return;
           setPlaceView(next);
-          setFilters((current) => ({ ...current, missingRoute: false }));
+          setFilters(current => ({...current, missingRoute: false}));
           setSelectedId(null);
           setSelectedStationId(null);
           view.requestFit();
         }}
         services={stationFilters}
-        onServices={(next) => {
+        onServices={next => {
           setStationFilters(next);
           view.preserveView();
         }}
@@ -420,11 +420,11 @@ export default function AdminExplorer() {
                 key={editingStation.id}
                 original={editingStation}
                 authenticated={auth.authenticated}
-                onDirty={(value) => {
+                onDirty={value => {
                   editState.current.dirty = value;
                   setStationDirty(value);
                 }}
-                onBusy={(value) => {
+                onBusy={value => {
                   editState.current.saving = value;
                   setSaving(value);
                 }}
@@ -438,7 +438,7 @@ export default function AdminExplorer() {
                     editState.current.dirty = false;
                   }
                 }}
-                onSaved={(record) => {
+                onSaved={record => {
                   gas.replaceItem(record);
                   setEditingStation(null);
                   setStationDirty(false);
@@ -452,12 +452,12 @@ export default function AdminExplorer() {
                 key={editing.base.id}
                 original={editing.base}
                 draft={editing.draft}
-                onChange={(draft) => {
+                onChange={draft => {
                   editState.current.dirty = editorIsDirty(editing.base, draft);
-                  setEditing((current) => (current ? { ...current, draft } : current));
+                  setEditing(current => (current ? {...current, draft} : current));
                 }}
                 authenticated={auth.authenticated}
-                onBusy={(busy) => {
+                onBusy={busy => {
                   editState.current.saving = busy;
                   setSaving(busy);
                 }}
@@ -467,7 +467,7 @@ export default function AdminExplorer() {
                 onCancel={() => {
                   if (mayLeave()) setEditing(null);
                 }}
-                onSaved={(record) => {
+                onSaved={record => {
                   replaceItem(record);
                   view.requestFit();
                   setEditing(null);

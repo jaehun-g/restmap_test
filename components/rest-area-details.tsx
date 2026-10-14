@@ -1,9 +1,4 @@
-import {
-  hasCoordinates,
-  type RestArea,
-  visibleFacilities,
-  routeDescription,
-} from "@/lib/rest-areas";
+import {hasCoordinates, type RestArea, visibleFacilities, routeDescription} from "@/lib/rest-areas";
 import Icon from "./icon";
 
 export default function RestAreaDetails({

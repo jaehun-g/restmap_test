@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
-import { stationHours, stationServices, type GasStationRecord } from "@/lib/gas-stations";
-import { hasCoordinates } from "@/lib/rest-areas";
+import {useEffect, useState} from "react";
+import {stationHours, stationServices, type GasStationRecord} from "@/lib/gas-stations";
+import {hasCoordinates} from "@/lib/rest-areas";
 import Icon from "./icon";
 
 export default function GasStationDetails({
@@ -23,8 +23,8 @@ export default function GasStationDetails({
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void globalThis
-        .fetch(`/api/gas-stations/${station.id}`, { cache: "no-store", signal: controller.signal })
-        .then(async (response) => {
+        .fetch(`/api/gas-stations/${station.id}`, {cache: "no-store", signal: controller.signal})
+        .then(async response => {
           const body = await response.json();
           if (!response.ok)
             throw new Error(body.error?.message || "추가 정보를 조회하지 못했습니다.");
@@ -33,7 +33,7 @@ export default function GasStationDetails({
             setError(null);
           }
         })
-        .catch((reason) => {
+        .catch(reason => {
           if (!controller.signal.aborted)
             setError(reason instanceof Error ? reason.message : "추가 정보를 조회하지 못했습니다.");
         });
@@ -93,7 +93,7 @@ export default function GasStationDetails({
           <span>있음 / 없음 / 미확인</span>
         </div>
         <ul className="facility-list">
-          {stationServices.map(({ key, label }) => {
+          {stationServices.map(({key, label}) => {
             const value = station.services[key];
             return (
               <li
@@ -121,10 +121,7 @@ export default function GasStationDetails({
             {error ? (
               <p role="status">
                 {error}{" "}
-                <button
-                  className="button secondary"
-                  onClick={() => setAttempt((value) => value + 1)}
-                >
+                <button className="button secondary" onClick={() => setAttempt(value => value + 1)}>
                   다시 조회
                 </button>
               </p>

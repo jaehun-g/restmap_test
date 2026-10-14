@@ -1,4 +1,4 @@
-import { parseHighwayRoute, type HighwayRoute } from "./highway-routes.ts";
+import {parseHighwayRoute, type HighwayRoute} from "./highway-routes.ts";
 
 export type HighwayRouteState = {
   routeName: string | null;
@@ -6,7 +6,7 @@ export type HighwayRouteState = {
   loading: boolean;
   error: string | null;
 };
-type CacheEntry = { route: HighwayRoute; expiresAt: number };
+type CacheEntry = {route: HighwayRoute; expiresAt: number};
 const routeCache = new Map<string, CacheEntry>();
 const cacheLifetime = 5 * 60 * 1000;
 const initialState: HighwayRouteState = {
@@ -44,7 +44,7 @@ export class HighwayRouteLoader {
 
   private publish(state: HighwayRouteState) {
     this.state = state;
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach(listener => listener());
   }
 
   cancel = () => {
@@ -61,14 +61,14 @@ export class HighwayRouteLoader {
     }
     const cached = this.cache.get(routeName);
     if (!force && cached && cached.expiresAt > this.now()) {
-      this.publish({ routeName, route: cached.route, loading: false, error: null });
+      this.publish({routeName, route: cached.route, loading: false, error: null});
       return;
     }
     this.cache.delete(routeName);
     const controller = new AbortController();
     this.request = controller;
     const sequence = this.sequence;
-    this.publish({ routeName, route: null, loading: true, error: null });
+    this.publish({routeName, route: null, loading: true, error: null});
     void this.load(routeName, controller, sequence);
   };
 
@@ -78,8 +78,8 @@ export class HighwayRouteLoader {
     const current = () => !controller.signal.aborted && sequence === this.sequence;
     try {
       const response = await this.fetcher(
-        `/api/highway-routes?${new URLSearchParams({ routeName })}`,
-        { cache: "no-store", signal: controller.signal },
+        `/api/highway-routes?${new URLSearchParams({routeName})}`,
+        {cache: "no-store", signal: controller.signal},
       );
       const body = await response.json();
       if (!current()) return;
@@ -94,8 +94,8 @@ export class HighwayRouteLoader {
       if (!parsed.ok) throw new Error(parsed.error.message);
       if (parsed.value.routeName !== routeName)
         throw new Error("선택한 노선과 경로 데이터가 일치하지 않습니다.");
-      this.cache.set(routeName, { route: parsed.value, expiresAt: this.now() + cacheLifetime });
-      this.publish({ routeName, route: parsed.value, loading: false, error: null });
+      this.cache.set(routeName, {route: parsed.value, expiresAt: this.now() + cacheLifetime});
+      this.publish({routeName, route: parsed.value, loading: false, error: null});
     } catch (reason) {
       if (!current()) return;
       this.publish({

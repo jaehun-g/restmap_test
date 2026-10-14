@@ -1,12 +1,12 @@
-import type { HighwayRoute } from "./highway-routes.ts";
-import type { KakaoMap, KakaoMaps, KakaoPolyline } from "./kakao-sdk.ts";
+import type {HighwayRoute} from "./highway-routes.ts";
+import type {KakaoMap, KakaoMaps, KakaoPolyline} from "./kakao-sdk.ts";
 
 export function createHighwayRouteLayer(sdk: KakaoMaps, map: KakaoMap) {
   let active: HighwayRoute | null = null;
   let lines: KakaoPolyline[] = [];
   let disposed = false;
   function clear() {
-    lines.forEach((line) => line.setMap(null));
+    lines.forEach(line => line.setMap(null));
     lines = [];
     active = null;
   }
@@ -15,7 +15,7 @@ export function createHighwayRouteLayer(sdk: KakaoMaps, map: KakaoMap) {
       if (disposed || route === active) return;
       clear();
       if (!route) return;
-      const path = route.paths.map((segment) =>
+      const path = route.paths.map(segment =>
         segment.map(([latitude, longitude]) => new sdk.LatLng(latitude, longitude)),
       );
       lines.push(

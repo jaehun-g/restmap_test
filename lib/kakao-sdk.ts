@@ -84,19 +84,19 @@ export interface KakaoMaps {
     styles?: Record<string, string>[];
   }) => KakaoClusterer;
   load(callback: () => void): void;
-  Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap;
+  Map: new (container: HTMLElement, options: {center: KakaoLatLng; level: number}) => KakaoMap;
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
   LatLngBounds: new () => KakaoBounds;
   Size: new (width: number, height: number) => object;
   Point: new (x: number, y: number) => object;
-  MarkerImage: new (source: string, size: object, options?: { offset: object }) => KakaoMarkerImage;
+  MarkerImage: new (source: string, size: object, options?: {offset: object}) => KakaoMarkerImage;
   Marker: new (options: {
     map?: KakaoMap;
     position: KakaoLatLng;
     title: string;
     image: KakaoMarkerImage;
   }) => KakaoMarker;
-  InfoWindow: new (options: { zIndex: number }) => KakaoInfoWindow;
+  InfoWindow: new (options: {zIndex: number}) => KakaoInfoWindow;
   CustomOverlay: new (options: {
     content: HTMLElement | string;
     clickable: boolean;
@@ -139,7 +139,7 @@ export interface KakaoMaps {
 
 declare global {
   interface Window {
-    kakao?: { maps: KakaoMaps };
+    kakao?: {maps: KakaoMaps};
   }
 }
 

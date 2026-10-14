@@ -1,5 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import type { Result } from "./rest-areas.ts";
+import {createHash, randomBytes, timingSafeEqual} from "node:crypto";
+import type {Result} from "./rest-areas.ts";
 
 export const ADMIN_COOKIE = "rest_area_admin";
 export const SESSION_SECONDS = 8 * 60 * 60;
@@ -7,7 +7,7 @@ const WINDOW_MS = 5 * 60 * 1000;
 const digest = (password: string) => createHash("sha256").update(password).digest();
 
 export class AdminSessionStore {
-  private sessions = new Map<string, { expiresAt: number; fingerprint: string }>();
+  private sessions = new Map<string, {expiresAt: number; fingerprint: string}>();
   private failures = 0;
   private windowStart = 0;
   private now: () => number;
@@ -20,10 +20,7 @@ export class AdminSessionStore {
     this.token = token;
   }
 
-  login(
-    input: unknown,
-    password: string | undefined,
-  ): Result<{ token: string; expiresAt: number }> {
+  login(input: unknown, password: string | undefined): Result<{token: string; expiresAt: number}> {
     if (!password)
       return {
         ok: false,
@@ -50,7 +47,7 @@ export class AdminSessionStore {
       this.failures++;
       return {
         ok: false,
-        error: { code: "UNAUTHORIZED", message: "관리자 암호를 확인해주세요." },
+        error: {code: "UNAUTHORIZED", message: "관리자 암호를 확인해주세요."},
       };
     }
     this.failures = 0;
@@ -63,7 +60,7 @@ export class AdminSessionStore {
       expiresAt,
       fingerprint: digest(password).toString("hex"),
     });
-    return { ok: true, value: { token, expiresAt } };
+    return {ok: true, value: {token, expiresAt}};
   }
 
   verify(token: string | null, password: string | undefined): number | null {
@@ -105,8 +102,8 @@ export function sameOrigin(
 export function sessionCookie(header: string | null): string | null {
   const value = header
     ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${ADMIN_COOKIE}=`))
+    .map(part => part.trim())
+    .find(part => part.startsWith(`${ADMIN_COOKIE}=`))
     ?.slice(ADMIN_COOKIE.length + 1);
   if (!value) return null;
   try {

@@ -1,9 +1,9 @@
-import type { Result } from "./rest-areas.ts";
-import { validateHighwayRouteName } from "./highway-routes.ts";
-import { isGeoPoint, type GeoSearchScope } from "./geo-search.ts";
-import { expandedBounds } from "./route-proximity.ts";
+import type {Result} from "./rest-areas.ts";
+import {validateHighwayRouteName} from "./highway-routes.ts";
+import {isGeoPoint, type GeoSearchScope} from "./geo-search.ts";
+import {expandedBounds} from "./route-proximity.ts";
 
-export type GasStationQuery = { routeName: string | null; scope: GeoSearchScope };
+export type GasStationQuery = {routeName: string | null; scope: GeoSearchScope};
 export function stationQueryString(routeName: string | null, scope: GeoSearchScope): string {
   const params = new URLSearchParams();
   if (routeName) params.set("routeName", routeName);
@@ -19,7 +19,7 @@ export function stationQueryString(routeName: string | null, scope: GeoSearchSco
 export function parseStationQuery(params: URLSearchParams): Result<GasStationQuery> {
   const fail = (): Result<never> => ({
     ok: false,
-    error: { code: "VALIDATION_ERROR", message: "주유소 검색 범위가 올바르지 않습니다." },
+    error: {code: "VALIDATION_ERROR", message: "주유소 검색 범위가 올바르지 않습니다."},
   });
   const keys = [
     "routeName",
@@ -31,17 +31,17 @@ export function parseStationQuery(params: URLSearchParams): Result<GasStationQue
     "longitude",
     "radiusMeters",
   ];
-  if ([...params.keys()].some((key) => !keys.includes(key) || params.getAll(key).length !== 1))
+  if ([...params.keys()].some(key => !keys.includes(key) || params.getAll(key).length !== 1))
     return fail();
   if (params.has("routeName")) {
     const name = validateHighwayRouteName(params.get("routeName"));
     if (!name.ok) return name;
-    if ([...params.keys()].some((key) => key !== "routeName")) return fail();
-    return { ok: true, value: { routeName: name.value, scope: { kind: "all" } } };
+    if ([...params.keys()].some(key => key !== "routeName")) return fail();
+    return {ok: true, value: {routeName: name.value, scope: {kind: "all"}}};
   }
   const number = (key: string) => (params.get(key)?.trim() ? Number(params.get(key)) : NaN);
-  if (["south", "west", "north", "east"].some((key) => params.has(key))) {
-    if (["latitude", "longitude", "radiusMeters"].some((key) => params.has(key))) return fail();
+  if (["south", "west", "north", "east"].some(key => params.has(key))) {
+    if (["latitude", "longitude", "radiusMeters"].some(key => params.has(key))) return fail();
     const bounds = {
       south: number("south"),
       west: number("west"),
@@ -49,15 +49,15 @@ export function parseStationQuery(params: URLSearchParams): Result<GasStationQue
       east: number("east"),
     };
     if (
-      !isGeoPoint({ latitude: bounds.south, longitude: bounds.west }) ||
-      !isGeoPoint({ latitude: bounds.north, longitude: bounds.east }) ||
+      !isGeoPoint({latitude: bounds.south, longitude: bounds.west}) ||
+      !isGeoPoint({latitude: bounds.north, longitude: bounds.east}) ||
       bounds.south > bounds.north
     )
       return fail();
-    return { ok: true, value: { routeName: null, scope: { kind: "bounds", bounds } } };
+    return {ok: true, value: {routeName: null, scope: {kind: "bounds", bounds}}};
   }
   if (params.size) {
-    const center = { latitude: number("latitude"), longitude: number("longitude") },
+    const center = {latitude: number("latitude"), longitude: number("longitude")},
       radiusMeters = number("radiusMeters");
     if (
       !isGeoPoint(center) ||
@@ -70,11 +70,11 @@ export function parseStationQuery(params: URLSearchParams): Result<GasStationQue
       ok: true,
       value: {
         routeName: null,
-        scope: { kind: "radius", center, radiusMeters, referenceLevel: null },
+        scope: {kind: "radius", center, radiusMeters, referenceLevel: null},
       },
     };
   }
-  return { ok: true, value: { routeName: null, scope: { kind: "all" } } };
+  return {ok: true, value: {routeName: null, scope: {kind: "all"}}};
 }
 export function stationQueryBounds(scope: GeoSearchScope) {
   return scope.kind === "bounds"

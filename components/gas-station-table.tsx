@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import type { GasStationRecord } from "@/lib/gas-stations";
+import {useEffect, useMemo, useState} from "react";
+import type {GasStationRecord} from "@/lib/gas-stations";
 import QueryState from "./query-state";
 
 export default function GasStationTable({
@@ -19,7 +19,7 @@ export default function GasStationTable({
   onRetry: () => void;
 }) {
   const [page, setPage] = useState(0);
-  const [sort, setSort] = useState<{ key: "name" | "address"; asc: boolean }>({
+  const [sort, setSort] = useState<{key: "name" | "address"; asc: boolean}>({
     key: "name",
     asc: true,
   });
@@ -27,12 +27,12 @@ export default function GasStationTable({
     () =>
       [...rows].sort(
         (a, b) =>
-          (a[sort.key] ?? "").localeCompare(b[sort.key] ?? "", "ko-KR", { numeric: true }) *
+          (a[sort.key] ?? "").localeCompare(b[sort.key] ?? "", "ko-KR", {numeric: true}) *
             (sort.asc ? 1 : -1) || a.id - b.id,
       ),
     [rows, sort],
   );
-  const selectedIndex = sorted.findIndex((station) => station.id === selectedId);
+  const selectedIndex = sorted.findIndex(station => station.id === selectedId);
   useEffect(() => {
     if (selectedIndex < 0) return;
     let active = true;
@@ -46,7 +46,7 @@ export default function GasStationTable({
   const pages = Math.max(1, Math.ceil(sorted.length / 50)),
     current = Math.min(page, pages - 1);
   const sortBy = (key: "name" | "address") => {
-    setSort((value) => ({ key, asc: value.key === key ? !value.asc : true }));
+    setSort(value => ({key, asc: value.key === key ? !value.asc : true}));
     setPage(0);
   };
   return (
