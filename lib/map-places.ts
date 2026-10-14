@@ -9,6 +9,11 @@ export function placeSummary(places: MapPlace[]) {
   const lounge = places.filter((place) => place.kind === "rest" && place.record.facilities.has_truck_lounge === true).length;
   return { total: places.length, rest, station: places.length - rest, lounge };
 }
+const placeRank = (place: MapPlace) => place.kind === "station" ? 2 : place.record.facilities.has_truck_lounge === true ? 0 : 1;
+/** 클러스터 목록용 정렬: 라운지 휴게소 → 일반 휴게소 → 주유소, 같은 그룹은 이름순. 원본은 변경하지 않습니다. */
+export function sortPlacesForList(places: MapPlace[]): MapPlace[] {
+  return [...places].sort((a, b) => placeRank(a) - placeRank(b) || a.record.name.localeCompare(b.record.name, "ko-KR"));
+}
 export function filterStations<T extends GasStation>(stations: T[], query: string, services: (keyof GasStation["services"])[]) {
   const terms = query.trim().toLocaleLowerCase("ko-KR").split(/\s+/).filter(Boolean);
   return stations.filter((station) => {
