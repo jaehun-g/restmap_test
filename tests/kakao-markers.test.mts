@@ -15,7 +15,7 @@ function mockKakao() {
     setMap(map:unknown){if(map===null)state.detached++;}setImage(image:MarkerImage){state.ids.push(image.path);}setZIndex(){}
   }
   class Overlay {setContent(content:unknown){state.content.push(content);}setPosition(){}setMap(map:unknown){if(map)state.shown++;else state.hidden++;} }
-  const sdk={LatLng,LatLngBounds:Bounds,Marker,MarkerImage,Size,Point:class{},CustomOverlay:Overlay,event:{addListener(_target:unknown,name:string,callback:()=>void){if(name==="click")state.clicks.push(callback);if(name==="idle")state.idle.push(callback);},removeListener(){state.removed++;}}} as unknown as KakaoMaps;
+  const sdk={LatLng,LatLngBounds:Bounds,Marker,MarkerImage,Size,Point:class{},CustomOverlay:Overlay,event:{addListener(target:unknown,name:string,callback:()=>void){if(name==="click"&&target instanceof Marker)state.clicks.push(callback);if(name==="idle")state.idle.push(callback);},removeListener(){state.removed++;}}} as unknown as KakaoMaps;
   const map={setBounds(){state.fitted++;},panTo(){state.panned++;},panBy(dx:number,dy:number){state.offsets.push([dx,dy]);},setCenter(){state.centered++;},setLevel(){}} as unknown as KakaoMap;
   return {sdk,map,state};
 }
@@ -52,7 +52,7 @@ test("fit handles multiple markers, a single marker and empty results",()=>{
 });
 test("disposal removes marker listeners, the map idle listener, card contents and all markers",()=>{
   const {sdk,map,state}=mockKakao();const markers=createRestAreaMarkers(sdk,map,areas(),()=>{},label);markers.dispose();
-  assert.equal(state.detached,2);assert.equal(state.removed,3);assert.equal(state.content.at(-1),"");
+  assert.equal(state.detached,2);assert.equal(state.removed,5);assert.equal(state.content.at(-1),"");
 });
 
 test("summary cards fit the viewport width without introducing a height limit or scrolling", (t) => {

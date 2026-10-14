@@ -70,8 +70,7 @@ export default function KakaoMap({
   const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
   const places = useMemo(() => [...areas.map(restPlace), ...stations.map(stationPlace)], [areas, stations]);
   const positionedItems = useMemo(() => places.map((place) => place.record), [places]);
-  const [clusterChoice, setClusterChoice] = useState<{ source: MapPlace[]; items: MapPlace[] } | null>(null);
-  const chooseCluster = useCallback((items: MapPlace[]) => setClusterChoice({ source: places, items }), [places]);
+  const clearSelection = useCallback(() => { onSelect(null); onStationSelect?.(null); }, [onSelect, onStationSelect]);
   const selectPlace = useCallback((place: MapPlace) => {
     if (place.kind === "station") onStationSelect?.(place.record.id);
     else onSelect(place.record.id);
@@ -160,14 +159,14 @@ export default function KakaoMap({
         const bounds = container.current!.getBoundingClientRect();
         return cardViewport ? cardViewport(bounds) : bounds;
       },
-      chooseCluster,
+      clearSelection,
     );
     layer.current = current;
     return () => {
       current.dispose();
       layer.current = null;
     };
-  }, [map, places, selectPlace, card, cardViewport, chooseCluster]);
+  }, [map, places, selectPlace, card, cardViewport, clearSelection]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
@@ -465,7 +464,6 @@ export default function KakaoMap({
           </div>
         </>
       )}
-      {ready && clusterChoice?.source === places && <div className="map-cluster-list" role="dialog" aria-label="겹친 위치의 장소 선택"><div><strong>이 위치의 장소 {clusterChoice.items.length}개</strong><button className="icon-button" aria-label="장소 목록 닫기" onClick={() => setClusterChoice(null)}><Icon name="close" /></button></div><ul>{clusterChoice.items.map((place) => <li key={place.key}><button onClick={() => { selectPlace(place); setClusterChoice(null); }}>{place.record.name}<small>{place.kind === "station" ? "GS 주유소" : "휴게소"}</small></button></li>)}</ul></div>}
     </section>
   );
 }
