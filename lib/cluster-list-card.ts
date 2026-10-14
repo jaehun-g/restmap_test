@@ -1,7 +1,11 @@
 import type { MapPlace } from "./map-places.ts";
 
 const kindLabel = (place: MapPlace) =>
-  place.kind === "station" ? "GS 주유소" : place.record.facilities.has_truck_lounge === true ? "화물차 라운지" : "휴게소";
+  place.kind === "station"
+    ? "GS 주유소"
+    : place.record.facilities.has_truck_lounge === true
+      ? "화물차 라운지"
+      : "휴게소";
 
 /** 클러스터 클릭 시 말풍선으로 띄우는 장소 목록 카드를 만듭니다. */
 export function createClusterListCard(
@@ -21,7 +25,10 @@ export function createClusterListCard(
   close.className = "map-card-close";
   close.textContent = "×";
   close.setAttribute("aria-label", "장소 목록 닫기");
-  close.addEventListener("click", (event) => { event.stopPropagation(); handlers.onClose(); });
+  close.addEventListener("click", (event) => {
+    event.stopPropagation();
+    handlers.onClose();
+  });
   heading.append(title, close);
   const list = document.createElement("ul");
   list.className = "cluster-popover-list";
@@ -34,7 +41,10 @@ export function createClusterListCard(
     const kind = document.createElement("small");
     kind.textContent = kindLabel(place);
     button.append(name, kind);
-    button.addEventListener("click", (event) => { event.stopPropagation(); handlers.onPick(place); });
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handlers.onPick(place);
+    });
     item.append(button);
     list.append(item);
   }
@@ -44,7 +54,10 @@ export function createClusterListCard(
     zoom.type = "button";
     zoom.className = "map-card-details";
     zoom.textContent = "이 영역 확대 →";
-    zoom.addEventListener("click", (event) => { event.stopPropagation(); handlers.onZoom?.(); });
+    zoom.addEventListener("click", (event) => {
+      event.stopPropagation();
+      handlers.onZoom?.();
+    });
     card.append(zoom);
   }
   return card;

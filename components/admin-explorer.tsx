@@ -12,11 +12,7 @@ import {
   type RestAreaFilters,
 } from "@/lib/rest-area-filters";
 import type { SortField } from "@/lib/rest-area-fields";
-import {
-  createEditorDraft,
-  editorIsDirty,
-  type EditorDraft,
-} from "@/lib/rest-area-editor";
+import { createEditorDraft, editorIsDirty, type EditorDraft } from "@/lib/rest-area-editor";
 import { hasCoordinates, type RestAreaRecord } from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
@@ -43,7 +39,11 @@ export default function AdminExplorer() {
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
-  const gas = useGasStations(placeView === "rest" ? null : stationQueryString(filters.missingRoute ? null : filters.routeName, { kind: "all" }));
+  const gas = useGasStations(
+    placeView === "rest"
+      ? null
+      : stationQueryString(filters.missingRoute ? null : filters.routeName, { kind: "all" }),
+  );
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
   const [stationDirty, setStationDirty] = useState(false);
@@ -73,14 +73,16 @@ export default function AdminExplorer() {
     [results, sortField, direction],
   );
   const selected = results.find((area) => area.id === selectedId);
-  const stationResults = useMemo(() => filterStations(gas.stations, search.query, stationFilters), [gas.stations, search.query, stationFilters]);
+  const stationResults = useMemo(
+    () => filterStations(gas.stations, search.query, stationFilters),
+    [gas.stations, search.query, stationFilters],
+  );
   const visibleAreas = placeView === "station" ? noAreas : results;
   const selectedStation = stationResults.find((station) => station.id === selectedStationId);
   const mayLeave = useCallback(
     () =>
       !editState.current.saving &&
-      (!editState.current.dirty ||
-        window.confirm("저장하지 않은 변경사항을 버릴까요?")),
+      (!editState.current.dirty || window.confirm("저장하지 않은 변경사항을 버릴까요?")),
     [],
   );
   const select = useCallback(
@@ -88,11 +90,11 @@ export default function AdminExplorer() {
       if (!mayLeave()) return;
       if (id !== null)
         returnFocus.current =
-          document.activeElement instanceof HTMLElement
-            ? document.activeElement
-            : null;
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setEditing(null);
-      setEditingStation(null); setStationDirty(false); editState.current.dirty = false;
+      setEditingStation(null);
+      setStationDirty(false);
+      editState.current.dirty = false;
       setSelectedStationId(null);
       setSelectedId(id);
     },
@@ -101,24 +103,38 @@ export default function AdminExplorer() {
   const close = useCallback(() => {
     if (!mayLeave()) return;
     setEditing(null);
-    setEditingStation(null); setStationDirty(false); editState.current.dirty = false;
+    setEditingStation(null);
+    setStationDirty(false);
+    editState.current.dirty = false;
     setSelectedStationId(null);
     setSelectedId(null);
     returnFocus.current?.focus({ preventScroll: true });
   }, [mayLeave]);
   const details = useCallback((id: number) => select(id), [select]);
-  const selectStation = useCallback((id: number | null) => {
-    if (!mayLeave()) return;
-    returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setEditing(null); setEditingStation(null); setStationDirty(false); editState.current.dirty = false;
-    setSelectedId(null); setSelectedStationId(id);
-  }, [mayLeave]);
+  const selectStation = useCallback(
+    (id: number | null) => {
+      if (!mayLeave()) return;
+      returnFocus.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setEditing(null);
+      setEditingStation(null);
+      setStationDirty(false);
+      editState.current.dirty = false;
+      setSelectedId(null);
+      setSelectedStationId(id);
+    },
+    [mayLeave],
+  );
   const stationDetails = useCallback((id: number) => selectStation(id), [selectStation]);
   useEffect(() => {
     if (selectedStationId === null || selectedStation || gas.loading || editingStation) return;
     let active = true;
-    queueMicrotask(() => { if (active) setSelectedStationId(null); });
-    return () => { active = false; };
+    queueMicrotask(() => {
+      if (active) setSelectedStationId(null);
+    });
+    return () => {
+      active = false;
+    };
   }, [selectedStationId, selectedStation, gas.loading, editingStation]);
   useEffect(() => {
     if (loading || selectedId === null || selected || editing) return;
@@ -134,7 +150,11 @@ export default function AdminExplorer() {
     if (selectedId === null && selectedStationId === null) return;
     detailRef.current?.focus({ preventScroll: true });
     document
-      .getElementById(selectedStationId !== null ? `station-row-${selectedStationId}` : `rest-area-row-${selectedId}`)
+      .getElementById(
+        selectedStationId !== null
+          ? `station-row-${selectedStationId}`
+          : `rest-area-row-${selectedId}`,
+      )
       ?.scrollIntoView({ block: "nearest" });
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
@@ -154,11 +174,10 @@ export default function AdminExplorer() {
     window.addEventListener("beforeunload", beforeLeave);
     return () => window.removeEventListener("beforeunload", beforeLeave);
   }, [dirty]);
-  const mapped = visibleAreas.filter(hasCoordinates).length + stationResults.filter(hasCoordinates).length;
+  const mapped =
+    visibleAreas.filter(hasCoordinates).length + stationResults.filter(hasCoordinates).length;
   const missingRoute = areas.filter((area) => area.routeName === null).length;
-  const unknownLounge = areas.filter(
-    (area) => area.facilities.has_truck_lounge === null,
-  ).length;
+  const unknownLounge = areas.filter((area) => area.facilities.has_truck_lounge === null).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
     setDirection(next);
@@ -175,13 +194,17 @@ export default function AdminExplorer() {
   const reset = () => {
     search.clear(false);
     setFilters(initialFilters());
-    setStationFilters([]); setPlaceView("all"); setSelectedStationId(null);
+    setStationFilters([]);
+    setPlaceView("all");
+    setSelectedStationId(null);
     view.preserveView();
   };
   const reloadData = () => {
     if (mayLeave()) {
       setEditing(null);
-      setEditingStation(null); setStationDirty(false); editState.current.dirty = false;
+      setEditingStation(null);
+      setStationDirty(false);
+      editState.current.dirty = false;
       setSelectedStationId(null);
       setSelectedId(null);
       void reload();
@@ -200,9 +223,7 @@ export default function AdminExplorer() {
             <h1>휴게소 관리</h1>
             <p>CAFE24 DATA VIEWER</p>
           </div>
-          <span
-            className={`read-only-badge ${auth.authenticated ? "edit-unlocked" : ""}`}
-          >
+          <span className={`read-only-badge ${auth.authenticated ? "edit-unlocked" : ""}`}>
             {auth.authenticated ? "편집 가능" : "조회 전용"}
           </span>
         </div>
@@ -212,7 +233,9 @@ export default function AdminExplorer() {
             onLogout={() => {
               if (mayLeave()) {
                 setEditing(null);
-                setEditingStation(null); setStationDirty(false); editState.current.dirty = false;
+                setEditingStation(null);
+                setStationDirty(false);
+                editState.current.dirty = false;
                 void auth.logout();
               }
             }}
@@ -221,11 +244,7 @@ export default function AdminExplorer() {
             사용자 화면
             <Icon name="arrow" size={16} />
           </Link>
-          <button
-            className="button primary"
-            disabled={loading || saving}
-            onClick={reloadData}
-          >
+          <button className="button primary" disabled={loading || saving} onClick={reloadData}>
             <Icon name="refresh" size={17} />
             다시 조회
           </button>
@@ -279,7 +298,23 @@ export default function AdminExplorer() {
           </button>
         </div>
       </section>
-      <PlaceControls view={placeView} onView={(next) => { if (!mayLeave()) return; setPlaceView(next); setFilters((current) => ({ ...current, missingRoute: false })); setSelectedId(null); setSelectedStationId(null); view.requestFit(); }} services={stationFilters} onServices={(next) => { setStationFilters(next); view.preserveView(); }} disabled={anyEditing} />
+      <PlaceControls
+        view={placeView}
+        onView={(next) => {
+          if (!mayLeave()) return;
+          setPlaceView(next);
+          setFilters((current) => ({ ...current, missingRoute: false }));
+          setSelectedId(null);
+          setSelectedStationId(null);
+          view.requestFit();
+        }}
+        services={stationFilters}
+        onServices={(next) => {
+          setStationFilters(next);
+          view.preserveView();
+        }}
+        disabled={anyEditing}
+      />
       <AdminFilterBar
         areas={areas}
         filters={filters}
@@ -290,7 +325,11 @@ export default function AdminExplorer() {
         includeStations={placeView !== "rest"}
         hideRestFilters={placeView === "station"}
       />
-      {filters.routeName && placeView !== "rest" && <p className="station-route-note compact">GS 주유소는 선택 노선 주변 2km · 직선거리 기준이며 고속도로 소속을 뜻하지 않습니다.</p>}
+      {filters.routeName && placeView !== "rest" && (
+        <p className="station-route-note compact">
+          GS 주유소는 선택 노선 주변 2km · 직선거리 기준이며 고속도로 소속을 뜻하지 않습니다.
+        </p>
+      )}
       {notice && (
         <div className="save-notice" role="status">
           <Icon name="check" size={17} />
@@ -306,23 +345,37 @@ export default function AdminExplorer() {
       )}
       <div className="admin-workspace">
         <section className="admin-table-panel" aria-labelledby="table-heading">
-          {placeView !== "station" && <AdminRestAreaTable
-            rows={sorted}
-            selectedId={selectedId}
-            sortField={sortField}
-            direction={direction}
-            onSort={changeSort}
-            onSelect={select}
-            loading={loading}
-            error={error}
-            hasData={!!areas.length}
-            onRetry={reloadData}
-            onReset={reset}
-          />}
-          {placeView !== "rest" && <GasStationTable rows={stationResults} selectedId={selectedStationId} onSelect={stationDetails} loading={gas.loading} error={gas.error} onRetry={() => { void gas.reload(); }} />}
+          {placeView !== "station" && (
+            <AdminRestAreaTable
+              rows={sorted}
+              selectedId={selectedId}
+              sortField={sortField}
+              direction={direction}
+              onSort={changeSort}
+              onSelect={select}
+              loading={loading}
+              error={error}
+              hasData={!!areas.length}
+              onRetry={reloadData}
+              onReset={reset}
+            />
+          )}
+          {placeView !== "rest" && (
+            <GasStationTable
+              rows={stationResults}
+              selectedId={selectedStationId}
+              onSelect={stationDetails}
+              loading={gas.loading}
+              error={gas.error}
+              onRetry={() => {
+                void gas.reload();
+              }}
+            />
+          )}
           <div className="panel-footer">
             <span>
-              지도 {mapped}개 · 좌표 확인 필요 {visibleAreas.length + stationResults.length - mapped}개
+              지도 {mapped}개 · 좌표 확인 필요{" "}
+              {visibleAreas.length + stationResults.length - mapped}개
             </span>
             {data && (
               <time dateTime={data.fetchedAt}>
@@ -349,7 +402,9 @@ export default function AdminExplorer() {
               onStationDetails={stationDetails}
               stationsLoading={gas.loading}
               stationError={gas.error}
-              onRetryStations={() => { void gas.reload(); }}
+              onRetryStations={() => {
+                void gas.reload();
+              }}
               selectedRouteName={filters.missingRoute ? null : filters.routeName}
               selectedId={selected?.id ?? null}
               onSelect={select}
@@ -359,18 +414,38 @@ export default function AdminExplorer() {
               dataVersion={`${data?.fetchedAt ?? ""}|${gas.data?.fetchedAt ?? ""}`}
             />
           </div>
-          <div
-            className="admin-details"
-            ref={detailRef}
-            tabIndex={selected ? -1 : undefined}
-          >
+          <div className="admin-details" ref={detailRef} tabIndex={selected ? -1 : undefined}>
             {editingStation ? (
-              <GasStationEditor key={editingStation.id} original={editingStation} authenticated={auth.authenticated}
-                onDirty={(value) => { editState.current.dirty = value; setStationDirty(value); }}
-                onBusy={(value) => { editState.current.saving = value; setSaving(value); }}
-                onExpired={() => { void auth.refresh(); }}
-                onCancel={() => { if (mayLeave()) { setEditingStation(null); setStationDirty(false); editState.current.dirty = false; } }}
-                onSaved={(record) => { gas.replaceItem(record); setEditingStation(null); setStationDirty(false); editState.current.dirty = false; setNotice(`${record.name}의 변경사항을 저장했습니다.`); void gas.reload(); }}
+              <GasStationEditor
+                key={editingStation.id}
+                original={editingStation}
+                authenticated={auth.authenticated}
+                onDirty={(value) => {
+                  editState.current.dirty = value;
+                  setStationDirty(value);
+                }}
+                onBusy={(value) => {
+                  editState.current.saving = value;
+                  setSaving(value);
+                }}
+                onExpired={() => {
+                  void auth.refresh();
+                }}
+                onCancel={() => {
+                  if (mayLeave()) {
+                    setEditingStation(null);
+                    setStationDirty(false);
+                    editState.current.dirty = false;
+                  }
+                }}
+                onSaved={(record) => {
+                  gas.replaceItem(record);
+                  setEditingStation(null);
+                  setStationDirty(false);
+                  editState.current.dirty = false;
+                  setNotice(`${record.name}의 변경사항을 저장했습니다.`);
+                  void gas.reload();
+                }}
               />
             ) : editing ? (
               <RestAreaEditor
@@ -379,9 +454,7 @@ export default function AdminExplorer() {
                 draft={editing.draft}
                 onChange={(draft) => {
                   editState.current.dirty = editorIsDirty(editing.base, draft);
-                  setEditing((current) =>
-                    current ? { ...current, draft } : current,
-                  );
+                  setEditing((current) => (current ? { ...current, draft } : current));
                 }}
                 authenticated={auth.authenticated}
                 onBusy={(busy) => {
@@ -399,12 +472,31 @@ export default function AdminExplorer() {
                   view.requestFit();
                   setEditing(null);
                   setNotice(`${record.name}의 변경사항을 저장했습니다.`);
-                  if (!filterRestAreas([record], filters, search.query).length)
-                    setSelectedId(null);
+                  if (!filterRestAreas([record], filters, search.query).length) setSelectedId(null);
                 }}
               />
             ) : selectedStation ? (
-              <><div className="admin-detail-actions"><span>GS 코드 {selectedStation.siteCode}</span><button className="button secondary" disabled={!auth.authenticated} onClick={() => setEditingStation(selectedStation)}>{auth.authenticated ? "정보 수정" : "인증 후 수정 가능"}</button></div><div className="admin-detail-body"><GasStationDetails key={selectedStation.id} station={selectedStation} onClose={close} audience="admin" routeName={filters.routeName} /></div></>
+              <>
+                <div className="admin-detail-actions">
+                  <span>GS 코드 {selectedStation.siteCode}</span>
+                  <button
+                    className="button secondary"
+                    disabled={!auth.authenticated}
+                    onClick={() => setEditingStation(selectedStation)}
+                  >
+                    {auth.authenticated ? "정보 수정" : "인증 후 수정 가능"}
+                  </button>
+                </div>
+                <div className="admin-detail-body">
+                  <GasStationDetails
+                    key={selectedStation.id}
+                    station={selectedStation}
+                    onClose={close}
+                    audience="admin"
+                    routeName={filters.routeName}
+                  />
+                </div>
+              </>
             ) : selected ? (
               <>
                 <div className="admin-detail-actions">

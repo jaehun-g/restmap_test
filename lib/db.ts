@@ -14,7 +14,13 @@ import type { UpdateRequest } from "./rest-area-validation";
 import type { RestAreaRecord } from "./rest-areas";
 import { normalizeHighwayRoute, type HighwayRoute } from "./highway-routes";
 import { hasCoordinates as positioned } from "./rest-areas";
-import { selectStationColumns, stationColumns, stationReadOnlyColumns, type GasStationRecord, type GasStationsResponse } from "./gas-stations";
+import {
+  selectStationColumns,
+  stationColumns,
+  stationReadOnlyColumns,
+  type GasStationRecord,
+  type GasStationsResponse,
+} from "./gas-stations";
 import { stationRecordFromRow } from "./gas-station-revision";
 import { stationQueryBounds, type GasStationQuery } from "./gas-station-query";
 import { compileRouteProximity, expandedBounds, routeStationRadiusMeters } from "./route-proximity";
@@ -65,8 +71,7 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
           ...area,
           revision: rowRevision(rows[index]),
         })),
-        unmappedCount: parsed.value.filter((area) => !hasCoordinates(area))
-          .length,
+        unmappedCount: parsed.value.filter((area) => !hasCoordinates(area)).length,
         fetchedAt: new Date().toISOString(),
       },
     };
@@ -79,14 +84,20 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const [rows] = await pool.value.query<RowDataPacket[]>({
-      sql: `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
+    const [rows] = await pool.value.query<RowDataPacket[]>(
+      {
+        sql: `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
                    path_coordinates
             FROM test_highway_routes WHERE route_name = ? LIMIT 1`,
-      timeout: 10_000,
-    }, [routeName]);
+        timeout: 10_000,
+      },
+      [routeName],
+    );
     if (!rows.length)
-      return { ok: false, error: { code: "NOT_FOUND", message: "선택한 노선의 경로를 찾지 못했습니다." } };
+      return {
+        ok: false,
+        error: { code: "NOT_FOUND", message: "선택한 노선의 경로를 찾지 못했습니다." },
+      };
     return normalizeHighwayRoute(rows[0]);
   } catch (reason) {
     const error = databaseError(reason);
@@ -98,7 +109,9 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
   }
 }
 
-export async function queryGasStations(query: GasStationQuery): Promise<Result<GasStationsResponse>> {
+export async function queryGasStations(
+  query: GasStationQuery,
+): Promise<Result<GasStationsResponse>> {
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
@@ -113,22 +126,36 @@ export async function queryGasStations(query: GasStationQuery): Promise<Result<G
     const values: number[] = [];
     let where = "";
     if (bounds) {
-      const longitude = bounds.west <= bounds.east ? "longi BETWEEN ? AND ?" : "(longi >= ? OR longi <= ?)";
+      const longitude =
+        bounds.west <= bounds.east ? "longi BETWEEN ? AND ?" : "(longi >= ? OR longi <= ?)";
       where = ` WHERE lat BETWEEN ? AND ? AND ${longitude}`;
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
-    const [rows] = await pool.value.query<RowDataPacket[]>({ sql: `${selectStationColumns}${where} ORDER BY siteNm, id`, timeout: 10_000 }, values);
+    const [rows] = await pool.value.query<RowDataPacket[]>(
+      { sql: `${selectStationColumns}${where} ORDER BY siteNm, id`, timeout: 10_000 },
+      values,
+    );
     const records: GasStationRecord[] = [];
     for (const row of rows) {
       const parsed = stationRecordFromRow(row);
       if (!parsed.ok) return parsed;
       records.push(parsed.value);
     }
-    const items = nearRoute ? records.filter((station) => positioned(station) && nearRoute(station)) : filterByGeoScope(records, query.scope, null);
-    return { ok: true, value: { items, unmappedCount: items.filter((station) => !positioned(station)).length, fetchedAt: new Date().toISOString() } };
+    const items = nearRoute
+      ? records.filter((station) => positioned(station) && nearRoute(station))
+      : filterByGeoScope(records, query.scope, null);
+    return {
+      ok: true,
+      value: {
+        items,
+        unmappedCount: items.filter((station) => !positioned(station)).length,
+        fetchedAt: new Date().toISOString(),
+      },
+    };
   } catch (reason) {
     const error = databaseError(reason);
-    if (error.code === "DB_SCHEMA_ERROR") error.message = "주유소 테이블(test_gscargo)을 확인해주세요.";
+    if (error.code === "DB_SCHEMA_ERROR")
+      error.message = "주유소 테이블(test_gscargo)을 확인해주세요.";
     return { ok: false, error };
   }
 }
@@ -137,25 +164,44 @@ export async function queryGasStation(id: number): Promise<Result<GasStationReco
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const columns = [...stationColumns, ...stationReadOnlyColumns].map((column) => `\`${column}\``).join(", ");
-    const [rows] = await pool.value.query<RowDataPacket[]>({ sql: `SELECT ${columns} FROM test_gscargo WHERE id = ? LIMIT 1`, timeout: 10_000 }, [id]);
-    if (!rows.length) return { ok: false, error: { code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다." } };
+    const columns = [...stationColumns, ...stationReadOnlyColumns]
+      .map((column) => `\`${column}\``)
+      .join(", ");
+    const [rows] = await pool.value.query<RowDataPacket[]>(
+      { sql: `SELECT ${columns} FROM test_gscargo WHERE id = ? LIMIT 1`, timeout: 10_000 },
+      [id],
+    );
+    if (!rows.length)
+      return { ok: false, error: { code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다." } };
     return stationRecordFromRow(rows[0], true);
-  } catch (reason) { return { ok: false, error: databaseError(reason) }; }
+  } catch (reason) {
+    return { ok: false, error: databaseError(reason) };
+  }
 }
 
-export async function updateGasStation(id: number, request: StationUpdateRequest): Promise<Result<GasStationRecord>> {
+export async function updateGasStation(
+  id: number,
+  request: StationUpdateRequest,
+): Promise<Result<GasStationRecord>> {
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
     const connection = await pool.value.getConnection();
-    return await saveGasStation({
-      beginTransaction: () => connection.beginTransaction(),
-      query: (sql, values) => connection.query({ sql, timeout: 10_000 }, values),
-      commit: () => connection.commit(), rollback: () => connection.rollback(),
-      release: () => connection.release(), destroy: () => connection.destroy(),
-    }, id, request);
-  } catch (reason) { return { ok: false, error: databaseError(reason, "write") }; }
+    return await saveGasStation(
+      {
+        beginTransaction: () => connection.beginTransaction(),
+        query: (sql, values) => connection.query({ sql, timeout: 10_000 }, values),
+        commit: () => connection.commit(),
+        rollback: () => connection.rollback(),
+        release: () => connection.release(),
+        destroy: () => connection.destroy(),
+      },
+      id,
+      request,
+    );
+  } catch (reason) {
+    return { ok: false, error: databaseError(reason, "write") };
+  }
 }
 
 export async function updateRestArea(
@@ -169,8 +215,7 @@ export async function updateRestArea(
     return await saveRestArea(
       {
         beginTransaction: () => connection.beginTransaction(),
-        query: (sql, values) =>
-          connection.query({ sql, timeout: 10_000 }, values),
+        query: (sql, values) => connection.query({ sql, timeout: 10_000 }, values),
         commit: () => connection.commit(),
         rollback: () => connection.rollback(),
         release: () => connection.release(),

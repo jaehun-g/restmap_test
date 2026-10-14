@@ -1,6 +1,5 @@
 export type Result<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: { code: string; message: string } };
+  { ok: true; value: T } | { ok: false; error: { code: string; message: string } };
 
 export const facilityDefinitions = [
   ["has_truck_lounge", "화물차 라운지"],
@@ -41,15 +40,9 @@ export type RestAreasResponse = {
 
 export type RestAreaRecord = RestArea & { revision: string };
 
-export function visibleFacilities(
-  area: RestArea,
-  audience: "admin" | "mobile",
-) {
+export function visibleFacilities(area: RestArea, audience: "admin" | "mobile") {
   return facilityDefinitions.filter(
-    ([key]) =>
-      audience === "admin" ||
-      key !== "has_truck_lounge" ||
-      area.facilities[key] !== null,
+    ([key]) => audience === "admin" || key !== "has_truck_lounge" || area.facilities[key] !== null,
   );
 }
 
@@ -95,27 +88,18 @@ export function hasCoordinates<T extends { latitude: number | null; longitude: n
 }
 
 /** MariaDB DECIMAL values arrive as strings; NULL coordinates must never become (0, 0). */
-export function normalizeRestAreas(
-  rows: Record<string, unknown>[],
-): Result<RestArea[]> {
+export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<RestArea[]> {
   const items: RestArea[] = [];
   const ids = new Set<number>();
   for (const row of rows) {
     const id = nullableNumber(row.id);
     const name = nullableText(row.name);
-    if (
-      id === null ||
-      !Number.isSafeInteger(id) ||
-      id <= 0 ||
-      !name ||
-      ids.has(id)
-    ) {
+    if (id === null || !Number.isSafeInteger(id) || id <= 0 || !name || ids.has(id)) {
       return {
         ok: false,
         error: {
           code: "INVALID_DATA",
-          message:
-            "휴게소의 ID 또는 이름이 올바르지 않습니다. test_lounge 데이터를 확인해주세요.",
+          message: "휴게소의 ID 또는 이름이 올바르지 않습니다. test_lounge 데이터를 확인해주세요.",
         },
       };
     }
@@ -146,9 +130,7 @@ export function normalizeRestAreas(
       directionLabel: nullableText(row.direction_label),
       restAreaType: nullableText(row.rest_area_type),
       parkingCount:
-        parking !== null && Number.isSafeInteger(parking) && parking >= 0
-          ? parking
-          : null,
+        parking !== null && Number.isSafeInteger(parking) && parking >= 0 ? parking : null,
       facilities: Object.fromEntries(
         facilityDefinitions.map(([key]) => [key, nullableBoolean(row[key])]),
       ) as RestArea["facilities"],

@@ -45,24 +45,15 @@ export function distanceMeters(from: GeoPoint, to: GeoPoint): number {
     Math.cos(radians(from.latitude)) *
       Math.cos(radians(to.latitude)) *
       Math.sin(longitude / 2) ** 2;
-  return (
-    2 *
-    EARTH_RADIUS_METERS *
-    Math.asin(Math.sqrt(Math.min(1, Math.max(0, arc))))
-  );
+  return 2 * EARTH_RADIUS_METERS * Math.asin(Math.sqrt(Math.min(1, Math.max(0, arc))));
 }
 
 export function radiusForLevel(level: number, referenceLevel: number): number {
   return INITIAL_RADIUS_METERS * 2 ** (level - referenceLevel);
 }
 
-export function areaDistance(
-  area: LocatedItem,
-  position: GeoPoint | null,
-): number | null {
-  return position && hasCoordinates(area)
-    ? distanceMeters(position, area)
-    : null;
+export function areaDistance(area: LocatedItem, position: GeoPoint | null): number | null {
+  return position && hasCoordinates(area) ? distanceMeters(position, area) : null;
 }
 
 export function filterByGeoScope<T extends LocatedItem>(
@@ -74,9 +65,7 @@ export function filterByGeoScope<T extends LocatedItem>(
     if (scope.kind === "all") return true;
     if (!hasCoordinates(area)) return false;
     if (scope.kind === "radius")
-      return (
-        distanceMeters(scope.center, area) <= scope.radiusMeters + 0.000001
-      );
+      return distanceMeters(scope.center, area) <= scope.radiusMeters + 0.000001;
     const { south, west, north, east } = scope.bounds;
     return (
       area.latitude >= south &&
@@ -87,9 +76,7 @@ export function filterByGeoScope<T extends LocatedItem>(
     );
   });
   if (!position) return results;
-  const distances = new Map(
-    results.map((area) => [area.id, areaDistance(area, position)]),
-  );
+  const distances = new Map(results.map((area) => [area.id, areaDistance(area, position)]));
   return results.sort((a, b) => {
     const left = distances.get(a.id) ?? Infinity;
     const right = distances.get(b.id) ?? Infinity;

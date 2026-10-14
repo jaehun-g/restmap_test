@@ -1,8 +1,4 @@
-import {
-  facilityDefinitions,
-  type RestArea,
-  type Result,
-} from "./rest-areas.ts";
+import { facilityDefinitions, type RestArea, type Result } from "./rest-areas.ts";
 import { scalarFields, type ScalarKey } from "./rest-area-fields.ts";
 import {
   validateUpdateRequest,
@@ -17,10 +13,7 @@ export type EditorDraft = {
 export function createEditorDraft(area: RestArea): EditorDraft {
   return {
     values: Object.fromEntries(
-      scalarFields.map(({ key }) => [
-        key,
-        area[key] === null ? "" : String(area[key]),
-      ]),
+      scalarFields.map(({ key }) => [key, area[key] === null ? "" : String(area[key])]),
     ) as EditorDraft["values"],
     facilities: { ...area.facilities },
   };
@@ -29,9 +22,7 @@ export function editorIsDirty(area: RestArea, draft: EditorDraft): boolean {
   const initial = createEditorDraft(area);
   return (
     scalarFields.some(({ key }) => initial.values[key] !== draft.values[key]) ||
-    facilityDefinitions.some(
-      ([key]) => area.facilities[key] !== draft.facilities[key],
-    )
+    facilityDefinitions.some(([key]) => area.facilities[key] !== draft.facilities[key])
   );
 }
 export function requestFromDraft(
@@ -45,10 +36,7 @@ export function requestFromDraft(
       .filter(({ key }) => initial.values[key] !== draft.values[key])
       .map(({ key, kind }) => {
         const text = draft.values[key].trim();
-        return [
-          key,
-          kind === "text" ? text || null : text ? Number(text) : null,
-        ];
+        return [key, kind === "text" ? text || null : text ? Number(text) : null];
       }),
   );
   const facilities = Object.fromEntries(

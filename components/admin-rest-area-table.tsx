@@ -1,11 +1,7 @@
 "use client";
 import { useState } from "react";
 import { sortFields, type SortField } from "@/lib/rest-area-fields";
-import {
-  hasCoordinates,
-  type FacilityKey,
-  type RestAreaRecord,
-} from "@/lib/rest-areas";
+import { hasCoordinates, type FacilityKey, type RestAreaRecord } from "@/lib/rest-areas";
 import FacilitySummary from "./facility-summary";
 import QueryState from "./query-state";
 import Icon from "./icon";
@@ -46,13 +42,8 @@ export default function AdminRestAreaTable({
 }) {
   const [allColumns, setAllColumns] = useState(false);
   const columns = allColumns
-    ? [
-        ...sortFields.filter((field) => field.key !== "id"),
-        { key: "id" as const, label: "DB ID" },
-      ]
-    : defaultColumns.map((key) =>
-        sortFields.find((field) => field.key === key)!,
-      );
+    ? [...sortFields.filter((field) => field.key !== "id"), { key: "id" as const, label: "DB ID" }]
+    : defaultColumns.map((key) => sortFields.find((field) => field.key === key)!);
   const cell = (area: RestAreaRecord, key: SortField) => {
     if (key === "name")
       return (
@@ -67,11 +58,7 @@ export default function AdminRestAreaTable({
           >
             {area.name}
           </button>
-          {!allColumns && (
-            <span className="table-meta">
-              {area.phone || "전화번호 미등록"}
-            </span>
-          )}
+          {!allColumns && <span className="table-meta">{area.phone || "전화번호 미등록"}</span>}
         </>
       );
     if (key === "routeName")
@@ -87,9 +74,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           {area.directionLabel ?? "—"}
-          {!allColumns && (
-            <span className="table-meta">{area.routeDirection ?? ""}</span>
-          )}
+          {!allColumns && <span className="table-meta">{area.routeDirection ?? ""}</span>}
         </>
       );
     if (key.startsWith("has_")) {
@@ -108,12 +93,9 @@ export default function AdminRestAreaTable({
         </span>
       );
     }
-    if (key === "latitude" || key === "longitude")
-      return area[key]?.toFixed(7) ?? "—";
+    if (key === "latitude" || key === "longitude") return area[key]?.toFixed(7) ?? "—";
     if (key === "parkingCount")
-      return area.parkingCount === null
-        ? "—"
-        : `${area.parkingCount.toLocaleString("ko-KR")}대`;
+      return area.parkingCount === null ? "—" : `${area.parkingCount.toLocaleString("ko-KR")}대`;
     return area[key as Exclude<SortField, FacilityKey>] ?? "—";
   };
   return (
@@ -135,8 +117,7 @@ export default function AdminRestAreaTable({
             onClick={() => {
               const next = !allColumns;
               setAllColumns(next);
-              if (!next && !defaultColumns.includes(sortField))
-                onSort("name", "asc");
+              if (!next && !defaultColumns.includes(sortField)) onSort("name", "asc");
             }}
           >
             {allColumns ? "기본 컬럼 보기" : "전체 컬럼 보기"}
@@ -157,8 +138,7 @@ export default function AdminRestAreaTable({
         ) : (
           <table className="rest-area-table">
             <caption className="sr-only">
-              휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로
-              정렬합니다.
+              휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
             </caption>
             <thead>
               <tr>
@@ -178,12 +158,7 @@ export default function AdminRestAreaTable({
                   >
                     <button
                       onClick={() =>
-                        onSort(
-                          key,
-                          sortField === key && direction === "asc"
-                            ? "desc"
-                            : "asc",
-                        )
+                        onSort(key, sortField === key && direction === "asc" ? "desc" : "asc")
                       }
                     >
                       {label}

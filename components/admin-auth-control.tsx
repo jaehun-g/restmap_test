@@ -15,11 +15,7 @@ export default function AdminAuthControl({
   return (
     <div className="auth-control">
       {auth.authenticated ? (
-        <button
-          className="button secondary"
-          disabled={auth.loading}
-          onClick={onLogout}
-        >
+        <button className="button secondary" disabled={auth.loading} onClick={onLogout}>
           <Icon name="lock" size={16} />
           편집 잠금
         </button>
@@ -60,8 +56,7 @@ export default function AdminAuthControl({
           </div>
           {!auth.configured ? (
             <p>
-              서버 환경변수 <code>ADMIN_PASSWORD</code>를 설정하고 서버를
-              재시작해주세요.
+              서버 환경변수 <code>ADMIN_PASSWORD</code>를 설정하고 서버를 재시작해주세요.
             </p>
           ) : (
             <>

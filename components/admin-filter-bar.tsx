@@ -63,64 +63,61 @@ export default function AdminFilterBar({
             ))}
           </select>
         </label>
-        {!hideRestFilters && <details className="facility-picker">
-          <summary
-            onClick={(event) => {
-              if (disabled) event.preventDefault();
-            }}
-          >
-            휴게소 편의시설{" "}
-            {filters.facilities.length
-              ? `(${filters.facilities.length})`
-              : "전체"}{" "}
-            ▾
-          </summary>
-          <div className="facility-picker-options">
-            <p>선택한 시설을 모두 포함</p>
-            {selectableFacilities.map(([key, label]) => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  disabled={disabled}
-                  checked={filters.facilities.includes(key)}
-                  onChange={(event) =>
-                    onChange({
-                      ...filters,
-                      facilities: event.target.checked
-                        ? [...filters.facilities, key]
-                        : filters.facilities.filter((value) => value !== key),
-                    })
-                  }
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </details>}
-        {!hideRestFilters && <label className="filter-select">
-          휴게소 라운지
-          <select
-            aria-label="화물차 라운지 필터"
-            value={filters.lounge}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({
-                ...filters,
-                lounge: event.target.value as LoungeFilter,
-              })
-            }
-          >
-            <option value="all">전체</option>
-            <option value="present">있음</option>
-            <option value="absent">없음</option>
-            <option value="unknown">미확인</option>
-          </select>
-        </label>}
-        <button
-          className="button secondary"
-          disabled={disabled}
-          onClick={onReset}
-        >
+        {!hideRestFilters && (
+          <details className="facility-picker">
+            <summary
+              onClick={(event) => {
+                if (disabled) event.preventDefault();
+              }}
+            >
+              휴게소 편의시설{" "}
+              {filters.facilities.length ? `(${filters.facilities.length})` : "전체"} ▾
+            </summary>
+            <div className="facility-picker-options">
+              <p>선택한 시설을 모두 포함</p>
+              {selectableFacilities.map(([key, label]) => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    disabled={disabled}
+                    checked={filters.facilities.includes(key)}
+                    onChange={(event) =>
+                      onChange({
+                        ...filters,
+                        facilities: event.target.checked
+                          ? [...filters.facilities, key]
+                          : filters.facilities.filter((value) => value !== key),
+                      })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </details>
+        )}
+        {!hideRestFilters && (
+          <label className="filter-select">
+            휴게소 라운지
+            <select
+              aria-label="화물차 라운지 필터"
+              value={filters.lounge}
+              disabled={disabled}
+              onChange={(event) =>
+                onChange({
+                  ...filters,
+                  lounge: event.target.value as LoungeFilter,
+                })
+              }
+            >
+              <option value="all">전체</option>
+              <option value="present">있음</option>
+              <option value="absent">없음</option>
+              <option value="unknown">미확인</option>
+            </select>
+          </label>
+        )}
+        <button className="button secondary" disabled={disabled} onClick={onReset}>
           필터 초기화
         </button>
       </div>
@@ -134,9 +131,7 @@ export default function AdminFilterBar({
         {(filters.routeName || filters.missingRoute) && (
           <button
             disabled={disabled}
-            onClick={() =>
-              onChange({ ...filters, routeName: null, missingRoute: false })
-            }
+            onClick={() => onChange({ ...filters, routeName: null, missingRoute: false })}
           >
             {filters.routeName || "노선 미등록"}
             <Icon name="close" size={12} />
@@ -158,10 +153,7 @@ export default function AdminFilterBar({
           </button>
         ))}
         {filters.lounge !== "all" && (
-          <button
-            disabled={disabled}
-            onClick={() => onChange({ ...filters, lounge: "all" })}
-          >
+          <button disabled={disabled} onClick={() => onChange({ ...filters, lounge: "all" })}>
             라운지{" "}
             {filters.lounge === "present"
               ? "있음"
@@ -176,9 +168,7 @@ export default function AdminFilterBar({
           !filters.missingRoute &&
           !filters.facilities.length &&
           filters.lounge === "all" && <span>모든 휴게소 표시</span>}
-        {disabled && (
-          <span>수정 중에는 저장 또는 취소 후 조건을 변경할 수 있습니다.</span>
-        )}
+        {disabled && <span>수정 중에는 저장 또는 취소 후 조건을 변경할 수 있습니다.</span>}
       </div>
     </section>
   );

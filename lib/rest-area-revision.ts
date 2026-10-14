@@ -1,10 +1,6 @@
 import { createHash } from "node:crypto";
 import { databaseColumns } from "./rest-area-fields.ts";
-import {
-  normalizeRestAreas,
-  type Result,
-  type RestAreaRecord,
-} from "./rest-areas.ts";
+import { normalizeRestAreas, type Result, type RestAreaRecord } from "./rest-areas.ts";
 
 export function rowRevision(row: Record<string, unknown>): string {
   const snapshot = databaseColumns.map((key) => {
@@ -19,9 +15,7 @@ export function rowRevision(row: Record<string, unknown>): string {
   return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
 }
 
-export function recordFromRow(
-  row: Record<string, unknown>,
-): Result<RestAreaRecord> {
+export function recordFromRow(row: Record<string, unknown>): Result<RestAreaRecord> {
   const normalized = normalizeRestAreas([row]);
   return normalized.ok
     ? {

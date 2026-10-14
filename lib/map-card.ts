@@ -1,8 +1,4 @@
-import {
-  facilityDefinitions,
-  routeDescription,
-  type RestArea,
-} from "./rest-areas.ts";
+import { facilityDefinitions, routeDescription, type RestArea } from "./rest-areas.ts";
 
 export function createMapCard(
   area: RestArea,
@@ -16,10 +12,7 @@ export function createMapCard(
   const heading = document.createElement("div");
   heading.className = "map-card-heading";
   const icon = document.createElement("img");
-  icon.src =
-    area.facilities.has_truck_lounge === true
-      ? "/marker-lounge.svg"
-      : "/marker.svg";
+  icon.src = area.facilities.has_truck_lounge === true ? "/marker-lounge.svg" : "/marker.svg";
   icon.alt = "";
   const title = document.createElement("strong");
   title.textContent = area.name;
@@ -46,11 +39,7 @@ export function createMapCard(
     const badge = document.createElement("span");
     badge.className = lounge === true ? "lounge-badge" : "map-card-muted";
     badge.textContent =
-      lounge === true
-        ? "화물차 라운지"
-        : lounge === false
-          ? "라운지 없음"
-          : "라운지 미확인";
+      lounge === true ? "화물차 라운지" : lounge === false ? "라운지 없음" : "라운지 미확인";
     card.append(badge);
   }
   const available = facilityDefinitions.filter(

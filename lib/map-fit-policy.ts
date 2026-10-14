@@ -7,15 +7,10 @@ export class MapFitPolicy {
   private initialized = false;
   private pending = false;
 
-  update(
-    source: unknown,
-    request: MapFitRequest | undefined,
-    deferred: boolean,
-  ): boolean {
+  update(source: unknown, request: MapFitRequest | undefined, deferred: boolean): boolean {
     const first = !this.initialized;
     if (first || source !== this.source) this.pending = true;
-    if (!first && request !== this.request && request)
-      this.pending = request.fit;
+    if (!first && request !== this.request && request) this.pending = request.fit;
     this.initialized = true;
     this.source = source;
     this.request = request;

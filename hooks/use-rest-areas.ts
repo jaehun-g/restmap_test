@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  hasCoordinates,
-  type RestAreasResponse,
-  type RestAreaRecord,
-} from "@/lib/rest-areas";
+import { hasCoordinates, type RestAreasResponse, type RestAreaRecord } from "@/lib/rest-areas";
 
 const emptyAreas: RestAreasResponse["items"] = [];
 
@@ -29,18 +25,12 @@ export function useRestAreas() {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(
-          result.error?.message || "휴게소를 조회하지 못했습니다.",
-        );
+        throw new Error(result.error?.message || "휴게소를 조회하지 못했습니다.");
       }
       if (!controller.signal.aborted) setData(result as RestAreasResponse);
     } catch (reason) {
       if (!controller.signal.aborted) {
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "휴게소를 조회하지 못했습니다.",
-        );
+        setError(reason instanceof Error ? reason.message : "휴게소를 조회하지 못했습니다.");
       }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
@@ -61,9 +51,7 @@ export function useRestAreas() {
   const replaceItem = useCallback((item: RestAreaRecord) => {
     setData((current) => {
       if (!current) return current;
-      const items = current.items.map((area) =>
-        area.id === item.id ? item : area,
-      );
+      const items = current.items.map((area) => (area.id === item.id ? item : area));
       return {
         ...current,
         items,

@@ -8,17 +8,8 @@ import { stationQueryString } from "@/lib/gas-station-query";
 import { stationHours, type StationServiceKey } from "@/lib/gas-stations";
 import { filterStations, restPlace, stationPlace, type PlaceView } from "@/lib/map-places";
 import { filterMobileRestAreas, initialFilters } from "@/lib/rest-area-filters";
-import {
-  areaDistance,
-  filterByGeoScope,
-  formatDistance,
-  scopeLabel,
-} from "@/lib/geo-search";
-import {
-  facilityDefinitions,
-  hasCoordinates,
-  routeDescription,
-} from "@/lib/rest-areas";
+import { areaDistance, filterByGeoScope, formatDistance, scopeLabel } from "@/lib/geo-search";
+import { facilityDefinitions, hasCoordinates, routeDescription } from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import QueryState from "./query-state";
@@ -37,7 +28,9 @@ export default function MobileExplorer() {
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
-  const gas = useGasStations(placeView === "rest" ? null : stationQueryString(filters.routeName, location.scope));
+  const gas = useGasStations(
+    placeView === "rest" ? null : stationQueryString(filters.routeName, location.scope),
+  );
   const [panel, setPanel] = useState<Panel>("collapsed");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
@@ -71,38 +64,38 @@ export default function MobileExplorer() {
       canvas.bottom,
       (sheetRef.current?.getBoundingClientRect().top ?? canvas.bottom) - 10,
     );
-    return new DOMRect(
-      canvas.left,
-      top,
-      canvas.width,
-      Math.max(0, bottom - top),
-    );
+    return new DOMRect(canvas.left, top, canvas.width, Math.max(0, bottom - top));
   }, []);
   const results = useMemo(
-    () =>
-      filterMobileRestAreas(
-        areas,
-        filters,
-        search.query,
-        location.scope,
-        location.position,
-      ),
+    () => filterMobileRestAreas(areas, filters, search.query, location.scope, location.position),
     [areas, filters, search.query, location.scope, location.position],
   );
-  const stationResults = useMemo(() => filterByGeoScope(filterStations(gas.stations, search.query, stationFilters), { kind: "all" }, location.position), [gas.stations, search.query, stationFilters, location.position]);
+  const stationResults = useMemo(
+    () =>
+      filterByGeoScope(
+        filterStations(gas.stations, search.query, stationFilters),
+        { kind: "all" },
+        location.position,
+      ),
+    [gas.stations, search.query, stationFilters, location.position],
+  );
   const visibleAreas = placeView === "station" ? noAreas : results;
   const listPlaces = useMemo(() => {
     const places = [...visibleAreas.map(restPlace), ...stationResults.map(stationPlace)];
-    if (location.position) places.sort((left, right) => {
-      const a = areaDistance(left.record, location.position) ?? Infinity, b = areaDistance(right.record, location.position) ?? Infinity;
-      return a === b ? left.key.localeCompare(right.key) : a - b;
-    });
+    if (location.position)
+      places.sort((left, right) => {
+        const a = areaDistance(left.record, location.position) ?? Infinity,
+          b = areaDistance(right.record, location.position) ?? Infinity;
+        return a === b ? left.key.localeCompare(right.key) : a - b;
+      });
     return places;
   }, [visibleAreas, stationResults, location.position]);
   const selected = visibleAreas.find((area) => area.id === selectedId);
   const selectedStation = stationResults.find((station) => station.id === selectedStationId);
   const effectivePanel =
-    panel === "detail" && !selected && !selectedStation && !loading && !gas.loading ? "list" : panel;
+    panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
+      ? "list"
+      : panel;
   const expanded = effectivePanel !== "collapsed";
   const mapped = listPlaces.filter((place) => hasCoordinates(place.record)).length;
   const resultCount = listPlaces.length;
@@ -110,7 +103,9 @@ export default function MobileExplorer() {
     search.input ||
     filters.routeName ||
     filters.facilities.length ||
-    filters.lounge !== "all" || stationFilters.length || placeView !== "all",
+    filters.lounge !== "all" ||
+    stationFilters.length ||
+    placeView !== "all",
   );
   const select = useCallback((id: number | null) => {
     setSelectedStationId(null);
@@ -127,13 +122,25 @@ export default function MobileExplorer() {
     setSelectedId(null);
     setSelectedStationId(null);
   }, []);
-  const selectStation = useCallback((id: number | null) => { setSelectedId(null); setSelectedStationId(id); setPanel("collapsed"); }, []);
-  const stationDetails = useCallback((id: number) => { setSelectedId(null); setSelectedStationId(id); setPanel("detail"); }, []);
+  const selectStation = useCallback((id: number | null) => {
+    setSelectedId(null);
+    setSelectedStationId(id);
+    setPanel("collapsed");
+  }, []);
+  const stationDetails = useCallback((id: number) => {
+    setSelectedId(null);
+    setSelectedStationId(id);
+    setPanel("detail");
+  }, []);
   useEffect(() => {
     if (selectedStationId === null || selectedStation || gas.loading) return;
     let active = true;
-    queueMicrotask(() => { if (active) setSelectedStationId(null); });
-    return () => { active = false; };
+    queueMicrotask(() => {
+      if (active) setSelectedStationId(null);
+    });
+    return () => {
+      active = false;
+    };
   }, [selectedStationId, selectedStation, gas.loading]);
   useEffect(() => {
     if (loading || selectedId === null || selected) return;
@@ -151,10 +158,9 @@ export default function MobileExplorer() {
   useEffect(() => {
     if (!expanded) {
       if (wasOpen.current)
-        (returnFocus.current?.isConnected
-          ? returnFocus.current
-          : summaryRef.current
-        )?.focus({ preventScroll: true });
+        (returnFocus.current?.isConnected ? returnFocus.current : summaryRef.current)?.focus({
+          preventScroll: true,
+        });
       wasOpen.current = false;
       return;
     }
@@ -202,7 +208,17 @@ export default function MobileExplorer() {
           </span>
         </div>
         <SearchBox search={search} includeStations={placeView !== "rest"} />
-        <PlaceControls view={placeView} onView={(next) => { setPlaceView(next); setSelectedId(null); setSelectedStationId(null); setPanel("collapsed"); }} services={stationFilters} onServices={setStationFilters} />
+        <PlaceControls
+          view={placeView}
+          onView={(next) => {
+            setPlaceView(next);
+            setSelectedId(null);
+            setSelectedStationId(null);
+            setPanel("collapsed");
+          }}
+          services={stationFilters}
+          onServices={setStationFilters}
+        />
         <div className="mobile-filters">
           <button
             className={`filter-chip ${filters.routeName ? "active" : ""}`}
@@ -211,45 +227,39 @@ export default function MobileExplorer() {
             disabled={loading}
           >
             <span>{filters.routeName || "전체 노선"}</span>
-            <Icon
-              name="chevronUp"
-              size={13}
-              style={{ transform: "rotate(180deg)" }}
-            />
+            <Icon name="chevronUp" size={13} style={{ transform: "rotate(180deg)" }} />
           </button>
-          {placeView !== "station" && <button
-            className={`filter-chip ${filters.facilities.length ? "active" : ""}`}
-            onClick={(event) => open("facilities", event.currentTarget)}
-            aria-expanded={panel === "facilities"}
-          >
-            휴게소 편의시설
-            {filters.facilities.length > 0 && (
-              <b>{filters.facilities.length}</b>
-            )}
-            <Icon
-              name="chevronUp"
-              size={13}
-              style={{ transform: "rotate(180deg)" }}
-            />
-          </button>}
-          {placeView !== "station" && <button
-            className={`filter-chip lounge-toggle ${filters.lounge === "present" ? "on" : ""}`}
-            aria-pressed={filters.lounge === "present"}
-            aria-label={
-              filters.lounge === "present"
-                ? "라운지 ON: 라운지 있는 휴게소만 표시"
-                : "라운지 OFF: 전체 휴게소 표시"
-            }
-            onClick={() => {
-              setFilters((current) => ({
-                ...current,
-                lounge: current.lounge === "present" ? "all" : "present",
-              }));
-            }}
-          >
-            <Icon name="truck" size={14} />
-            라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
-          </button>}
+          {placeView !== "station" && (
+            <button
+              className={`filter-chip ${filters.facilities.length ? "active" : ""}`}
+              onClick={(event) => open("facilities", event.currentTarget)}
+              aria-expanded={panel === "facilities"}
+            >
+              휴게소 편의시설
+              {filters.facilities.length > 0 && <b>{filters.facilities.length}</b>}
+              <Icon name="chevronUp" size={13} style={{ transform: "rotate(180deg)" }} />
+            </button>
+          )}
+          {placeView !== "station" && (
+            <button
+              className={`filter-chip lounge-toggle ${filters.lounge === "present" ? "on" : ""}`}
+              aria-pressed={filters.lounge === "present"}
+              aria-label={
+                filters.lounge === "present"
+                  ? "라운지 ON: 라운지 있는 휴게소만 표시"
+                  : "라운지 OFF: 전체 휴게소 표시"
+              }
+              onClick={() => {
+                setFilters((current) => ({
+                  ...current,
+                  lounge: current.lounge === "present" ? "all" : "present",
+                }));
+              }}
+            >
+              <Icon name="truck" size={14} />
+              라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
+            </button>
+          )}
         </div>
         {filtered && (
           <div className="mobile-result-info">
@@ -257,7 +267,9 @@ export default function MobileExplorer() {
             <button onClick={reset}>조건 초기화</button>
           </div>
         )}
-        {filters.routeName && placeView !== "rest" && <p className="station-route-note compact">주유소는 선택 노선 주변 2km · 직선거리 기준</p>}
+        {filters.routeName && placeView !== "rest" && (
+          <p className="station-route-note compact">주유소는 선택 노선 주변 2km · 직선거리 기준</p>
+        )}
       </header>
       <div className="mobile-content">
         <div className="mobile-map">
@@ -269,7 +281,9 @@ export default function MobileExplorer() {
             onStationDetails={stationDetails}
             stationsLoading={gas.loading}
             stationError={gas.error}
-            onRetryStations={() => { void gas.reload(); }}
+            onRetryStations={() => {
+              void gas.reload();
+            }}
             selectedRouteName={filters.routeName}
             onClearRoute={clearRoute}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
@@ -329,8 +343,7 @@ export default function MobileExplorer() {
             </button>
           ) : (
             <div ref={panelRef} className="sheet-content" tabIndex={-1}>
-              {effectivePanel === "routes" ||
-              effectivePanel === "facilities" ? (
+              {effectivePanel === "routes" || effectivePanel === "facilities" ? (
                 <MobileFilterSheet
                   key={effectivePanel}
                   kind={effectivePanel}
@@ -342,7 +355,12 @@ export default function MobileExplorer() {
                   onClose={collapse}
                 />
               ) : effectivePanel === "detail" && selectedStation ? (
-                <GasStationDetails key={selectedStation.id} station={selectedStation} onClose={collapse} routeName={filters.routeName} />
+                <GasStationDetails
+                  key={selectedStation.id}
+                  station={selectedStation}
+                  onClose={collapse}
+                  routeName={filters.routeName}
+                />
               ) : effectivePanel === "detail" && selected ? (
                 <>
                   <button
@@ -352,18 +370,10 @@ export default function MobileExplorer() {
                       setPanel("list");
                     }}
                   >
-                    <Icon
-                      name="arrow"
-                      size={16}
-                      style={{ transform: "rotate(180deg)" }}
-                    />
+                    <Icon name="arrow" size={16} style={{ transform: "rotate(180deg)" }} />
                     휴게소 목록
                   </button>
-                  <RestAreaDetails
-                    area={selected}
-                    onClose={collapse}
-                    audience="mobile"
-                  />
+                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" />
                 </>
               ) : (
                 <>
@@ -415,17 +425,41 @@ export default function MobileExplorer() {
                           if (place.kind === "station") {
                             const station = place.record;
                             const distance = areaDistance(station, location.position);
-                            return <li key={place.key}><button className="mobile-area-card" onClick={() => stationDetails(station.id)} aria-label={`${station.name} 주유소 상세정보 보기`}><span className="list-pin is-station"><Icon name="pin" size={19} /></span><span className="mobile-area-info"><strong><span className="mobile-area-name">{station.name}</span>{distance !== null && <small className="mobile-area-distance">{formatDistance(distance)}</small>}<Icon name="chevron" size={16} /></strong><span>GS 주유·충전소{station.services.cargo ? " · 화물 특화" : ""}</span><span>{station.address || stationHours(station)}</span></span></button></li>;
+                            return (
+                              <li key={place.key}>
+                                <button
+                                  className="mobile-area-card"
+                                  onClick={() => stationDetails(station.id)}
+                                  aria-label={`${station.name} 주유소 상세정보 보기`}
+                                >
+                                  <span className="list-pin is-station">
+                                    <Icon name="pin" size={19} />
+                                  </span>
+                                  <span className="mobile-area-info">
+                                    <strong>
+                                      <span className="mobile-area-name">{station.name}</span>
+                                      {distance !== null && (
+                                        <small className="mobile-area-distance">
+                                          {formatDistance(distance)}
+                                        </small>
+                                      )}
+                                      <Icon name="chevron" size={16} />
+                                    </strong>
+                                    <span>
+                                      GS 주유·충전소{station.services.cargo ? " · 화물 특화" : ""}
+                                    </span>
+                                    <span>{station.address || stationHours(station)}</span>
+                                  </span>
+                                </button>
+                              </li>
+                            );
                           }
                           const area = place.record;
                           const available = facilityDefinitions.filter(
                             ([key]) => area.facilities[key] === true,
                           );
                           const route = routeDescription(area, "mobile");
-                          const distance = areaDistance(
-                            area,
-                            location.position,
-                          );
+                          const distance = areaDistance(area, location.position);
                           return (
                             <li key={place.key}>
                               <button
@@ -438,18 +472,14 @@ export default function MobileExplorer() {
                                 >
                                   <Icon
                                     name={
-                                      area.facilities.has_truck_lounge === true
-                                        ? "truck"
-                                        : "pin"
+                                      area.facilities.has_truck_lounge === true ? "truck" : "pin"
                                     }
                                     size={19}
                                   />
                                 </span>
                                 <span className="mobile-area-info">
                                   <strong>
-                                    <span className="mobile-area-name">
-                                      {area.name}
-                                    </span>
+                                    <span className="mobile-area-name">{area.name}</span>
                                     {distance !== null && (
                                       <small
                                         className="mobile-area-distance"
@@ -462,14 +492,10 @@ export default function MobileExplorer() {
                                   </strong>
                                   {route && <span>{route}</span>}
                                   <span className="facility-tags">
-                                    {available
-                                      .slice(0, 3)
-                                      .map(([key, label]) => (
-                                        <span key={key}>{label}</span>
-                                      ))}
-                                    {available.length > 3 && (
-                                      <span>+{available.length - 3}</span>
-                                    )}
+                                    {available.slice(0, 3).map(([key, label]) => (
+                                      <span key={key}>{label}</span>
+                                    ))}
+                                    {available.length > 3 && <span>+{available.length - 3}</span>}
                                   </span>
                                 </span>
                               </button>

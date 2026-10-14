@@ -1,10 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import {
-  routeOptions,
-  selectableFacilities,
-  type RestAreaFilters,
-} from "@/lib/rest-area-filters";
+import { routeOptions, selectableFacilities, type RestAreaFilters } from "@/lib/rest-area-filters";
 import type { RestArea } from "@/lib/rest-areas";
 import Icon from "./icon";
 
@@ -24,9 +20,7 @@ export default function MobileFilterSheet({
   const [routeQuery, setRouteQuery] = useState("");
   const options = useMemo(() => routeOptions(areas), [areas]);
   const found = options.filter(({ name }) =>
-    name
-      .toLocaleLowerCase("ko-KR")
-      .includes(routeQuery.trim().toLocaleLowerCase("ko-KR")),
+    name.toLocaleLowerCase("ko-KR").includes(routeQuery.trim().toLocaleLowerCase("ko-KR")),
   );
   return (
     <>
@@ -39,11 +33,7 @@ export default function MobileFilterSheet({
               : "선택한 시설을 모두 갖춘 휴게소를 보여드려요."}
           </p>
         </div>
-        <button
-          className="icon-button"
-          aria-label="필터 선택창 닫기"
-          onClick={onClose}
-        >
+        <button className="icon-button" aria-label="필터 선택창 닫기" onClick={onClose}>
           <Icon name="close" />
         </button>
       </div>
@@ -77,9 +67,7 @@ export default function MobileFilterSheet({
                   }}
                 >
                   <span>전체 노선</span>
-                  {filters.routeName === null && (
-                    <Icon name="check" size={18} />
-                  )}
+                  {filters.routeName === null && <Icon name="check" size={18} />}
                 </button>
               </li>
               {found.map(({ name, count }) => (
@@ -100,9 +88,7 @@ export default function MobileFilterSheet({
                       {name}
                       <small>{count}개 · 전체 데이터 기준</small>
                     </span>
-                    {filters.routeName === name && (
-                      <Icon name="check" size={18} />
-                    )}
+                    {filters.routeName === name && <Icon name="check" size={18} />}
                   </button>
                 </li>
               ))}
@@ -126,10 +112,7 @@ export default function MobileFilterSheet({
           <div className="filter-sheet-scroll">
             <div className="facility-checkboxes">
               {selectableFacilities.map(([key, label]) => (
-                <label
-                  key={key}
-                  className={filters.facilities.includes(key) ? "selected" : ""}
-                >
+                <label key={key} className={filters.facilities.includes(key) ? "selected" : ""}>
                   <input
                     type="checkbox"
                     checked={filters.facilities.includes(key)}

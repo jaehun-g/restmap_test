@@ -9,11 +9,9 @@ import {
   type LocationCameraRequest,
 } from "./geo-search.ts";
 
-export type LocationErrorCode =
-  "INSECURE" | "UNSUPPORTED" | "DENIED" | "TIMEOUT" | "UNAVAILABLE";
+export type LocationErrorCode = "INSECURE" | "UNSUPPORTED" | "DENIED" | "TIMEOUT" | "UNAVAILABLE";
 type LocationError = { code: LocationErrorCode; message: string };
-type LocationResult =
-  { ok: true; value: GeoPoint } | { ok: false; error: LocationError };
+type LocationResult = { ok: true; value: GeoPoint } | { ok: false; error: LocationError };
 export type LocationState = {
   position: GeoPoint | null;
   scope: GeoSearchScope;
@@ -27,8 +25,7 @@ export type LocationState = {
 const messages: Record<LocationErrorCode, string> = {
   INSECURE:
     "현재 위치는 HTTPS 또는 localhost에서 사용할 수 있어요. 지도를 이동해 지도 내 재검색을 이용해주세요.",
-  UNSUPPORTED:
-    "이 브라우저는 현재 위치를 지원하지 않아요. 지도 내 재검색을 이용해주세요.",
+  UNSUPPORTED: "이 브라우저는 현재 위치를 지원하지 않아요. 지도 내 재검색을 이용해주세요.",
   DENIED:
     "위치 권한이 꺼져 있어요. 브라우저 설정에서 위치를 허용하거나 지도 내 재검색을 이용해주세요.",
   TIMEOUT: "위치 확인 시간이 초과됐어요. 내 위치 버튼으로 다시 시도해주세요.",
@@ -59,19 +56,11 @@ export function readCurrentPosition(environment: {
             latitude: result.coords.latitude,
             longitude: result.coords.longitude,
           };
-          resolve(
-            isGeoPoint(value) ? { ok: true, value } : failure("UNAVAILABLE"),
-          );
+          resolve(isGeoPoint(value) ? { ok: true, value } : failure("UNAVAILABLE"));
         },
         (error) =>
           resolve(
-            failure(
-              error.code === 1
-                ? "DENIED"
-                : error.code === 3
-                  ? "TIMEOUT"
-                  : "UNAVAILABLE",
-            ),
+            failure(error.code === 1 ? "DENIED" : error.code === 3 ? "TIMEOUT" : "UNAVAILABLE"),
           ),
         locationOptions,
       );
@@ -161,10 +150,7 @@ export class MobileLocationController {
     if (this.state.requesting) this.update({ requesting: false });
   }
   cameraReady = (sequence: number, level: number) => {
-    if (
-      this.state.cameraRequest?.sequence !== sequence ||
-      this.state.scope.kind !== "radius"
-    )
+    if (this.state.cameraRequest?.sequence !== sequence || this.state.scope.kind !== "radius")
       return;
     this.radiusReady(level);
   };
@@ -183,8 +169,7 @@ export class MobileLocationController {
     const radius = this.state.locationRadius;
     if (!radius || radius.referenceLevel === null) return;
     const radiusMeters = radiusForLevel(level, radius.referenceLevel);
-    if (radiusMeters !== radius.radiusMeters)
-      this.updateRadius({ ...radius, radiusMeters });
+    if (radiusMeters !== radius.radiusMeters) this.updateRadius({ ...radius, radiusMeters });
   };
   mapMoved = () => {
     if (!this.state.researchAvailable) this.update({ researchAvailable: true });

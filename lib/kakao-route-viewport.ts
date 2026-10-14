@@ -34,15 +34,11 @@ export function createHighwayRouteViewport(sdk: KakaoMaps, map: KakaoMap) {
         bounds.extend(new sdk.LatLng(north, east));
         fittedRoute = true;
       }
-      positioned.forEach((area) =>
-        bounds.extend(new sdk.LatLng(area.latitude, area.longitude)),
-      );
+      positioned.forEach((area) => bounds.extend(new sdk.LatLng(area.latitude, area.longitude)));
       fittedResults = true;
       move(() => {
         if (!selectedRoute && positioned.length === 1) {
-          map.setCenter(
-            new sdk.LatLng(positioned[0].latitude, positioned[0].longitude),
-          );
+          map.setCenter(new sdk.LatLng(positioned[0].latitude, positioned[0].longitude));
           map.setLevel(6);
         } else map.setBounds(bounds, 65, 45, 65, 45);
       });

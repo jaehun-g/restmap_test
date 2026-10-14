@@ -24,11 +24,7 @@ export default function RestAreaDetails({
           <span className="eyebrow">휴게소 상세정보</span>
           <h2 id="detail-title">{area.name}</h2>
         </div>
-        <button
-          className="icon-button"
-          onClick={onClose}
-          aria-label="상세정보 닫기"
-        >
+        <button className="icon-button" onClick={onClose} aria-label="상세정보 닫기">
           <Icon name="close" />
         </button>
       </div>
@@ -85,20 +81,12 @@ export default function RestAreaDetails({
               <li
                 key={key}
                 className={
-                  value === true
-                    ? "available"
-                    : value === false
-                      ? "unavailable"
-                      : "unknown"
+                  value === true ? "available" : value === false ? "unavailable" : "unknown"
                 }
               >
                 <span>{label}</span>
                 <span className="facility-state">
-                  {value === true
-                    ? "있음"
-                    : value === false
-                      ? "없음"
-                      : "미확인"}
+                  {value === true ? "있음" : value === false ? "없음" : "미확인"}
                 </span>
               </li>
             );

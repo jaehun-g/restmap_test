@@ -1,14 +1,9 @@
 import { facilityDefinitions, type RestArea } from "@/lib/rest-areas";
 
 export default function FacilitySummary({ area }: { area: RestArea }) {
-  const available = facilityDefinitions.filter(
-    ([key]) => area.facilities[key] === true,
-  );
+  const available = facilityDefinitions.filter(([key]) => area.facilities[key] === true);
   return (
-    <details
-      className="facility-summary"
-      onClick={(event) => event.stopPropagation()}
-    >
+    <details className="facility-summary" onClick={(event) => event.stopPropagation()}>
       <summary aria-label={`${area.name} 전체 편의시설 확인`}>
         <span className="facility-tags">
           {available.slice(0, 3).map(([key, label]) => (
@@ -21,10 +16,7 @@ export default function FacilitySummary({ area }: { area: RestArea }) {
       </summary>
       <ul className="facility-list">
         {facilityDefinitions.map(([key, label]) => (
-          <li
-            key={key}
-            className={area.facilities[key] === true ? "available" : "unknown"}
-          >
+          <li key={key} className={area.facilities[key] === true ? "available" : "unknown"}>
             <span>{label}</span>
             <span className="facility-state">
               {area.facilities[key] === true

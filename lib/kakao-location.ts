@@ -62,8 +62,7 @@ export function createLocationMapLayer(
   let pendingMove = false;
   let routeMode = false;
   const dot = new sdk.CustomOverlay({
-    content:
-      '<span class="current-location-dot" role="img" aria-label="내 현재 위치"></span>',
+    content: '<span class="current-location-dot" role="img" aria-label="내 현재 위치"></span>',
     clickable: false,
     xAnchor: 0.5,
     yAnchor: 0.5,
@@ -164,13 +163,10 @@ export function createLocationMapLayer(
           memory.initialFitDone = true;
           programmatic(() => {
             map.setBounds(circle!.getBounds(), 65, 35, 65, 35);
-            map.setCenter(
-              new sdk.LatLng(request.center.latitude, request.center.longitude),
-            );
+            map.setCenter(new sdk.LatLng(request.center.latitude, request.center.longitude));
           });
           callbacks.cameraReady(request.sequence, map.getLevel());
-        } else if (locationRadius.referenceLevel === null)
-          callbacks.radiusReady(map.getLevel());
+        } else if (locationRadius.referenceLevel === null) callbacks.radiusReady(map.getLevel());
       } else circle?.setMap(null);
     },
     fitInitialResults(fit: () => void) {

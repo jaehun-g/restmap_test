@@ -4,14 +4,10 @@ import type { Result } from "./rest-areas.ts";
 export const ADMIN_COOKIE = "rest_area_admin";
 export const SESSION_SECONDS = 8 * 60 * 60;
 const WINDOW_MS = 5 * 60 * 1000;
-const digest = (password: string) =>
-  createHash("sha256").update(password).digest();
+const digest = (password: string) => createHash("sha256").update(password).digest();
 
 export class AdminSessionStore {
-  private sessions = new Map<
-    string,
-    { expiresAt: number; fingerprint: string }
-  >();
+  private sessions = new Map<string, { expiresAt: number; fingerprint: string }>();
   private failures = 0;
   private windowStart = 0;
   private now: () => number;
@@ -49,10 +45,7 @@ export class AdminSessionStore {
           message: "인증 시도가 너무 많습니다. 5분 후 다시 시도해주세요.",
         },
       };
-    if (
-      typeof input !== "string" ||
-      !timingSafeEqual(digest(input), digest(password))
-    ) {
+    if (typeof input !== "string" || !timingSafeEqual(digest(input), digest(password))) {
       if (!this.failures) this.windowStart = now;
       this.failures++;
       return {
@@ -63,8 +56,7 @@ export class AdminSessionStore {
     this.failures = 0;
     for (const [token, session] of this.sessions)
       if (session.expiresAt <= now) this.sessions.delete(token);
-    while (this.sessions.size >= 50)
-      this.sessions.delete(this.sessions.keys().next().value!);
+    while (this.sessions.size >= 50) this.sessions.delete(this.sessions.keys().next().value!);
     const token = this.token();
     const expiresAt = now + SESSION_SECONDS * 1000;
     this.sessions.set(token, {

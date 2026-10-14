@@ -5,28 +5,13 @@ import { updateRestArea } from "@/lib/db";
 
 const headers = { "Cache-Control": "no-store" };
 const denied = (code: string, message: string) =>
-  Response.json(
-    { error: { code, message } },
-    { status: errorStatus(code), headers },
-  );
+  Response.json({ error: { code, message } }, { status: errorStatus(code), headers });
 
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ id: string }> },
-) {
-  if (
-    !sameOrigin(
-      request.url,
-      request.headers.get("origin"),
-      request.headers.get("host"),
-    )
-  )
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!sameOrigin(request.url, request.headers.get("origin"), request.headers.get("host")))
     return denied("FORBIDDEN", "동일 출처에서만 저장할 수 있습니다.");
   if (!process.env.ADMIN_PASSWORD)
-    return denied(
-      "ADMIN_NOT_CONFIGURED",
-      "ADMIN_PASSWORD가 설정되지 않아 조회만 가능합니다.",
-    );
+    return denied("ADMIN_NOT_CONFIGURED", "ADMIN_PASSWORD가 설정되지 않아 조회만 가능합니다.");
   if (
     !adminSessions().verify(
       sessionCookie(request.headers.get("cookie")),
@@ -48,8 +33,7 @@ export async function PATCH(
   const body = await readJsonRequest(request);
   if (!body.ok) return denied(body.error.code, body.error.message);
   const validated = validateUpdateRequest(body.value);
-  if (!validated.ok)
-    return denied(validated.error.code, validated.error.message);
+  if (!validated.ok) return denied(validated.error.code, validated.error.message);
   const result = await updateRestArea(Number(id), validated.value);
   if (!result.ok) return denied(result.error.code, result.error.message);
   return Response.json({ item: result.value }, { headers });

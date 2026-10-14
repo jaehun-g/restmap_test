@@ -10,7 +10,10 @@ type CacheEntry = { route: HighwayRoute; expiresAt: number };
 const routeCache = new Map<string, CacheEntry>();
 const cacheLifetime = 5 * 60 * 1000;
 const initialState: HighwayRouteState = {
-  routeName: null, route: null, loading: false, error: null,
+  routeName: null,
+  route: null,
+  loading: false,
+  error: null,
 };
 
 export class HighwayRouteLoader {
@@ -96,8 +99,11 @@ export class HighwayRouteLoader {
     } catch (reason) {
       if (!current()) return;
       this.publish({
-        routeName, route: null, loading: false,
-        error: reason instanceof Error ? reason.message : "선택한 노선의 경로를 불러오지 못했습니다.",
+        routeName,
+        route: null,
+        loading: false,
+        error:
+          reason instanceof Error ? reason.message : "선택한 노선의 경로를 불러오지 못했습니다.",
       });
     } finally {
       if (current()) this.request = null;

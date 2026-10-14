@@ -26,13 +26,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (
-    !sameOrigin(
-      request.url,
-      request.headers.get("origin"),
-      request.headers.get("host"),
-    )
-  )
+  if (!sameOrigin(request.url, request.headers.get("origin"), request.headers.get("host")))
     return NextResponse.json(
       {
         error: {
@@ -43,8 +37,7 @@ export async function POST(request: Request) {
       { status: 403, headers },
     );
   const body = await readJsonRequest(request);
-  if (!body.ok)
-    return NextResponse.json({ error: body.error }, { status: 400, headers });
+  if (!body.ok) return NextResponse.json({ error: body.error }, { status: 400, headers });
   const input =
     body.value && typeof body.value === "object" && "password" in body.value
       ? body.value.password
@@ -74,13 +67,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (
-    !sameOrigin(
-      request.url,
-      request.headers.get("origin"),
-      request.headers.get("host"),
-    )
-  )
+  if (!sameOrigin(request.url, request.headers.get("origin"), request.headers.get("host")))
     return NextResponse.json(
       {
         error: {

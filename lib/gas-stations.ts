@@ -1,7 +1,14 @@
 import type { Result } from "./rest-areas.ts";
 
 export const stationFields = [
-  { key: "name", column: "siteNm", label: "주유소명", kind: "text", maxLength: 150, required: true },
+  {
+    key: "name",
+    column: "siteNm",
+    label: "주유소명",
+    kind: "text",
+    maxLength: 150,
+    required: true,
+  },
   { key: "phone", column: "telNo", label: "전화번호", kind: "text", maxLength: 30 },
   { key: "address", column: "zipAddr", label: "주소", kind: "text", maxLength: 255 },
   { key: "detailAddress", column: "detAddr", label: "상세주소", kind: "text", maxLength: 255 },
@@ -21,29 +28,73 @@ export const stationServices = [
 export type StationServiceKey = (typeof stationServices)[number]["key"];
 export type StationScalarKey = (typeof stationFields)[number]["key"];
 export type GasStation = {
-  id: number; siteCode: string; brand: "GS"; name: string;
-  latitude: number | null; longitude: number | null;
-  phone: string | null; address: string | null; detailAddress: string | null;
-  openTime: string | null; closeTime: string | null;
+  id: number;
+  siteCode: string;
+  brand: "GS";
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  address: string | null;
+  detailAddress: string | null;
+  openTime: string | null;
+  closeTime: string | null;
   services: Record<StationServiceKey, boolean | null>;
 };
-export type GasStationRecord = GasStation & { revision: string; sourceDetails?: Record<string, string | null> };
-export type GasStationsResponse = { items: GasStationRecord[]; unmappedCount: number; fetchedAt: string };
-export type StationChanges = Partial<Pick<GasStation, StationScalarKey>> & { services?: Partial<GasStation["services"]> };
-export const stationColumns = ["id", "siteCd", ...stationFields.map((field) => field.column), ...stationServices.map((field) => field.column), "updated_at"];
-export const stationReadOnlyColumns = ["siteSxnCd", "siteOperTy", "zipNo", "aoYn", "kixxprimeYn", "payPsblYn", "epMoneyYn", "goodgsYn", "kakaoPayYn", "naverPayYn", "zeroPayYn", "paycoYn", "hyundaiPayYn", "tossPayYn"];
+export type GasStationRecord = GasStation & {
+  revision: string;
+  sourceDetails?: Record<string, string | null>;
+};
+export type GasStationsResponse = {
+  items: GasStationRecord[];
+  unmappedCount: number;
+  fetchedAt: string;
+};
+export type StationChanges = Partial<Pick<GasStation, StationScalarKey>> & {
+  services?: Partial<GasStation["services"]>;
+};
+export const stationColumns = [
+  "id",
+  "siteCd",
+  ...stationFields.map((field) => field.column),
+  ...stationServices.map((field) => field.column),
+  "updated_at",
+];
+export const stationReadOnlyColumns = [
+  "siteSxnCd",
+  "siteOperTy",
+  "zipNo",
+  "aoYn",
+  "kixxprimeYn",
+  "payPsblYn",
+  "epMoneyYn",
+  "goodgsYn",
+  "kakaoPayYn",
+  "naverPayYn",
+  "zeroPayYn",
+  "paycoYn",
+  "hyundaiPayYn",
+  "tossPayYn",
+];
 export const selectStationColumns = `SELECT ${stationColumns.map((column) => `\`${column}\``).join(", ")} FROM test_gscargo`;
 
 export function stationText(value: unknown): string | null {
   if (value instanceof Uint8Array) {
-    try { value = new TextDecoder("utf-8", { fatal: true }).decode(value); }
-    catch { return null; }
+    try {
+      value = new TextDecoder("utf-8", { fatal: true }).decode(value);
+    } catch {
+      return null;
+    }
   }
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 export function stationNumber(value: unknown): number | null {
   if (value instanceof Uint8Array) value = stationText(value);
-  if ((typeof value !== "number" && typeof value !== "string") || (typeof value === "string" && !value.trim())) return null;
+  if (
+    (typeof value !== "number" && typeof value !== "string") ||
+    (typeof value === "string" && !value.trim())
+  )
+    return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -52,27 +103,65 @@ export function normalizeGasStations(rows: Record<string, unknown>[]): Result<Ga
   const ids = new Set<number>();
   const codes = new Set<string>();
   for (const row of rows) {
-    const id = stationNumber(row.id), name = stationText(row.siteNm), siteCode = stationText(row.siteCd);
-    if (!id || !Number.isSafeInteger(id) || id < 1 || !name || !siteCode || ids.has(id) || codes.has(siteCode))
-      return { ok: false, error: { code: "INVALID_DATA", message: "주유소의 식별자 또는 이름이 올바르지 않습니다. test_gscargo 데이터를 확인해주세요." } };
-    ids.add(id); codes.add(siteCode);
-    let latitude = stationNumber(row.lat), longitude = stationNumber(row.longi);
-    if (latitude === null || longitude === null || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) { latitude = null; longitude = null; }
+    const id = stationNumber(row.id),
+      name = stationText(row.siteNm),
+      siteCode = stationText(row.siteCd);
+    if (
+      !id ||
+      !Number.isSafeInteger(id) ||
+      id < 1 ||
+      !name ||
+      !siteCode ||
+      ids.has(id) ||
+      codes.has(siteCode)
+    )
+      return {
+        ok: false,
+        error: {
+          code: "INVALID_DATA",
+          message:
+            "주유소의 식별자 또는 이름이 올바르지 않습니다. test_gscargo 데이터를 확인해주세요.",
+        },
+      };
+    ids.add(id);
+    codes.add(siteCode);
+    let latitude = stationNumber(row.lat),
+      longitude = stationNumber(row.longi);
+    if (
+      latitude === null ||
+      longitude === null ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      latitude = null;
+      longitude = null;
+    }
     items.push({
-      id, siteCode, brand: "GS", name, latitude, longitude,
-      phone: stationText(row.telNo), address: stationText(row.zipAddr), detailAddress: stationText(row.detAddr),
-      openTime: stationText(row.businsFrTm), closeTime: stationText(row.businsToTm),
-      services: Object.fromEntries(stationServices.map(({ key, column }) => {
-        const value = stationText(row[column]);
-        return [key, value === "Y" ? true : value === "N" ? false : null];
-      })) as GasStation["services"],
+      id,
+      siteCode,
+      brand: "GS",
+      name,
+      latitude,
+      longitude,
+      phone: stationText(row.telNo),
+      address: stationText(row.zipAddr),
+      detailAddress: stationText(row.detAddr),
+      openTime: stationText(row.businsFrTm),
+      closeTime: stationText(row.businsToTm),
+      services: Object.fromEntries(
+        stationServices.map(({ key, column }) => {
+          const value = stationText(row[column]);
+          return [key, value === "Y" ? true : value === "N" ? false : null];
+        }),
+      ) as GasStation["services"],
     });
   }
   return { ok: true, value: items };
 }
 export function stationHours(station: Pick<GasStation, "openTime" | "closeTime">): string {
   const { openTime, closeTime } = station;
-  if (!openTime || !closeTime || !/^\d{4}$/.test(openTime + "") || !/^\d{4}$/.test(closeTime + "")) return "영업시간 정보 없음";
+  if (!openTime || !closeTime || !/^\d{4}$/.test(openTime + "") || !/^\d{4}$/.test(closeTime + ""))
+    return "영업시간 정보 없음";
   const display = (value: string) => `${value.slice(0, 2)}:${value.slice(2)}`;
   return `${display(openTime)}–${display(closeTime)}${openTime === closeTime ? " · 운영시간 확인 필요" : ""}`;
 }

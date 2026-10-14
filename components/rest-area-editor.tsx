@@ -2,11 +2,7 @@
 import { useState } from "react";
 import { scalarFields, type ScalarKey } from "@/lib/rest-area-fields";
 import { facilityDefinitions, type RestAreaRecord } from "@/lib/rest-areas";
-import {
-  editorIsDirty,
-  requestFromDraft,
-  type EditorDraft,
-} from "@/lib/rest-area-editor";
+import { editorIsDirty, requestFromDraft, type EditorDraft } from "@/lib/rest-area-editor";
 import Icon from "./icon";
 
 const groups: { label: string; fields: ScalarKey[] }[] = [
@@ -72,10 +68,7 @@ export default function RestAreaEditor({
           const data = await response.json();
           if (response.status === 401) onExpired();
           if (!response.ok)
-            throw new Error(
-              data.error?.message ||
-                "저장하지 못했습니다. 입력 초안은 유지됩니다.",
-            );
+            throw new Error(data.error?.message || "저장하지 못했습니다. 입력 초안은 유지됩니다.");
           onSaved(data.item);
         } catch (reason) {
           setError(
@@ -94,15 +87,13 @@ export default function RestAreaEditor({
           <span className="eyebrow">ID {original.id} · test_lounge</span>
           <h2>휴게소 정보 수정</h2>
         </div>
-        <span className="edit-status">
-          {dirty ? "미저장 변경" : "변경 없음"}
-        </span>
+        <span className="edit-status">{dirty ? "미저장 변경" : "변경 없음"}</span>
       </div>
       <div className="editor-scroll">
         {!authenticated && (
           <p className="form-error" role="alert">
-            인증이 만료되었거나 편집이 잠겼습니다. 관리자 인증 후 저장해주세요.
-            입력 초안은 유지됩니다.
+            인증이 만료되었거나 편집이 잠겼습니다. 관리자 인증 후 저장해주세요. 입력 초안은
+            유지됩니다.
           </p>
         )}
         {groups.map((group) => (
@@ -111,8 +102,7 @@ export default function RestAreaEditor({
             <div className="editor-grid">
               {group.fields.map((key) => {
                 const field = scalarFields.find((entry) => entry.key === key)!;
-                const before =
-                  original[key] === null ? "" : String(original[key]);
+                const before = original[key] === null ? "" : String(original[key]);
                 const changed = draft.values[key] !== before;
                 return (
                   <label
@@ -151,9 +141,7 @@ export default function RestAreaEditor({
                       placeholder={"required" in field ? "필수" : "미등록"}
                     />
                     {changed && (
-                      <small className="previous-value">
-                        기존: {before || "미등록"}
-                      </small>
+                      <small className="previous-value">기존: {before || "미등록"}</small>
                     )}
                   </label>
                 );
@@ -170,17 +158,14 @@ export default function RestAreaEditor({
                 className={
                   draft.facilities[key] !== original.facilities[key]
                     ? "field-changed"
-                    : key === "has_truck_lounge" &&
-                        original.facilities[key] === null
+                    : key === "has_truck_lounge" && original.facilities[key] === null
                       ? "field-missing"
                       : ""
                 }
               >
                 <span>
                   {label}
-                  {draft.facilities[key] !== original.facilities[key] && (
-                    <small>수정됨</small>
-                  )}
+                  {draft.facilities[key] !== original.facilities[key] && <small>수정됨</small>}
                 </span>
                 <select
                   value={
@@ -218,18 +203,10 @@ export default function RestAreaEditor({
         )}
       </div>
       <div className="editor-actions">
-        <button
-          type="button"
-          className="button secondary"
-          disabled={saving}
-          onClick={onCancel}
-        >
+        <button type="button" className="button secondary" disabled={saving} onClick={onCancel}>
           취소
         </button>
-        <button
-          className="button primary"
-          disabled={!dirty || !authenticated || saving}
-        >
+        <button className="button primary" disabled={!dirty || !authenticated || saving}>
           <Icon name="check" size={16} />
           {saving ? "저장 중…" : "변경사항 저장"}
         </button>

@@ -1,8 +1,4 @@
-import {
-  facilityDefinitions,
-  type FacilityKey,
-  type RestArea,
-} from "./rest-areas.ts";
+import { facilityDefinitions, type FacilityKey, type RestArea } from "./rest-areas.ts";
 
 export const scalarFields = [
   {
@@ -100,10 +96,7 @@ export type RestAreaChanges = Partial<Pick<RestArea, ScalarKey>> & {
   facilities?: Partial<RestArea["facilities"]>;
 };
 
-export function changedFields(
-  original: RestArea,
-  draft: RestArea,
-): RestAreaChanges {
+export function changedFields(original: RestArea, draft: RestArea): RestAreaChanges {
   const scalar = Object.fromEntries(
     scalarFields
       .filter(({ key }) => original[key] !== draft[key])

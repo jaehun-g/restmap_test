@@ -1,9 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import {
-  MobileLocationController,
-  readCurrentPosition,
-} from "@/lib/mobile-location";
+import { MobileLocationController, readCurrentPosition } from "@/lib/mobile-location";
 
 export function useMobileLocation() {
   const [controller] = useState(() => new MobileLocationController());

@@ -38,11 +38,7 @@ function text(value: unknown): string | null {
 
 function number(value: unknown): number | null {
   const decoded = value instanceof Uint8Array ? text(value) : value;
-  if (
-    typeof decoded !== "number" &&
-    (typeof decoded !== "string" || !decoded.trim())
-  )
-    return null;
+  if (typeof decoded !== "number" && (typeof decoded !== "string" || !decoded.trim())) return null;
   const parsed = Number(decoded);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -78,12 +74,17 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
 
   const { south, west, north, east } = value.bounds;
   if (
-    typeof south !== "number" || typeof west !== "number" ||
-    typeof north !== "number" || typeof east !== "number" ||
+    typeof south !== "number" ||
+    typeof west !== "number" ||
+    typeof north !== "number" ||
+    typeof east !== "number" ||
     ![south, west, north, east].every(Number.isFinite) ||
-    Math.abs(south) > 90 || Math.abs(north) > 90 ||
-    Math.abs(west) > 180 || Math.abs(east) > 180 ||
-    south > north || west > east
+    Math.abs(south) > 90 ||
+    Math.abs(north) > 90 ||
+    Math.abs(west) > 180 ||
+    Math.abs(east) > 180 ||
+    south > north ||
+    west > east
   )
     return invalidRoute();
 
@@ -94,15 +95,19 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
     const coordinates: HighwayCoordinate[] = [];
     for (const point of path) {
       if (
-        !Array.isArray(point) || point.length !== 2 ||
+        !Array.isArray(point) ||
+        point.length !== 2 ||
         !point.every((coordinate) => typeof coordinate === "number" && Number.isFinite(coordinate))
       )
         return invalidRoute();
       const [latitude, longitude] = point as HighwayCoordinate;
       if (
-        Math.abs(latitude) > 90 || Math.abs(longitude) > 180 ||
-        latitude < south - tolerance || latitude > north + tolerance ||
-        longitude < west - tolerance || longitude > east + tolerance
+        Math.abs(latitude) > 90 ||
+        Math.abs(longitude) > 180 ||
+        latitude < south - tolerance ||
+        latitude > north + tolerance ||
+        longitude < west - tolerance ||
+        longitude > east + tolerance
       )
         return invalidRoute();
       coordinates.push([latitude, longitude]);

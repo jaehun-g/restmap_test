@@ -75,24 +75,21 @@ export interface KakaoClusterer {
 
 export interface KakaoMaps {
   MarkerClusterer?: new (options: {
-    map: KakaoMap; gridSize: number; minLevel: number; minClusterSize: number;
-    averageCenter: boolean; disableClickZoom: boolean;
+    map: KakaoMap;
+    gridSize: number;
+    minLevel: number;
+    minClusterSize: number;
+    averageCenter: boolean;
+    disableClickZoom: boolean;
     styles?: Record<string, string>[];
   }) => KakaoClusterer;
   load(callback: () => void): void;
-  Map: new (
-    container: HTMLElement,
-    options: { center: KakaoLatLng; level: number },
-  ) => KakaoMap;
+  Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap;
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
   LatLngBounds: new () => KakaoBounds;
   Size: new (width: number, height: number) => object;
   Point: new (x: number, y: number) => object;
-  MarkerImage: new (
-    source: string,
-    size: object,
-    options?: { offset: object },
-  ) => KakaoMarkerImage;
+  MarkerImage: new (source: string, size: object, options?: { offset: object }) => KakaoMarkerImage;
   Marker: new (options: {
     map?: KakaoMap;
     position: KakaoLatLng;
@@ -149,7 +146,8 @@ declare global {
 let loading: Promise<KakaoMaps> | null = null;
 
 export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
-  if (window.kakao?.maps.Map && window.kakao.maps.MarkerClusterer) return Promise.resolve(window.kakao.maps);
+  if (window.kakao?.maps.Map && window.kakao.maps.MarkerClusterer)
+    return Promise.resolve(window.kakao.maps);
   if (loading) return loading;
 
   loading = new Promise<KakaoMaps>((resolve, reject) => {

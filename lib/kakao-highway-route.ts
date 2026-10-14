@@ -18,14 +18,28 @@ export function createHighwayRouteLayer(sdk: KakaoMaps, map: KakaoMap) {
       const path = route.paths.map((segment) =>
         segment.map(([latitude, longitude]) => new sdk.LatLng(latitude, longitude)),
       );
-      lines.push(new sdk.Polyline({
-        map, path, strokeWeight: 9, strokeColor: "#ffffff",
-        strokeOpacity: 0.85, strokeStyle: "solid", zIndex: 0,
-      }));
-      lines.push(new sdk.Polyline({
-        map, path, strokeWeight: 5, strokeColor: "#0865ff",
-        strokeOpacity: 0.9, strokeStyle: "solid", zIndex: 0,
-      }));
+      lines.push(
+        new sdk.Polyline({
+          map,
+          path,
+          strokeWeight: 9,
+          strokeColor: "#ffffff",
+          strokeOpacity: 0.85,
+          strokeStyle: "solid",
+          zIndex: 0,
+        }),
+      );
+      lines.push(
+        new sdk.Polyline({
+          map,
+          path,
+          strokeWeight: 5,
+          strokeColor: "#0865ff",
+          strokeOpacity: 0.9,
+          strokeStyle: "solid",
+          zIndex: 0,
+        }),
+      );
       active = route;
     },
     dispose() {

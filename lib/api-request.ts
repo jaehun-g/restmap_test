@@ -1,16 +1,13 @@
 import type { Result } from "./rest-areas.ts";
 
 /** Bound authenticated and anonymous JSON requests before parsing or opening a DB connection. */
-export async function readJsonRequest(
-  request: Request,
-): Promise<Result<unknown>> {
+export async function readJsonRequest(request: Request): Promise<Result<unknown>> {
   const fail = (message: string): Result<never> => ({
     ok: false,
     error: { code: "VALIDATION_ERROR", message },
   });
   if (
-    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !==
-    "application/json"
+    request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json"
   )
     return fail("JSON 요청만 지원합니다.");
   const limit = 16 * 1024;
@@ -39,9 +36,7 @@ export async function readJsonRequest(
     }
     return {
       ok: true,
-      value: JSON.parse(
-        new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-      ),
+      value: JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
     };
   } catch {
     return fail("JSON 형식이 올바르지 않습니다.");
@@ -57,7 +52,6 @@ export function errorStatus(code: string) {
   if (code === "NOT_FOUND") return 404;
   if (code === "CONFLICT") return 409;
   if (code === "RATE_LIMITED") return 429;
-  if (code === "ADMIN_NOT_CONFIGURED" || code.startsWith("DB_CONFIG"))
-    return 503;
+  if (code === "ADMIN_NOT_CONFIGURED" || code.startsWith("DB_CONFIG")) return 503;
   return 502;
 }

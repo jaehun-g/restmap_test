@@ -12,9 +12,8 @@ export type DatabaseConfig = {
 export function readDatabaseConfig(
   environment: Record<string, string | undefined>,
 ): Result<DatabaseConfig> {
-  const missing = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"].filter(
-    (key) =>
-      key === "DB_PASSWORD" ? !environment[key] : !environment[key]?.trim(),
+  const missing = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"].filter((key) =>
+    key === "DB_PASSWORD" ? !environment[key] : !environment[key]?.trim(),
   );
   if (missing.length)
     return {
@@ -26,12 +25,7 @@ export function readDatabaseConfig(
     };
   const portText = environment.DB_PORT || "3306";
   const port = Number(portText);
-  if (
-    !/^\d+$/.test(portText) ||
-    !Number.isInteger(port) ||
-    port < 1 ||
-    port > 65535
-  ) {
+  if (!/^\d+$/.test(portText) || !Number.isInteger(port) || port < 1 || port > 65535) {
     return {
       ok: false,
       error: {
@@ -69,10 +63,7 @@ export function databaseError(
   code: string;
   message: string;
 } {
-  const code =
-    error && typeof error === "object" && "code" in error
-      ? String(error.code)
-      : "";
+  const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
   if (["ER_ACCESS_DENIED_ERROR", "ER_DBACCESS_DENIED_ERROR"].includes(code)) {
     return {
       code: "DB_ACCESS_DENIED",
@@ -97,9 +88,7 @@ export function databaseError(
         "DB에 연결하지 못했습니다. 호스트·포트와 Cafe24 MySQL 외부 IP 허용 설정을 확인해주세요.",
     };
   }
-  if (
-    ["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR", "ER_BAD_DB_ERROR"].includes(code)
-  ) {
+  if (["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR", "ER_BAD_DB_ERROR"].includes(code)) {
     return {
       code: "DB_SCHEMA_ERROR",
       message: "DB_NAME과 test_lounge 테이블 및 컬럼 구성을 확인해주세요.",
