@@ -13,10 +13,13 @@ export function useGasStations(query: string | null) {
   const request = useRef<AbortController | null>(null);
   const reload = useCallback(async () => {
     request.current?.abort();
-    if (query === null) return;
+    if (query === null) {
+      setState({query: null, data: null, loading: false, error: null});
+      return;
+    }
     const controller = new AbortController();
     request.current = controller;
-    setState({query, data: null, loading: true, error: null});
+    setState(prev => ({...prev, loading: true, error: null}));
     try {
       const response = await globalThis.fetch(`/api/gas-stations${query ? `?${query}` : ""}`, {
         cache: "no-store",
@@ -29,12 +32,13 @@ export function useGasStations(query: string | null) {
       if (!controller.signal.aborted) setState({query, data: body, loading: false, error: null});
     } catch (reason) {
       if (!controller.signal.aborted)
-        setState({
+        setState(prev => ({
+          ...prev,
           query,
-          data: null,
+          data: prev.query === query ? prev.data : null,
           loading: false,
           error: reason instanceof Error ? reason.message : "주유소를 조회하지 못했습니다.",
-        });
+        }));
     }
   }, [query]);
   useEffect(() => {
