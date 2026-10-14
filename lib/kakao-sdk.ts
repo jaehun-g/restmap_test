@@ -9,6 +9,16 @@ export interface KakaoBounds {
   getNorthEast(): KakaoLatLng;
 }
 
+export interface KakaoPoint {
+  x: number;
+  y: number;
+}
+
+export interface KakaoProjection {
+  coordsFromContainerPoint(point: KakaoPoint): KakaoLatLng;
+  pointFromCoords(latlng: KakaoLatLng): KakaoPoint;
+}
+
 export interface KakaoMap {
   setCenter(position: KakaoLatLng): void;
   panTo(position: KakaoLatLng): void;
@@ -25,6 +35,7 @@ export interface KakaoMap {
     left?: number,
   ): void;
   relayout(): void;
+  getProjection?(): KakaoProjection;
 }
 
 export interface KakaoMarker {
@@ -89,7 +100,7 @@ export interface KakaoMaps {
   LatLng: new (latitude: number, longitude: number) => KakaoLatLng;
   LatLngBounds: new () => KakaoBounds;
   Size: new (width: number, height: number) => object;
-  Point: new (x: number, y: number) => object;
+  Point: new (x: number, y: number) => KakaoPoint;
   MarkerImage: new (source: string, size: object, options?: {offset: object}) => KakaoMarkerImage;
   Marker: new (options: {
     map?: KakaoMap;

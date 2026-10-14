@@ -6,6 +6,7 @@ import type {
   LocationCameraRequest,
 } from "./geo-search.ts";
 import type {KakaoCircle, KakaoMap, KakaoMaps} from "./kakao-sdk.ts";
+import {formatRadius} from "./geo-search.ts";
 
 export type MobileMapLocation = {
   position: GeoPoint | null;
@@ -41,6 +42,70 @@ export function mapBounds(map: KakaoMap): GeoBounds {
   };
 }
 
+/**
+ * 상단 헤더, 하단 시트 등으로 가려지는 영역을 제외한 실제 눈에 보이는 유효 뷰포트의 위경도 범위를 계산합니다.
+ * 계산이 불가능하거나 가시 영역이 지나치게 좁을 경우 전체 지도 뷰포트 Bounds로 안전하게 폴백합니다.
+ */
+export function visibleMapBounds(
+  sdk: KakaoMaps,
+  map: KakaoMap,
+  container?: HTMLElement | null,
+  viewport?: DOMRect,
+): GeoBounds {
+  const fallback = mapBounds(map);
+  if (!container || !viewport || !map.getProjection || !sdk.Point) {
+    return fallback;
+  }
+  const canvasRect = container.getBoundingClientRect();
+  if (
+    canvasRect.width <= 0 ||
+    canvasRect.height <= 0 ||
+    viewport.width < 100 ||
+    viewport.height < 100
+  ) {
+    return fallback;
+  }
+  try {
+    const projection = map.getProjection();
+    if (!projection?.coordsFromContainerPoint) {
+      return fallback;
+    }
+    const swX = Math.max(0, Math.min(canvasRect.width, viewport.left - canvasRect.left));
+    const swY = Math.max(0, Math.min(canvasRect.height, viewport.bottom - canvasRect.top));
+    const neX = Math.max(0, Math.min(canvasRect.width, viewport.right - canvasRect.left));
+    const neY = Math.max(0, Math.min(canvasRect.height, viewport.top - canvasRect.top));
+
+    // 화면 y좌표는 아래로 갈수록 커지므로 swY > neY 여야 유효한 사각형입니다.
+    if (swY <= neY || neX <= swX) {
+      return fallback;
+    }
+
+    const sw = projection.coordsFromContainerPoint(new sdk.Point(swX, swY));
+    const ne = projection.coordsFromContainerPoint(new sdk.Point(neX, neY));
+
+    const south = sw.getLat();
+    const west = sw.getLng();
+    const north = ne.getLat();
+    const east = ne.getLng();
+
+    if (
+      !Number.isFinite(south) ||
+      !Number.isFinite(west) ||
+      !Number.isFinite(north) ||
+      !Number.isFinite(east)
+    ) {
+      return fallback;
+    }
+    if (south >= north || west >= east) {
+      return fallback;
+    }
+
+    return {south, west, north, east};
+  } catch {
+    return fallback;
+  }
+}
+
 /** SDK events are tracked separately from programmatic camera moves to avoid fit/zoom feedback loops. */
 export function createLocationMapLayer(
   sdk: KakaoMaps,
@@ -53,6 +118,10 @@ export function createLocationMapLayer(
     zoomStart?: () => void;
   },
   memory: MobileMapMemory = {},
+  options?: {
+    container?: HTMLElement | null;
+    viewport?: () => DOMRect;
+  },
 ) {
   let circle: KakaoCircle | null = null;
   let disposed = false;
@@ -63,6 +132,13 @@ export function createLocationMapLayer(
   let routeMode = false;
   const dot = new sdk.CustomOverlay({
     content: '<span class="current-location-dot" role="img" aria-label="내 현재 위치"></span>',
+    clickable: false,
+    xAnchor: 0.5,
+    yAnchor: 0.5,
+    zIndex: 3,
+  });
+  const radiusLabel = new sdk.CustomOverlay({
+    content: "",
     clickable: false,
     xAnchor: 0.5,
     yAnchor: 0.5,
@@ -127,7 +203,10 @@ export function createLocationMapLayer(
   return {
     setRouteMode(enabled: boolean) {
       routeMode = enabled;
-      if (enabled) circle?.setMap(null);
+      if (enabled) {
+        circle?.setMap(null);
+        radiusLabel.setMap(null);
+      }
     },
     update(
       position: GeoPoint | null,
@@ -158,6 +237,17 @@ export function createLocationMapLayer(
         circle.setPosition(center);
         circle.setRadius(locationRadius.radiusMeters);
         circle.setMap(map);
+        const radius = formatRadius(locationRadius.radiusMeters);
+        radiusLabel.setContent(
+          `<span class="location-radius-label" role="img" aria-label="내 위치 기준 반경 ${radius}">${radius}</span>`,
+        );
+        radiusLabel.setPosition(
+          new sdk.LatLng(
+            locationRadius.center.latitude,
+            circle.getBounds().getNorthEast().getLng(),
+          ),
+        );
+        radiusLabel.setMap(map);
         if (scope.kind === "radius" && request && memory.cameraSequence !== request.sequence) {
           memory.cameraSequence = request.sequence;
           memory.initialFitDone = true;
@@ -167,7 +257,10 @@ export function createLocationMapLayer(
           });
           callbacks.cameraReady(request.sequence, map.getLevel());
         } else if (locationRadius.referenceLevel === null) callbacks.radiusReady(map.getLevel());
-      } else circle?.setMap(null);
+      } else {
+        circle?.setMap(null);
+        radiusLabel.setMap(null);
+      }
     },
     fitInitialResults(fit: () => void) {
       if (disposed || routeMode || memory.initialFitDone || memory.userMoved) return;
@@ -185,7 +278,11 @@ export function createLocationMapLayer(
       pendingZoom = false;
       pendingMove = false;
       memory.initialFitDone = true;
-      callbacks.research(mapBounds(map));
+      const bounds =
+        options?.container && options?.viewport
+          ? visibleMapBounds(sdk, map, options.container, options.viewport())
+          : mapBounds(map);
+      callbacks.research(bounds);
     },
     dispose() {
       disposed = true;
@@ -195,6 +292,7 @@ export function createLocationMapLayer(
       );
       dot.setMap(null);
       circle?.setMap(null);
+      radiusLabel.setMap(null);
     },
   };
 }

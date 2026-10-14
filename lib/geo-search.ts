@@ -93,9 +93,11 @@ export function formatDistance(meters: number): string {
 export function scopeLabel(scope: GeoSearchScope): string {
   if (scope.kind === "all") return "전체 휴게소";
   if (scope.kind === "bounds") return "지도 영역 검색";
-  const radius =
-    scope.radiusMeters >= 1000
-      ? `${(scope.radiusMeters / 1000).toLocaleString("ko-KR", {maximumFractionDigits: 2})}km`
-      : `${Math.round(scope.radiusMeters)}m`;
-  return `내 위치 기준 반경 ${radius}`;
+  return `내 위치 기준 반경 ${formatRadius(scope.radiusMeters)}`;
+}
+
+export function formatRadius(meters: number): string {
+  return meters >= 1000
+    ? `${(meters / 1000).toLocaleString("ko-KR", {maximumFractionDigits: 2})}km`
+    : `${Math.round(meters)}m`;
 }

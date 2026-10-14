@@ -29,9 +29,12 @@ import PlaceControls from "./place-controls";
 import GasStationTable from "./gas-station-table";
 import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
+import {useMobileLocation} from "@/hooks/use-mobile-location";
+import {filterByGeoScope} from "@/lib/geo-search";
 const noAreas: RestAreaRecord[] = [];
 
 export default function AdminExplorer() {
+  const location = useMobileLocation(false);
   const {data, areas, loading, error, reload, replaceItem} = useRestAreas();
   const view = useMapFitRequest();
   const search = useSearchQuery(view.requestFit);
@@ -42,7 +45,7 @@ export default function AdminExplorer() {
   const gas = useGasStations(
     placeView === "rest"
       ? null
-      : stationQueryString(filters.missingRoute ? null : filters.routeName, {kind: "all"}),
+      : stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope),
   );
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
@@ -65,8 +68,13 @@ export default function AdminExplorer() {
     editState.current = {dirty, saving};
   }, [dirty, saving]);
   const results = useMemo(
-    () => filterRestAreas(areas, filters, search.query),
-    [areas, filters, search.query],
+    () =>
+      filterByGeoScope(
+        filterRestAreas(areas, filters, search.query),
+        filters.routeName ? {kind: "all"} : location.scope,
+        location.position,
+      ),
+    [areas, filters, search.query, location.scope, location.position],
   );
   const sorted = useMemo(
     () => sortRestAreas(results, sortField, direction),
@@ -111,6 +119,11 @@ export default function AdminExplorer() {
     returnFocus.current?.focus({preventScroll: true});
   }, [mayLeave]);
   const details = useCallback((id: number) => select(id), [select]);
+  const clearRoute = useCallback(() => {
+    setFilters(current => ({...current, routeName: null, missingRoute: false}));
+    setSelectedId(null);
+    setSelectedStationId(null);
+  }, []);
   const selectStation = useCallback(
     (id: number | null) => {
       if (!mayLeave()) return;
@@ -406,6 +419,9 @@ export default function AdminExplorer() {
                 void gas.reload();
               }}
               selectedRouteName={filters.missingRoute ? null : filters.routeName}
+              mobileLocation={location}
+              onClearRoute={clearRoute}
+              locationDisabled={anyEditing}
               selectedId={selected?.id ?? null}
               onSelect={select}
               onDetails={details}

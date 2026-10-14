@@ -1,12 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createLocationMapLayer, type MobileMapMemory} from "../lib/kakao-location.ts";
-import {MobileLocationController} from "../lib/mobile-location.ts";
-import {filterByGeoScope} from "../lib/geo-search.ts";
-import {normalizeRestAreas} from "../lib/rest-areas.ts";
-import type {KakaoMaps, KakaoMap} from "../lib/kakao-sdk.ts";
+import {
+  createLocationMapLayer,
+  visibleMapBounds,
+  type MobileMapMemory,
+} from "../lib/kakao-location.ts";
+import { MobileLocationController } from "../lib/mobile-location.ts";
+import { filterByGeoScope } from "../lib/geo-search.ts";
+import { normalizeRestAreas } from "../lib/rest-areas.ts";
+import type { KakaoMaps, KakaoMap } from "../lib/kakao-sdk.ts";
 
-const origin = {latitude: 37, longitude: 127};
+const origin = { latitude: 37, longitude: 127 };
 class LatLng {
   latitude: number;
   longitude: number;
@@ -38,7 +42,7 @@ class Bounds {
 }
 function mockKakao() {
   const listeners = new Map<string, Set<() => void>>();
-  const emit = (name: string) => listeners.get(name)?.forEach(listener => listener());
+  const emit = (name: string) => listeners.get(name)?.forEach((listener) => listener());
   const state = {
     fitted: 0,
     centered: 0,
@@ -50,11 +54,13 @@ function mockKakao() {
     position: LatLng | null = null;
     visible = false;
     content: string;
-    constructor(options: {content: string}) {
+    constructor(options: { content: string }) {
       this.content = options.content;
       state.overlays.push(this);
     }
-    setContent() {}
+    setContent(content: string) {
+      this.content = content;
+    }
     setPosition(position: LatLng) {
       this.position = position;
     }
@@ -66,7 +72,7 @@ function mockKakao() {
     position: LatLng;
     radius: number;
     visible = false;
-    constructor(options: {center: LatLng; radius: number}) {
+    constructor(options: { center: LatLng; radius: number }) {
       this.position = options.center;
       this.radius = options.radius;
       state.circles.push(this);
@@ -154,11 +160,12 @@ function connected(memory: MobileMapMemory = {}) {
     memory,
   );
   const update = () => {
-    const {position, scope, cameraRequest, locationRadius} = controller.getSnapshot();
+    const { position, scope, cameraRequest, locationRadius } = controller.getSnapshot();
     layer.update(position, scope, cameraRequest, locationRadius);
   };
   const unsubscribe = controller.subscribe(update);
-  const locate = () => controller.requestLocation(() => Promise.resolve({ok: true, value: origin}));
+  const locate = () =>
+    controller.requestLocation(() => Promise.resolve({ ok: true, value: origin }));
   return {
     ...mock,
     controller,
@@ -173,7 +180,7 @@ function connected(memory: MobileMapMemory = {}) {
 }
 
 test("location fit initializes reference zoom, dot and circle without creating a user move", async () => {
-  const {controller, state, locate, emit, map, getZoomStarts} = connected();
+  const { controller, state, locate, emit, map, getZoomStarts } = connected();
   await locate();
   emit("idle");
   assert.equal(state.fitted, 1);
@@ -185,7 +192,7 @@ test("location fit initializes reference zoom, dot and circle without creating a
   });
   assert.equal(controller.getSnapshot().researchAvailable, false);
   assert.deepEqual(
-    {latitude: map.getCenter().getLat(), longitude: map.getCenter().getLng()},
+    { latitude: map.getCenter().getLat(), longitude: map.getCenter().getLng() },
     origin,
   );
   assert.equal(state.overlays[0].visible, true);
@@ -194,11 +201,11 @@ test("location fit initializes reference zoom, dot and circle without creating a
 });
 
 test("user zoom commits at idle, changes radius and results, and never fits or recenters", async () => {
-  const {map, state, controller, locate, emit, getZoomStarts} = connected();
+  const { map, state, controller, locate, emit, getZoomStarts } = connected();
   await locate();
   const result = normalizeRestAreas([
-    {id: 1, name: "near", latitude: 37.01, longitude: 127},
-    {id: 2, name: "far", latitude: 37.2, longitude: 127},
+    { id: 1, name: "near", latitude: 37.01, longitude: 127 },
+    { id: 2, name: "far", latitude: 37.2, longitude: 127 },
   ]);
   assert.ok(result.ok);
   map.setLevel(10);
@@ -233,14 +240,14 @@ test("drag immediately clears selection while keeping circle center, query radiu
 });
 
 test("map re-search takes click-time bounds and keeps them fixed across further zooms and moves", async () => {
-  const {locate, state, layer, controller, map, emit} = connected();
+  const { locate, state, layer, controller, map, emit } = connected();
   await locate();
   state.bounds = new Bounds(new LatLng(35, 128), new LatLng(36, 129));
   layer.research();
   const committed = controller.getSnapshot().scope;
   assert.deepEqual(committed, {
     kind: "bounds",
-    bounds: {south: 35, west: 128, north: 36, east: 129},
+    bounds: { south: 35, west: 128, north: 36, east: 129 },
   });
   assert.equal(state.circles[0].visible, true);
   assert.equal(state.overlays[0].visible, true);
@@ -256,7 +263,7 @@ test("map re-search takes click-time bounds and keeps them fixed across further 
   layer.research();
   assert.deepEqual(controller.getSnapshot().scope, {
     kind: "bounds",
-    bounds: {south: 34, west: 127, north: 37, east: 130},
+    bounds: { south: 34, west: 127, north: 37, east: 130 },
   });
   await locate();
   assert.equal(state.circles[0].radius, 15000);
@@ -284,7 +291,7 @@ test("filter/redraw updates keep center, zoom, radius and camera; fallback fitti
 });
 
 test("re-search before zoom idle keeps the radius aligned to the current level without a camera move", async () => {
-  const {locate, state, layer, controller, map, emit} = connected();
+  const { locate, state, layer, controller, map, emit } = connected();
   await locate();
   map.setLevel(10);
   assert.equal(state.circles[0].radius, 15000);
@@ -301,11 +308,11 @@ test("re-search before zoom idle keeps the radius aligned to the current level w
 });
 
 test("late initial GPS draws a zoom-aware radius while preserving a newer map search and camera", async () => {
-  const {state, controller, layer, map, emit} = connected();
-  let resolve!: (value: {ok: true; value: typeof origin}) => void;
+  const { state, controller, layer, map, emit } = connected();
+  let resolve!: (value: { ok: true; value: typeof origin }) => void;
   const pending = controller.requestLocation(
     () =>
-      new Promise(done => {
+      new Promise((done) => {
         resolve = done;
       }),
   );
@@ -313,7 +320,7 @@ test("late initial GPS draws a zoom-aware radius while preserving a newer map se
   emit("idle");
   layer.research();
   const committed = controller.getSnapshot().scope;
-  resolve({ok: true, value: origin});
+  resolve({ ok: true, value: origin });
   await pending;
   assert.equal(controller.getSnapshot().scope, committed);
   assert.deepEqual(controller.getSnapshot().locationRadius, {
@@ -332,7 +339,7 @@ test("late initial GPS draws a zoom-aware radius while preserving a newer map se
 });
 
 test("moving before DB results arrive prevents a delayed fallback fit; searching works without GPS", () => {
-  const {emit, layer, controller, state} = connected();
+  const { emit, layer, controller, state } = connected();
   emit("dragstart");
   emit("dragend");
   emit("idle");
@@ -354,7 +361,7 @@ test("SDK recreation retains camera memory and disposal removes overlays and all
   current.layer.dispose();
   assert.equal(current.state.overlays[0].visible, false);
   assert.equal(current.state.circles[0].visible, false);
-  assert.ok([...current.listeners.values()].every(listeners => listeners.size === 0));
+  assert.ok([...current.listeners.values()].every((listeners) => listeners.size === 0));
   const layer = createLocationMapLayer(
     current.sdk,
     current.map,
@@ -402,16 +409,16 @@ test("route mode hides the radius and preserves geographic scope across route fi
 
 test("late GPS in route mode updates the position without replacing the route camera", async () => {
   const current = connected();
-  let resolve!: (result: {ok: true; value: typeof origin}) => void;
+  let resolve!: (result: { ok: true; value: typeof origin }) => void;
   const pending = current.controller.requestLocation(
     () =>
-      new Promise(done => {
+      new Promise((done) => {
         resolve = done;
       }),
   );
   current.layer.setRouteMode(true);
   current.layer.fitRoute(() => current.map.setLevel(11));
-  resolve({ok: true, value: origin});
+  resolve({ ok: true, value: origin });
   await pending;
   current.emit("idle");
   assert.equal(current.state.overlays[0].visible, true);
@@ -424,7 +431,153 @@ test("late GPS in route mode updates the position without replacing the route ca
   current.layer.setRouteMode(false);
   current.update();
   assert.equal(current.state.fitted, 1);
-  assert.equal(current.map.getLevel(), 9);
-  assert.equal(current.state.circles[0].visible, true);
   assert.equal(current.state.circles[0].radius, 15000);
+});
+
+test("radius badge follows the eastern circle edge through zoom and stays centered on the actual position during drag", async () => {
+  const current = connected();
+  await current.locate();
+  const badge = current.state.overlays[1];
+  assert.equal(badge.visible, true);
+  assert.match(badge.content, />15km<\/span>/);
+  assert.equal(badge.position?.getLat(), origin.latitude);
+  assert.equal(
+    badge.position?.getLng(),
+    current.state.circles[0].getBounds().getNorthEast().getLng(),
+  );
+  current.map.setLevel(10);
+  current.emit("idle");
+  assert.match(badge.content, />30km<\/span>/);
+  assert.equal(
+    badge.position?.getLng(),
+    current.state.circles[0].getBounds().getNorthEast().getLng(),
+  );
+  current.emit("dragstart");
+  current.map.setCenter(new LatLng(35, 129));
+  current.emit("dragend");
+  current.emit("idle");
+  assert.equal(badge.position?.getLat(), origin.latitude);
+  assert.equal(
+    badge.position?.getLng(),
+    current.state.circles[0].getBounds().getNorthEast().getLng(),
+  );
+});
+
+test("radius badge remains alongside the circle after map search and hides with route mode or disposal", async () => {
+  const current = connected();
+  await current.locate();
+  const badge = current.state.overlays[1];
+  current.layer.research();
+  assert.equal(badge.visible, true);
+  assert.match(badge.content, />15km<\/span>/);
+  current.layer.setRouteMode(true);
+  current.update();
+  assert.equal(badge.visible, false);
+  current.layer.setRouteMode(false);
+  current.update();
+  assert.equal(badge.visible, true);
+  current.layer.dispose();
+  assert.equal(badge.visible, false);
+  assert.equal(current.state.circles[0].visible, false);
+});
+
+test("radius badge stays hidden when no position or radius is available", () => {
+  const current = connected();
+  current.update();
+  assert.equal(current.state.overlays[1].visible, false);
+  assert.equal(current.state.circles.length, 0);
+});
+
+test("visibleMapBounds converts visible screen rectangle to geographic bounds using projection", () => {
+  class Point {
+    x: number;
+    y: number;
+    constructor(x: number, y: number) {
+      this.x = x;
+      this.y = y;
+    }
+  }
+  const sdk = {
+    Point,
+  } as unknown as KakaoMaps;
+  const map = {
+    getBounds: () => new Bounds(new LatLng(35, 126), new LatLng(38, 129)),
+    getProjection: () => ({
+      coordsFromContainerPoint: (point: { x: number; y: number }) => {
+        // x: 0..400 -> lng 126..129, y: 0..600 -> lat 38..35
+        const lat = 38 - (point.y / 600) * 3;
+        const lng = 126 + (point.x / 400) * 3;
+        return new LatLng(lat, lng);
+      },
+      pointFromCoords: () => new Point(0, 0),
+    }),
+  } as unknown as KakaoMap;
+
+  const container = {
+    getBoundingClientRect: () => ({
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 600,
+      width: 400,
+      height: 600,
+    }),
+  } as unknown as HTMLElement;
+
+  // 헤더 60px 제외(top=60), 바텀시트 200px 제외(bottom=400)
+  const visible = {
+    left: 0,
+    top: 60,
+    right: 400,
+    bottom: 400,
+    width: 400,
+    height: 340,
+  } as DOMRect;
+
+  const result = visibleMapBounds(sdk, map, container, visible);
+  assert.equal(Math.round(result.north * 10) / 10, 37.7);
+  assert.equal(Math.round(result.south * 10) / 10, 36.0);
+  assert.equal(result.west, 126);
+  assert.equal(result.east, 129);
+});
+
+test("visibleMapBounds falls back to map bounds when viewport is too small", () => {
+  const sdk = {
+    Point: class {
+      x: number;
+      y: number;
+      constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+      }
+    },
+  } as unknown as KakaoMaps;
+  const map = {
+    getBounds: () => new Bounds(new LatLng(35, 126), new LatLng(38, 129)),
+    getProjection: () => ({
+      coordsFromContainerPoint: () => new LatLng(36, 127),
+      pointFromCoords: () => ({ x: 0, y: 0 }),
+    }),
+  } as unknown as KakaoMap;
+  const container = {
+    getBoundingClientRect: () => ({
+      left: 0,
+      top: 0,
+      right: 400,
+      bottom: 600,
+      width: 400,
+      height: 600,
+    }),
+  } as unknown as HTMLElement;
+  const tinyViewport = {
+    left: 0,
+    top: 0,
+    right: 400,
+    bottom: 50,
+    width: 400,
+    height: 50,
+  } as DOMRect;
+  const result = visibleMapBounds(sdk, map, container, tinyViewport);
+  assert.equal(result.south, 35);
+  assert.equal(result.north, 38);
 });

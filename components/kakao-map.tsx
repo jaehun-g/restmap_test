@@ -43,6 +43,7 @@ export default function KakaoMap({
   stationsLoading = false,
   stationError,
   onRetryStations,
+  locationDisabled = false,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -65,6 +66,7 @@ export default function KakaoMap({
   stationsLoading?: boolean;
   stationError?: string | null;
   onRetryStations?: () => void;
+  locationDisabled?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
@@ -95,7 +97,8 @@ export default function KakaoMap({
   });
   const locationLayer = useRef<ReturnType<typeof createLocationMapLayer> | null>(null);
   const mobileMemory = useRef<MobileMapMemory>({});
-  const mobileEnabled = !!mobileLocation;
+  const locationEnabled = !!mobileLocation;
+  const mobileEnabled = locationEnabled && audience === "mobile";
   const {cameraReady, radiusReady, zoomChanged, mapMoved, research} = mobileLocation ?? {};
   const [map, setMap] = useState<MapInstance | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +129,7 @@ export default function KakaoMap({
     loadKakaoMaps(appKey)
       .then(sdk => {
         if (cancelled || !container.current) return;
-        const saved = mobileEnabled ? mobileMemory.current.viewport : undefined;
+        const saved = locationEnabled ? mobileMemory.current.viewport : undefined;
         const instance = new sdk.Map(container.current, {
           center: new sdk.LatLng(saved?.center.latitude ?? 36.4, saved?.center.longitude ?? 127.8),
           level: saved?.level ?? 13,
@@ -148,7 +151,7 @@ export default function KakaoMap({
       cancelled = true;
       observer?.disconnect();
     };
-  }, [attempt, mobileEnabled]);
+  }, [attempt, locationEnabled]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
@@ -197,13 +200,30 @@ export default function KakaoMap({
         zoomStart: () => layer.current?.suspendCardAdjustment(),
       },
       mobileMemory.current,
+      {
+        container: container.current,
+        viewport: () => {
+          const bounds = container.current?.getBoundingClientRect() ?? new DOMRect();
+          return cardViewport ? cardViewport(bounds) : bounds;
+        },
+      },
     );
     locationLayer.current = current;
     return () => {
       current.dispose();
       locationLayer.current = null;
     };
-  }, [map, cameraReady, radiusReady, zoomChanged, mapMoved, research, onSelect, onStationSelect]);
+  }, [
+    map,
+    cameraReady,
+    radiusReady,
+    zoomChanged,
+    mapMoved,
+    research,
+    onSelect,
+    onStationSelect,
+    cardViewport,
+  ]);
   const position = mobileLocation?.position;
   const scope = mobileLocation?.scope;
   const cameraRequest = mobileLocation?.cameraRequest;
@@ -247,7 +267,11 @@ export default function KakaoMap({
       return;
     }
     if (fitPolicy.current?.map !== map) fitPolicy.current = {map, policy: new MapFitPolicy()};
-    if (fitPolicy.current.policy.update(fitSource, fitRequest, deferFit) && !selectedRouteName)
+    if (
+      fitPolicy.current.policy.update(fitSource, fitRequest, deferFit) &&
+      !selectedRouteName &&
+      (!scope || scope.kind === "all")
+    )
       layer.current?.fit();
   }, [
     map,
@@ -341,33 +365,18 @@ export default function KakaoMap({
         </div>
       )}
       {(ready || mobileLocation) && (
-        <div className={`map-topbar ${mobileLocation ? "mobile-navigation" : ""}`}>
-          {mobileLocation ? (
+        <div className={`map-topbar ${mobileEnabled ? "mobile-navigation" : ""}`}>
+          {mobileEnabled && mobileLocation ? (
             <>
-              <div className="mobile-navigation-row">
-                <span className="map-scope-label" role="status">
-                  {selectedRouteName
-                    ? `${selectedRouteName} 전체 구간`
-                    : scopeLabel(mobileLocation.locationRadius ?? mobileLocation.scope)}
-                  {!selectedRouteName &&
-                    mobileLocation.locationRadius &&
-                    mobileLocation.scope.kind === "bounds" && (
-                      <small className="map-scope-mode">지도 영역 검색</small>
-                    )}
-                </span>
-                <button
-                  className="map-button"
-                  onClick={() => {
-                    onSelect(null);
-                    if (selectedRouteName) onClearRoute?.();
-                    mobileLocation.locate();
-                  }}
-                  disabled={mobileLocation.requesting}
-                >
-                  <Icon name="locate" size={17} />
-                  {mobileLocation.requesting ? "위치 확인 중" : "내 위치"}
-                </button>
-              </div>
+              {(selectedRouteName || mobileLocation.scope.kind !== "radius") && (
+                <div className="mobile-navigation-row">
+                  <span className="map-scope-label" role="status">
+                    {selectedRouteName
+                      ? `${selectedRouteName} 전체 구간`
+                      : scopeLabel(mobileLocation.scope)}
+                  </span>
+                </div>
+              )}
               {ready && !selectedRouteName && mobileLocation.researchAvailable && (
                 <button
                   className="map-button map-research-button"
@@ -445,6 +454,12 @@ export default function KakaoMap({
                 GS 주유소
               </span>
             )}
+            {stations.length > 0 && areas.length > 0 && (
+              <span>
+                <i className="legend-mixed" />
+                휴게소+주유소
+              </span>
+            )}
             {highway.route && (
               <span>
                 <i className="legend-route" />
@@ -452,21 +467,46 @@ export default function KakaoMap({
               </span>
             )}
           </div>
-          <div className="zoom-controls" aria-label="지도 확대 및 축소">
-            <button
-              aria-label="지도 확대"
-              onClick={() => map.setLevel(Math.max(1, map.getLevel() - 1))}
-            >
-              +
-            </button>
-            <button
-              aria-label="지도 축소"
-              onClick={() => map.setLevel(Math.min(14, map.getLevel() + 1))}
-            >
-              −
-            </button>
-          </div>
+          {mobileLocation && (
+            <div className="location-control">
+              <button
+                className="map-button"
+                aria-label="내 위치로 이동"
+                disabled={mobileLocation.requesting || locationDisabled}
+                onClick={() => {
+                  onSelect(null);
+                  if (selectedRouteName) onClearRoute?.();
+                  mobileLocation.locate();
+                }}
+              >
+                <Icon name="locate" size={20} />
+                <span>{mobileLocation.requesting ? "확인 중" : "내 위치"}</span>
+              </button>
+            </div>
+          )}
         </>
+      )}
+      {ready && !mobileEnabled && mobileLocation && (
+        <div className="admin-location-status">
+          {mobileLocation.error && (
+            <p className="map-location-error" role="status">
+              {mobileLocation.error.message}
+            </p>
+          )}
+          {!selectedRouteName && mobileLocation.researchAvailable && (
+            <button
+              className="map-button"
+              disabled={locationDisabled}
+              onClick={() => {
+                onSelect(null);
+                locationLayer.current?.research();
+              }}
+            >
+              <Icon name="refresh" size={16} />
+              지도 내 재검색
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

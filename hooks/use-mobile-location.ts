@@ -2,7 +2,7 @@
 import {useCallback, useEffect, useState, useSyncExternalStore} from "react";
 import {MobileLocationController, readCurrentPosition} from "@/lib/mobile-location";
 
-export function useMobileLocation() {
+export function useMobileLocation(autoLocate = true) {
   const [controller] = useState(() => new MobileLocationController());
   const state = useSyncExternalStore(
     controller.subscribe,
@@ -18,12 +18,13 @@ export function useMobileLocation() {
     );
   }, [controller]);
   useEffect(() => {
+    if (!autoLocate) return () => controller.cancelPendingRequests();
     const timer = window.setTimeout(locate, 0);
     return () => {
       window.clearTimeout(timer);
       controller.cancelPendingRequests();
     };
-  }, [controller, locate]);
+  }, [controller, locate, autoLocate]);
   return {
     ...state,
     locate,
