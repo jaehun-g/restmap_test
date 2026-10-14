@@ -1,4 +1,5 @@
 import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
+import {setMapCardIcon} from "./map-card-icon.ts";
 
 export function createMapCard(
   area: RestArea,
@@ -19,7 +20,7 @@ export function createMapCard(
   const close = document.createElement("button");
   close.className = "map-card-close";
   close.type = "button";
-  close.textContent = "×";
+  setMapCardIcon(close, "close");
   close.setAttribute("aria-label", "휴게소 요약 닫기");
   close.addEventListener("click", event => {
     event.stopPropagation();
@@ -27,12 +28,14 @@ export function createMapCard(
   });
   heading.append(icon, title, close);
   card.append(heading);
+  const body = document.createElement("div");
+  body.className = "map-card-body";
   const route = routeDescription(area, audience);
   if (route) {
     const text = document.createElement("p");
     text.className = "map-card-route";
     text.textContent = route;
-    card.append(text);
+    body.append(text);
   }
   const lounge = area.facilities.has_truck_lounge;
   if (lounge === true || audience === "admin") {
@@ -40,7 +43,7 @@ export function createMapCard(
     badge.className = lounge === true ? "lounge-badge" : "map-card-muted";
     badge.textContent =
       lounge === true ? "화물차 라운지" : lounge === false ? "라운지 없음" : "라운지 미확인";
-    card.append(badge);
+    body.append(badge);
   }
   const available = facilityDefinitions.filter(
     ([key]) => key !== "has_truck_lounge" && area.facilities[key] === true,
@@ -58,7 +61,7 @@ export function createMapCard(
       more.textContent = `+${available.length - 3}`;
       facilities.append(more);
     }
-    card.append(facilities);
+    body.append(facilities);
   }
   const details = document.createElement("button");
   details.className = "map-card-details";
@@ -68,6 +71,6 @@ export function createMapCard(
     event.stopPropagation();
     onDetails();
   });
-  card.append(details);
+  card.append(body, details);
   return card;
 }

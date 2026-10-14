@@ -1,13 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {createPlaceMarkers} from "../lib/kakao-place-markers.ts";
 import {createRestAreaMarkers} from "../lib/kakao-markers.ts";
+import {restPlace} from "../lib/map-places.ts";
 import {normalizeRestAreas, type RestArea} from "../lib/rest-areas.ts";
 import type {KakaoMaps, KakaoMap} from "../lib/kakao-sdk.ts";
+import {createMapCard} from "../lib/map-card.ts";
+import {CardElement, installCardDOM} from "./helpers/card-dom.mts";
 
 function mockKakao() {
   const state = {
     created: 0,
     clicks: [] as (() => void)[],
+    mapClicks: [] as (() => void)[],
     idle: [] as (() => void)[],
     offsets: [] as number[][],
     removed: 0,
@@ -38,6 +43,12 @@ function mockKakao() {
   }
   class Bounds {
     extend() {}
+    getSouthWest() {
+      return new LatLng(37, 127);
+    }
+    getNorthEast() {
+      return new LatLng(37, 127);
+    }
   }
   class Size {
     width: number;
@@ -87,7 +98,10 @@ function mockKakao() {
     CustomOverlay: Overlay,
     event: {
       addListener(target: unknown, name: string, callback: () => void) {
-        if (name === "click" && target instanceof Marker) state.clicks.push(callback);
+        if (name === "click") {
+          if (target instanceof Marker) state.clicks.push(callback);
+          else state.mapClicks.push(callback);
+        }
         if (name === "idle") state.idle.push(callback);
       },
       removeListener() {
@@ -109,6 +123,9 @@ function mockKakao() {
       state.centered++;
     },
     setLevel() {},
+    getLevel() {
+      return 6;
+    },
   } as unknown as KakaoMap;
   return {sdk, map, state};
 }
@@ -172,6 +189,27 @@ test("hiding a card can retain marker selection for administrator editing", () =
   assert.equal(state.shown, 0);
   assert.equal(state.panned, 1);
 });
+test("clicking an empty map area closes an open single-place card and clears its selection", () => {
+  const {sdk, map, state} = mockKakao();
+  let cleared = 0;
+  const markers = createPlaceMarkers(
+    sdk,
+    map,
+    areas().slice(0, 1).map(restPlace),
+    () => {},
+    label,
+    undefined,
+    () => {
+      cleared++;
+    },
+  );
+  markers.select("rest:1");
+  assert.equal(state.shown, 1);
+  const hidden = state.hidden;
+  state.mapClicks[0]();
+  assert.ok(state.hidden > hidden);
+  assert.equal(cleared, 1);
+});
 test("fit handles multiple markers, a single marker and empty results", () => {
   const {sdk, map, state} = mockKakao();
   createRestAreaMarkers(sdk, map, areas(), () => {}, label).fit();
@@ -190,7 +228,7 @@ test("disposal removes marker listeners, the map idle listener, card contents an
   assert.equal(state.content.at(-1), "");
 });
 
-test("summary cards fit the viewport width without introducing a height limit or scrolling", t => {
+test("summary cards fit viewport width and height and adjust only overflowing edges", t => {
   const animation = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
   const cancellation = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
   let scheduled: (() => void) | null = null;
@@ -228,11 +266,11 @@ test("summary cards fit the viewport width without introducing a height limit or
     () => view,
   );
   markers.select(1);
-  assert.equal(style.maxWidth, "288px");
-  assert.equal(style.maxHeight, "");
+  assert.equal(style.maxWidth, "280px");
+  assert.equal(style.maxHeight, "384px");
   assert.ok(scheduled);
   (scheduled as () => void)();
-  assert.deepEqual(state.offsets, [[-24, -45]]);
+  assert.deepEqual(state.offsets, [[-24, 0]]);
   box = {...box, left: 16, right: 254, top: 55, bottom: 205};
   state.idle[0]();
   assert.equal(state.offsets.length, 1);
@@ -246,6 +284,108 @@ test("summary cards fit the viewport width without introducing a height limit or
   markers.select(2);
   markers.dispose();
   assert.equal(cancelled, true);
+});
+
+test("cluster list returns with count, scroll and focus intact; close resets the next opening", t => {
+  const dom = installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const normalized = normalizeRestAreas(
+    Array.from({length: 12}, (_, i) => ({
+      id: i + 1,
+      name: `휴게소 ${i + 1}`,
+      latitude: "37",
+      longitude: "127",
+      has_truck_lounge: 0,
+    })),
+  );
+  if (!normalized.ok) assert.fail(normalized.error.message);
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    normalized.value.map(restPlace),
+    place => layer.select(place.key),
+    place =>
+      createMapCard(
+        place.record as RestArea,
+        "mobile",
+        () => layer.select(null),
+        () => {},
+      ),
+    () => ({left: 0, right: 320, top: 50, bottom: 700, width: 320, height: 650}) as DOMRect,
+    () => layer.select(null),
+  );
+  const currentCard = () =>
+    [...state.content].reverse().find(content => content instanceof CardElement) as CardElement;
+  state.clicks[0]();
+  dom.flush();
+  let listCard = currentCard();
+  listCard.querySelector(".cluster-list-more")!.dispatch("click");
+  const list = listCard.querySelector(".cluster-popover-list")!;
+  list.scrollTop = 192;
+  list.dispatch("scroll");
+  const key = list.children[7].children[0].getAttribute("data-place-key");
+  list.children[7].children[0].dispatch("click");
+  const single = currentCard();
+  const heading = single.querySelector(".map-card-heading")!;
+  assert.equal(heading.firstChild?.getAttribute("aria-label"), "목록으로 돌아가기");
+  assert.equal(heading.children[1].tag, "img");
+  single.querySelector(".cluster-back")!.dispatch("click");
+  dom.flush();
+  listCard = currentCard();
+  const restored = listCard.querySelector(".cluster-popover-list")!;
+  assert.equal(restored.children.length, 10);
+  assert.equal(restored.scrollTop, 192);
+  assert.equal(
+    restored
+      .querySelectorAll("button")
+      .find(button => button.getAttribute("data-place-key") === key)?.focused,
+    true,
+  );
+  listCard.querySelector(".map-card-close")!.dispatch("click");
+  state.clicks[0]();
+  assert.equal(currentCard().querySelector(".cluster-popover-list")?.children.length, 5);
+  layer.dispose();
+  assert.equal(dom.frames.size, 0);
+});
+
+test("resize observation hides and restores cards and cleans up all queued work on disposal", t => {
+  const dom = installCardDOM(t, true);
+  const {sdk, map, state} = mockKakao();
+  const card = new CardElement("section");
+  card.append(new CardElement("div"), new CardElement("button"));
+  let height = 400;
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    areas().slice(0, 1).map(restPlace),
+    () => {},
+    () => card as unknown as HTMLElement,
+    () => ({left: 0, top: 50, right: 320, bottom: 50 + height, width: 320, height}) as DOMRect,
+  );
+  layer.select("rest:1");
+  dom.flush();
+  assert.equal(card.style.visibility, "");
+  height = 70;
+  dom.observers[0].callback();
+  dom.flush();
+  assert.equal(card.style.visibility, "hidden");
+  assert.equal(card.style.pointerEvents, "none");
+  height = 400;
+  dom.observers[0].callback();
+  dom.flush();
+  assert.equal(card.style.visibility, "");
+  assert.equal(card.style.pointerEvents, "");
+  assert.equal(dom.observers[0].targets.has(card), true);
+  dom.observers[0].callback();
+  layer.dispose();
+  assert.equal(dom.observers[0].disconnected, true);
+  assert.equal(dom.observers[0].targets.size, 0);
+  assert.equal(dom.frames.size, 0);
+  const offsets = state.offsets.length;
+  dom.observers[0].callback();
+  dom.flush();
+  assert.equal(state.offsets.length, offsets);
+  assert.equal(dom.frames.size, 0);
 });
 
 test("opening details keeps the existing card and does not recenter the selected marker", () => {

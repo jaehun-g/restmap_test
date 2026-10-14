@@ -1,4 +1,5 @@
 import {stationHours, type GasStation} from "./gas-stations.ts";
+import {setMapCardIcon} from "./map-card-icon.ts";
 export function createStationMapCard(
   station: GasStation,
   onClose: () => void,
@@ -17,7 +18,7 @@ export function createStationMapCard(
   const close = document.createElement("button");
   close.className = "map-card-close";
   close.type = "button";
-  close.textContent = "×";
+  setMapCardIcon(close, "close");
   close.setAttribute("aria-label", "주유소 요약 닫기");
   close.addEventListener("click", event => {
     event.stopPropagation();
@@ -25,16 +26,20 @@ export function createStationMapCard(
   });
   heading.append(icon, title, close);
   card.append(heading);
+  const body = document.createElement("div");
+  body.className = "map-card-body";
   const source = document.createElement("p");
   source.className = "map-card-route";
   source.textContent = `GS 주유·충전소${station.services.cargo ? " · 화물 특화" : ""}`;
-  card.append(source);
+  body.append(source);
   const address = document.createElement("p");
   address.textContent = [station.address, station.detailAddress].filter(Boolean).join(" ");
-  card.append(address);
+  address.className = "map-card-address";
+  if (address.textContent) body.append(address);
   const hours = document.createElement("p");
   hours.textContent = stationHours(station);
-  card.append(hours);
+  hours.className = "map-card-hours";
+  body.append(hours);
   const details = document.createElement("button");
   details.className = "map-card-details";
   details.type = "button";
@@ -43,6 +48,6 @@ export function createStationMapCard(
     event.stopPropagation();
     onDetails();
   });
-  card.append(details);
+  card.append(body, details);
   return card;
 }

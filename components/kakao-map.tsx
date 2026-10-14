@@ -69,6 +69,7 @@ export default function KakaoMap({
   locationDisabled?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const topbar = useRef<HTMLDivElement>(null);
   const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
   const places = useMemo(
     () => [...areas.map(restPlace), ...stations.map(stationPlace)],
@@ -163,7 +164,11 @@ export default function KakaoMap({
       card,
       () => {
         const bounds = container.current!.getBoundingClientRect();
-        return cardViewport ? cardViewport(bounds) : bounds;
+        const view = cardViewport ? cardViewport(bounds) : bounds;
+        const bar = topbar.current?.getBoundingClientRect();
+        if (audience !== "mobile" || !bar?.height) return view;
+        const top = Math.max(view.top, bar.bottom + 8);
+        return new DOMRect(view.left, top, view.width, Math.max(0, view.bottom - top));
       },
       clearSelection,
     );
@@ -172,7 +177,23 @@ export default function KakaoMap({
       current.dispose();
       layer.current = null;
     };
-  }, [map, places, selectPlace, card, cardViewport, clearSelection]);
+  }, [map, places, selectPlace, card, cardViewport, clearSelection, audience]);
+  useEffect(() => {
+    if (!map || !container.current) return;
+    const adjust = () => layer.current?.adjustCard();
+    const observer = new ResizeObserver(adjust);
+    observer.observe(container.current);
+    if (topbar.current) observer.observe(topbar.current);
+    window.addEventListener("resize", adjust);
+    window.visualViewport?.addEventListener("resize", adjust);
+    window.visualViewport?.addEventListener("scroll", adjust);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", adjust);
+      window.visualViewport?.removeEventListener("resize", adjust);
+      window.visualViewport?.removeEventListener("scroll", adjust);
+    };
+  }, [map]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
@@ -365,7 +386,7 @@ export default function KakaoMap({
         </div>
       )}
       {(ready || mobileLocation) && (
-        <div className={`map-topbar ${mobileEnabled ? "mobile-navigation" : ""}`}>
+        <div ref={topbar} className={`map-topbar ${mobileEnabled ? "mobile-navigation" : ""}`}>
           {mobileEnabled && mobileLocation ? (
             <>
               {(selectedRouteName || mobileLocation.scope.kind !== "radius") && (

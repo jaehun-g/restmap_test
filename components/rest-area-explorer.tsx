@@ -9,6 +9,7 @@ import {stationHours, type StationServiceKey} from "@/lib/gas-stations";
 import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
 import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
+import {cardDisplayArea} from "@/lib/map-card-layout";
 import {facilityDefinitions, hasCoordinates, routeDescription} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
@@ -41,30 +42,62 @@ export default function MobileExplorer() {
   const summaryRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
+  const [viewportRevision, setViewportRevision] = useState(0);
   useEffect(() => {
     const header = headerRef.current;
     const shell = shellRef.current;
     if (!header || !shell) return;
-    const measure = () =>
+    let signature = "";
+    const measure = () => {
       shell.style.setProperty(
         "--mobile-header-height",
         `${header.getBoundingClientRect().height}px`,
       );
+      const next = [
+        header.getBoundingClientRect().bottom,
+        sheetRef.current?.getBoundingClientRect().top,
+        window.visualViewport?.height,
+        window.visualViewport?.offsetTop,
+        shell.getBoundingClientRect().width,
+      ].join(":");
+      if (next !== signature) {
+        signature = next;
+        setViewportRevision(value => value + 1);
+      }
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(header);
-    return () => observer.disconnect();
+    observer.observe(shell);
+    if (sheetRef.current) observer.observe(sheetRef.current);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("scroll", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("scroll", measure);
+    };
   }, []);
   const cardViewport = useCallback((canvas: DOMRect) => {
-    const top = Math.max(
-      canvas.top,
-      (headerRef.current?.getBoundingClientRect().bottom ?? canvas.top) + 8,
+    const screen = window.visualViewport;
+    const area = cardDisplayArea(
+      canvas,
+      headerRef.current?.getBoundingClientRect().bottom ?? canvas.top,
+      sheetRef.current?.getBoundingClientRect().top ?? canvas.bottom,
+      screen
+        ? {
+            left: screen.offsetLeft,
+            right: screen.offsetLeft + screen.width,
+            top: screen.offsetTop,
+            bottom: screen.offsetTop + screen.height,
+            width: screen.width,
+            height: screen.height,
+          }
+        : undefined,
     );
-    const bottom = Math.min(
-      canvas.bottom,
-      (sheetRef.current?.getBoundingClientRect().top ?? canvas.bottom) - 10,
-    );
-    return new DOMRect(canvas.left, top, canvas.width, Math.max(0, bottom - top));
+    return new DOMRect(area.left, area.top, area.width, area.height);
   }, []);
   const results = useMemo(
     () => filterMobileRestAreas(areas, filters, search.query, location.scope, location.position),
@@ -294,7 +327,7 @@ export default function MobileExplorer() {
             showCard
             dataVersion={data?.fetchedAt ?? gas.data?.fetchedAt}
             cardViewport={cardViewport}
-            viewportVersion={effectivePanel}
+            viewportVersion={`${effectivePanel}:${viewportRevision}`}
             mobileLocation={location}
           />
         </div>

@@ -2,6 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createMapCard} from "../lib/map-card.ts";
 import {normalizeRestAreas, type RestArea} from "../lib/rest-areas.ts";
+import {createStationMapCard} from "../lib/station-map-card.ts";
+import {normalizeGasStations} from "../lib/gas-stations.ts";
+import {CardElement, installCardDOM} from "./helpers/card-dom.mts";
 
 class ElementDouble {
   tag: string;
@@ -111,4 +114,56 @@ test("mobile cards hide missing routes and unknown lounges while administrator c
   );
   assert.ok(admin.all().some(element => element.textContent === "노선 미등록"));
   assert.ok(admin.all().some(element => element.textContent === "라운지 미확인"));
+});
+
+test("summary bodies scroll independently of header/footer and station text remains literal", t => {
+  installCardDOM(t);
+  const result = normalizeGasStations([
+    {
+      id: 1,
+      siteCd: "0001",
+      siteNm: "긴 이름의 GS 주유소",
+      lat: "37",
+      longi: "127",
+      zipAddr: '<img src=x onerror="alert(1)">긴 주소',
+      detAddr: "상세 주소",
+      cargoYn: "Y",
+      businsFrTm: "0900",
+      businsToTm: "2200",
+    },
+  ]);
+  if (!result.ok) assert.fail(result.error.message);
+  let opened = 0;
+  const cards = [
+    createMapCard(
+      area(true, "경부선"),
+      "mobile",
+      () => {},
+      () => {},
+    ),
+    createStationMapCard(
+      result.value[0],
+      () => {},
+      () => {
+        opened++;
+      },
+    ),
+  ] as unknown as CardElement[];
+  for (const card of cards) {
+    assert.deepEqual(
+      card.children.map(child => child.className),
+      ["map-card-heading", "map-card-body", "map-card-details"],
+    );
+    const close = card.querySelector(".map-card-close")!;
+    assert.equal(close.children[0].getAttribute("aria-hidden"), "true");
+    assert.ok(close.children[0].innerHTML.includes('stroke-width="1.7"'));
+  }
+  const station = cards[1];
+  assert.equal(
+    station.querySelector(".map-card-address")?.textContent,
+    `${result.value[0].address} 상세 주소`,
+  );
+  assert.equal(station.querySelector(".map-card-hours")?.textContent, "09:00–22:00");
+  station.querySelector(".map-card-details")!.dispatch("click");
+  assert.equal(opened, 1);
 });

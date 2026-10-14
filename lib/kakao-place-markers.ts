@@ -1,6 +1,13 @@
 import {hasCoordinates} from "./rest-areas.ts";
 import {placeSummary, sortPlacesForList, type MapPlace} from "./map-places.ts";
-import {createClusterListCard} from "./cluster-list-card.ts";
+import {
+  createClusterListCard,
+  initialClusterListState,
+  restoreClusterListCard,
+  type ClusterListState,
+} from "./cluster-list-card.ts";
+import {cardPanOffset, cardSizeLimit} from "./map-card-layout.ts";
+import {setMapCardIcon} from "./map-card-icon.ts";
 import {
   CLUSTER_MIN_LEVEL,
   clusterMinLevel,
@@ -66,6 +73,12 @@ export function createPlaceMarkers(
     listCenter: KakaoLatLng | null = null,
     listBounds: KakaoBounds | null = null,
     listOpen = false;
+  let listCard: HTMLElement | null = null;
+  let listState: ClusterListState = initialClusterListState();
+  let focusFrame: number | null = null;
+  let disposed = false;
+  const resizeObserver =
+    typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => scheduleAdjustment());
   const clusterer = sdk.MarkerClusterer
     ? new sdk.MarkerClusterer({
         map,
@@ -105,6 +118,10 @@ export function createPlaceMarkers(
     place.kind === "rest" && place.record.facilities.has_truck_lounge === true;
   const baseZ = (place: MapPlace) => (isLounge(place) ? 3 : place.kind === "rest" ? 2 : 1);
   function closeListOverlay() {
+    if (focusFrame !== null) cancelAnimationFrame(focusFrame);
+    focusFrame = null;
+    if (listCard) resizeObserver?.unobserve(listCard);
+    listCard = null;
     listOverlay.setMap(null);
     listOverlay.setContent("");
     listOpen = false;
@@ -114,8 +131,17 @@ export function createPlaceMarkers(
     listItems = null;
     listCenter = null;
     listBounds = null;
+    listState = initialClusterListState();
   }
-
+  function closeCardFromMap() {
+    if (!card) return;
+    clearCard();
+    onClear?.();
+  }
+  function handleMapClick() {
+    closeList();
+    closeCardFromMap();
+  }
   function canZoom(bounds: KakaoBounds) {
     const sw = bounds.getSouthWest(),
       ne = bounds.getNorthEast();
@@ -125,85 +151,118 @@ export function createPlaceMarkers(
     );
   }
   function showList(items: MapPlace[], center: KakaoLatLng, bounds: KakaoBounds) {
+    const restore = items === listItems;
     closeListOverlay();
+    if (!restore) listState = initialClusterListState();
     listItems = items;
     listCenter = center;
     listBounds = bounds;
     listOpen = true;
-    const content = createClusterListCard(items, {
-      onPick: place => {
-        closeListOverlay();
-        onSelect(place);
+    allowAdjustment = true;
+    const content = createClusterListCard(
+      items,
+      {
+        onPick: place => {
+          closeListOverlay();
+          onSelect(place);
+        },
+        onClose: closeList,
+        onStateChange: state => {
+          if (listCard === content) listState = state;
+        },
+        onLayout: () => {
+          allowAdjustment = true;
+          scheduleAdjustment();
+        },
+        onZoom: canZoom(bounds)
+          ? () => {
+              closeList();
+              const level = map.getLevel();
+              map.setBounds(bounds, 65, 45, 65, 45);
+              if (map.getLevel() >= level) map.setLevel(Math.max(1, level - 1));
+            }
+          : undefined,
       },
-      onClose: closeList,
-      onZoom: canZoom(bounds)
-        ? () => {
-            closeList();
-            const level = map.getLevel();
-            map.setBounds(bounds, 65, 45, 65, 45);
-            if (map.getLevel() >= level) map.setLevel(Math.max(1, level - 1));
-          }
-        : undefined,
-    });
+      listState,
+    );
+    listCard = content;
     listOverlay.setContent(content);
     listOverlay.setPosition(center);
     listOverlay.setMap(map);
-    requestAnimationFrame(() => content.querySelector<HTMLButtonElement>("ul button")?.focus());
+    resizeObserver?.observe(content);
+    scheduleAdjustment();
+    focusFrame = requestAnimationFrame(() => {
+      focusFrame = null;
+      if (!disposed && listCard === content) restoreClusterListCard(content, listState);
+    });
   }
   function addBackButton(target: HTMLElement) {
     const back = document.createElement("button");
     back.type = "button";
-    back.className = "map-card-details cluster-back";
-    back.textContent = "← 목록으로";
+    back.className = "map-card-back cluster-back";
+    setMapCardIcon(back, "back");
+    back.setAttribute("aria-label", "목록으로 돌아가기");
     back.addEventListener("click", event => {
       event.stopPropagation();
       if (listItems && listCenter && listBounds) {
         const items = listItems,
           center = listCenter,
           bounds = listBounds;
-        onClear?.();
+        clearCard();
         showList(items, center, bounds);
+        onClear?.();
       }
     });
-    target.append(back);
+    const heading = target.querySelector(".map-card-heading");
+    heading?.insertBefore(back, heading.firstChild);
   }
-  function constrainCard(view: DOMRect) {
-    if (card && view.width && view.height)
-      card.style.maxWidth = `${Math.max(1, view.width - 32)}px`;
+  function constrainCard(view: DOMRect, target = listCard ?? card) {
+    if (!target) return;
+    const fixed = [...(target.children ?? [])].filter(
+      child =>
+        !child.classList.contains("map-card-body") &&
+        !child.classList.contains("cluster-popover-list"),
+    );
+    const fixedHeight =
+      14 +
+      fixed.reduce((height, child) => {
+        const style = typeof getComputedStyle === "undefined" ? null : getComputedStyle(child);
+        return (
+          height +
+          child.getBoundingClientRect().height +
+          (parseFloat(style?.marginTop ?? "0") || 0) +
+          (parseFloat(style?.marginBottom ?? "0") || 0)
+        );
+      }, 0);
+    const limit = cardSizeLimit(view, fixedHeight);
+    target.style.maxWidth = `${limit.width}px`;
+    target.style.maxHeight = `${limit.height}px`;
+    target.style.visibility = limit.hidden ? "hidden" : "";
+    target.style.pointerEvents = limit.hidden ? "none" : "";
   }
   function keepVisible() {
-    if (!card || !viewport || !allowAdjustment) return;
+    const target = listCard ?? card;
+    if (!target || !viewport || disposed) return;
     const view = viewport();
-    constrainCard(view);
-    const box = card.getBoundingClientRect();
+    constrainCard(view, target);
+    if (!allowAdjustment || target.style.visibility === "hidden") return;
+    const box = target.getBoundingClientRect();
     if (!box.width || !box.height || !view.width || !view.height) return;
-    const spare = Math.max(0, view.height - box.height) / 2;
-    const left = view.left + 16,
-      right = view.right - 16;
-    const top = view.top + Math.min(55, view.height / 4, spare),
-      bottom = view.bottom - Math.min(28, view.height / 8, spare);
-    const dx = box.left < left ? box.left - left : box.right > right ? box.right - right : 0;
-    const dy =
-      box.height > bottom - top
-        ? box.top - top
-        : box.top < top
-          ? box.top - top
-          : box.bottom > bottom
-            ? box.bottom - bottom
-            : 0;
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) map.panBy(dx, dy);
+    const {x, y} = cardPanOffset(box, view);
+    if (Math.abs(x) > 1 || Math.abs(y) > 1) map.panBy(x, y);
   }
   function clearCard() {
     if (frame !== null) {
       cancelAnimationFrame(frame);
       frame = null;
     }
+    if (card) resizeObserver?.unobserve(card);
     card = null;
     overlay.setMap(null);
     overlay.setContent("");
   }
   function scheduleAdjustment() {
-    if (!card || !viewport || !allowAdjustment) return;
+    if ((!card && !listCard) || !viewport || disposed) return;
     if (frame !== null) cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => {
       frame = null;
@@ -211,7 +270,7 @@ export function createPlaceMarkers(
     });
   }
   sdk.event.addListener(map, "idle", keepVisible);
-  sdk.event.addListener(map, "click", closeList);
+  sdk.event.addListener(map, "click", handleMapClick);
   sdk.event.addListener(map, "dragstart", closeList);
   if (clusterer) sdk.event.addListener(map, "idle", applyClusterMode);
   const escape = (event: KeyboardEvent) => {
@@ -418,20 +477,21 @@ export function createPlaceMarkers(
       if (showCard) {
         card = createCard(selectedPlace);
         if (listItems && listItems.some(item => item.key === key)) addBackButton(card);
-        if (viewport) constrainCard(viewport());
+        if (viewport) constrainCard(viewport(), card);
         overlay.setContent(card);
         overlay.setPosition(position);
         overlay.setMap(map);
-
+        resizeObserver?.observe(card);
         scheduleAdjustment();
       }
     },
     dispose() {
+      disposed = true;
       clearCard();
       closeList();
-
+      resizeObserver?.disconnect();
       sdk.event.removeListener(map, "idle", keepVisible);
-      sdk.event.removeListener(map, "click", closeList);
+      sdk.event.removeListener(map, "click", handleMapClick);
       sdk.event.removeListener(map, "dragstart", closeList);
       if (typeof window !== "undefined") window.removeEventListener("keydown", escape);
       if (clusterer) {
