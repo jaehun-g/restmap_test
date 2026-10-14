@@ -3,10 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRestAreas } from "@/hooks/use-rest-areas";
 import { useSearchQuery } from "@/hooks/use-search-query";
 import { useMobileLocation } from "@/hooks/use-mobile-location";
-import { filterRestAreas, initialFilters } from "@/lib/rest-area-filters";
+import { filterMobileRestAreas, initialFilters } from "@/lib/rest-area-filters";
 import {
   areaDistance,
-  filterByGeoScope,
   formatDistance,
   scopeLabel,
 } from "@/lib/geo-search";
@@ -69,8 +68,10 @@ export default function MobileExplorer() {
   }, []);
   const results = useMemo(
     () =>
-      filterByGeoScope(
-        filterRestAreas(areas, filters, search.query),
+      filterMobileRestAreas(
+        areas,
+        filters,
+        search.query,
         location.scope,
         location.position,
       ),
@@ -143,6 +144,10 @@ export default function MobileExplorer() {
     setFilters(initialFilters());
     setSelectedId(null);
   };
+  const clearRoute = useCallback(() => {
+    setFilters((current) => ({ ...current, routeName: null }));
+    setSelectedId(null);
+  }, []);
 
   return (
     <main className="mobile-shell" ref={shellRef}>
@@ -216,6 +221,8 @@ export default function MobileExplorer() {
         <div className="mobile-map">
           <KakaoMap
             areas={results}
+            selectedRouteName={filters.routeName}
+            onClearRoute={clearRoute}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
             onSelect={select}
             onDetails={details}
@@ -262,9 +269,11 @@ export default function MobileExplorer() {
                 <small>
                   {error
                     ? "목록에서 조회 상태를 확인해주세요"
-                    : location.requesting
-                      ? "현재 위치를 확인하고 있어요"
-                      : scopeLabel(location.scope)}
+                    : filters.routeName
+                      ? `${filters.routeName} 전체 구간`
+                      : location.requesting
+                        ? "현재 위치를 확인하고 있어요"
+                        : scopeLabel(location.scope)}
                 </small>
               </span>
               <Icon name="chevronUp" size={20} />
@@ -340,8 +349,9 @@ export default function MobileExplorer() {
                         <Icon name="search" size={25} />
                         <strong>조건에 맞는 휴게소가 없습니다</strong>
                         <p>
-                          필터를 초기화하거나 지도를 이동한 뒤 지도 내 재검색을
-                          눌러보세요.
+                          {filters.routeName
+                            ? "검색어·편의시설·라운지 조건을 변경하거나 필터를 초기화해보세요."
+                            : "필터를 초기화하거나 지도를 이동한 뒤 지도 내 재검색을 눌러보세요."}
                         </p>
                         <button className="button secondary" onClick={reset}>
                           조건 초기화

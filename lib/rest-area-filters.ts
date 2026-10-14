@@ -4,6 +4,11 @@ import {
   type RestArea,
 } from "./rest-areas.ts";
 import type { SortField } from "./rest-area-fields.ts";
+import {
+  filterByGeoScope,
+  type GeoPoint,
+  type GeoSearchScope,
+} from "./geo-search.ts";
 
 export type LoungeFilter = "all" | "present" | "absent" | "unknown";
 export type RestAreaFilters = {
@@ -52,6 +57,21 @@ export function filterRestAreas<T extends RestArea>(
       (filters.lounge === "unknown" && lounge === null)
     );
   });
+}
+
+/** 노선 선택 시 위치 조건만 건너뛰고 거리순 정렬과 나머지 조건은 유지합니다. */
+export function filterMobileRestAreas<T extends RestArea>(
+  areas: T[],
+  filters: RestAreaFilters,
+  query: string,
+  scope: GeoSearchScope,
+  position: GeoPoint | null,
+): T[] {
+  return filterByGeoScope(
+    filterRestAreas(areas, filters, query),
+    filters.routeName ? { kind: "all" } : scope,
+    position,
+  );
 }
 
 const collator = new Intl.Collator("ko-KR", {

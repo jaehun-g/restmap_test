@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadKakaoMaps, type KakaoMap as MapInstance } from "@/lib/kakao-sdk";
 import { createRestAreaMarkers } from "@/lib/kakao-markers";
+import { createHighwayRouteLayer } from "@/lib/kakao-highway-route";
+import { createHighwayRouteViewport } from "@/lib/kakao-route-viewport";
+import { useHighwayRoute } from "@/hooks/use-highway-route";
 import { createMapCard } from "@/lib/map-card";
 import { MapFitPolicy, type MapFitRequest } from "@/lib/map-fit-policy";
 import { hasCoordinates, type RestArea } from "@/lib/rest-areas";
@@ -27,6 +30,8 @@ export default function KakaoMap({
   cardViewport,
   viewportVersion,
   mobileLocation,
+  selectedRouteName = null,
+  onClearRoute,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -40,12 +45,18 @@ export default function KakaoMap({
   cardViewport?: (canvas: DOMRect) => DOMRect;
   viewportVersion?: string;
   mobileLocation?: MobileMapLocation;
+  selectedRouteName?: string | null;
+  onClearRoute?: () => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const layer = useRef<ReturnType<typeof createRestAreaMarkers> | null>(null);
   const fitPolicy = useRef<{ map: MapInstance; policy: MapFitPolicy } | null>(
     null,
   );
+  const routeViewport = useRef<{
+    map: MapInstance;
+    view: ReturnType<typeof createHighwayRouteViewport>;
+  } | null>(null);
   const lastSelection = useRef<{ map: MapInstance | null; id: number | null }>({
     map: null,
     id: null,
@@ -59,6 +70,7 @@ export default function KakaoMap({
   const [map, setMap] = useState<MapInstance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const highway = useHighwayRoute(selectedRouteName, !!map && !error);
   const card = useCallback(
     (area: RestArea) =>
       createMapCard(
@@ -130,6 +142,13 @@ export default function KakaoMap({
   }, [map, areas, onSelect, card, cardViewport]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
+    if (!map || !sdk) return;
+    const current = createHighwayRouteLayer(sdk, map);
+    current.update(highway.route);
+    return () => current.dispose();
+  }, [map, highway.route]);
+  useEffect(() => {
+    const sdk = window.kakao?.maps;
     if (!map || !sdk || !cameraReady || !radiusReady || !zoomChanged || !mapMoved || !research)
       return;
     const current = createLocationMapLayer(
@@ -160,6 +179,7 @@ export default function KakaoMap({
   const cameraRequest = mobileLocation?.cameraRequest;
   const locationRadius = mobileLocation?.locationRadius;
   useEffect(() => {
+    locationLayer.current?.setRouteMode(!!selectedRouteName);
     if (scope)
       locationLayer.current?.update(
         position ?? null,
@@ -173,6 +193,7 @@ export default function KakaoMap({
     scope,
     cameraRequest,
     locationRadius,
+    selectedRouteName,
     cameraReady,
     radiusReady,
     zoomChanged,
@@ -184,13 +205,21 @@ export default function KakaoMap({
   useEffect(() => {
     if (!map) return;
     if (mobileEnabled) {
-      if (scope?.kind === "all" && dataVersion && areas.some(hasCoordinates))
+      if (
+        !selectedRouteName &&
+        scope?.kind === "all" &&
+        dataVersion &&
+        areas.some(hasCoordinates)
+      )
         locationLayer.current?.fitInitialResults(() => layer.current?.fit());
       return;
     }
     if (fitPolicy.current?.map !== map)
       fitPolicy.current = { map, policy: new MapFitPolicy() };
-    if (fitPolicy.current.policy.update(fitSource, fitRequest, deferFit))
+    if (
+      fitPolicy.current.policy.update(fitSource, fitRequest, deferFit) &&
+      !selectedRouteName
+    )
       layer.current?.fit();
   }, [
     map,
@@ -201,7 +230,23 @@ export default function KakaoMap({
     scope,
     dataVersion,
     areas,
+    selectedRouteName,
   ]);
+  useEffect(() => {
+    const sdk = window.kakao?.maps;
+    if (!map || !sdk) return;
+    if (routeViewport.current?.map !== map)
+      routeViewport.current = { map, view: createHighwayRouteViewport(sdk, map) };
+    routeViewport.current.view.update(
+      selectedRouteName,
+      highway.route,
+      areas,
+      (action) => {
+        if (locationLayer.current) locationLayer.current.fitRoute(action);
+        else action();
+      },
+    );
+  }, [map, selectedRouteName, highway.route, areas]);
   useEffect(() => {
     const move =
       lastSelection.current.map !== map ||
@@ -275,15 +320,20 @@ export default function KakaoMap({
             <>
               <div className="mobile-navigation-row">
                 <span className="map-scope-label" role="status">
-                  {scopeLabel(mobileLocation.locationRadius ?? mobileLocation.scope)}
-                  {mobileLocation.locationRadius && mobileLocation.scope.kind === "bounds" && (
-                    <small className="map-scope-mode">지도 영역 검색</small>
-                  )}
+                  {selectedRouteName
+                    ? `${selectedRouteName} 전체 구간`
+                    : scopeLabel(mobileLocation.locationRadius ?? mobileLocation.scope)}
+                  {!selectedRouteName &&
+                    mobileLocation.locationRadius &&
+                    mobileLocation.scope.kind === "bounds" && (
+                      <small className="map-scope-mode">지도 영역 검색</small>
+                    )}
                 </span>
                 <button
                   className="map-button"
                   onClick={() => {
                     onSelect(null);
+                    if (selectedRouteName) onClearRoute?.();
                     mobileLocation.locate();
                   }}
                   disabled={mobileLocation.requesting}
@@ -292,7 +342,7 @@ export default function KakaoMap({
                   {mobileLocation.requesting ? "위치 확인 중" : "내 위치"}
                 </button>
               </div>
-              {ready && mobileLocation.researchAvailable && (
+              {ready && !selectedRouteName && mobileLocation.researchAvailable && (
                 <button
                   className="map-button map-research-button"
                   onClick={() => {
@@ -304,7 +354,7 @@ export default function KakaoMap({
                   지도 내 재검색
                 </button>
               )}
-              {mobileLocation.error && (
+              {!selectedRouteName && mobileLocation.error && (
                 <p className="map-location-error" role="status">
                   {mobileLocation.error.message}
                 </p>
@@ -317,14 +367,30 @@ export default function KakaoMap({
                 className="map-button"
                 onClick={() => {
                   onSelect(null);
-                  layer.current?.fit();
+                  if (selectedRouteName)
+                    routeViewport.current?.view.update(
+                      selectedRouteName,
+                      highway.route,
+                      areas,
+                      undefined,
+                      true,
+                    );
+                  else layer.current?.fit();
                 }}
-                disabled={!areas.some(hasCoordinates)}
+                disabled={!highway.route && !areas.some(hasCoordinates)}
               >
                 <Icon name="fit" size={17} />
                 결과 전체 보기
               </button>
             </>
+          )}
+          {ready && highway.error && (
+            <div className="map-route-error" role="status">
+              <span>{highway.error}</span>
+              <button type="button" className="map-button" onClick={highway.retry}>
+                다시 시도
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -339,6 +405,12 @@ export default function KakaoMap({
               <i className="legend-lounge" />
               화물차 라운지
             </span>
+            {highway.route && (
+              <span>
+                <i className="legend-route" />
+                선택 노선
+              </span>
+            )}
           </div>
           <div className="zoom-controls" aria-label="지도 확대 및 축소">
             <button

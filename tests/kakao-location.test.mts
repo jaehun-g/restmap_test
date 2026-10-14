@@ -242,3 +242,48 @@ test("SDK recreation retains camera memory and disposal removes overlays and all
   assert.equal(current.state.circles.at(-1)?.radius, 30000);
   layer.dispose();
 });
+
+test("route mode hides the radius and preserves geographic scope across route fitting and user zoom", async () => {
+  const current = connected();
+  await current.locate();
+  const saved = current.controller.getSnapshot();
+  current.layer.setRouteMode(true);
+  current.update();
+  assert.equal(current.state.circles[0].visible, false);
+  assert.equal(current.state.overlays[0].visible, true);
+  current.layer.fitRoute(() => current.map.setLevel(12));
+  current.emit("idle");
+  current.map.setLevel(13);
+  current.emit("idle");
+  current.layer.research();
+  assert.equal(current.controller.getSnapshot(), saved);
+  assert.equal(current.state.fitted, 1);
+  current.layer.setRouteMode(false);
+  current.update();
+  assert.equal(current.state.circles[0].visible, true);
+  assert.equal(current.state.circles[0].radius, 15000);
+  assert.equal(current.controller.getSnapshot().scope, saved.scope);
+  assert.equal(current.state.fitted, 1);
+});
+
+test("late GPS in route mode updates the position without replacing the route camera", async () => {
+  const current = connected();
+  let resolve!: (result: { ok: true; value: typeof origin }) => void;
+  const pending = current.controller.requestLocation(() => new Promise((done) => { resolve = done; }));
+  current.layer.setRouteMode(true);
+  current.layer.fitRoute(() => current.map.setLevel(11));
+  resolve({ ok: true, value: origin });
+  await pending;
+  current.emit("idle");
+  assert.equal(current.state.overlays[0].visible, true);
+  assert.equal(current.state.circles.length, 0);
+  assert.equal(current.state.fitted, 0);
+  assert.equal(current.map.getLevel(), 11);
+  current.layer.fitInitialResults(() => assert.fail("initial results must not replace the route camera"));
+  current.layer.setRouteMode(false);
+  current.update();
+  assert.equal(current.state.fitted, 1);
+  assert.equal(current.map.getLevel(), 9);
+  assert.equal(current.state.circles[0].visible, true);
+  assert.equal(current.state.circles[0].radius, 15000);
+});

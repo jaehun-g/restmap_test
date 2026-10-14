@@ -12,6 +12,7 @@ import { selectRestAreaColumns } from "./rest-area-fields";
 import { saveRestArea } from "./rest-area-save";
 import type { UpdateRequest } from "./rest-area-validation";
 import type { RestAreaRecord } from "./rest-areas";
+import { normalizeHighwayRoute, type HighwayRoute } from "./highway-routes";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -63,6 +64,29 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
     };
   } catch (error) {
     return { ok: false, error: databaseError(error) };
+  }
+}
+
+export async function queryHighwayRoute(routeName: string): Promise<Result<HighwayRoute>> {
+  try {
+    const pool = getPool();
+    if (!pool.ok) return pool;
+    const [rows] = await pool.value.query<RowDataPacket[]>({
+      sql: `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
+                   path_coordinates
+            FROM test_highway_routes WHERE route_name = ? LIMIT 1`,
+      timeout: 10_000,
+    }, [routeName]);
+    if (!rows.length)
+      return { ok: false, error: { code: "NOT_FOUND", message: "선택한 노선의 경로를 찾지 못했습니다." } };
+    return normalizeHighwayRoute(rows[0]);
+  } catch (reason) {
+    const error = databaseError(reason);
+    if (error.code === "DB_SCHEMA_ERROR")
+      error.message = "노선 경로 테이블(test_highway_routes)을 확인해주세요.";
+    if (error.code === "DB_QUERY_FAILED")
+      error.message = "노선 경로를 조회하지 못했습니다. 잠시 후 다시 시도해주세요.";
+    return { ok: false, error };
   }
 }
 

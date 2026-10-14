@@ -56,6 +56,10 @@ export interface KakaoCircle {
   getBounds(): KakaoBounds;
 }
 
+export interface KakaoPolyline {
+  setMap(map: KakaoMap | null): void;
+}
+
 export interface KakaoMaps {
   load(callback: () => void): void;
   Map: new (
@@ -95,6 +99,15 @@ export interface KakaoMaps {
     fillOpacity: number;
     zIndex: number;
   }) => KakaoCircle;
+  Polyline: new (options: {
+    map: KakaoMap;
+    path: KakaoLatLng[][];
+    strokeWeight: number;
+    strokeColor: string;
+    strokeOpacity: number;
+    strokeStyle: string;
+    zIndex: number;
+  }) => KakaoPolyline;
   event: {
     addListener(
       target: KakaoMarker | KakaoMap,

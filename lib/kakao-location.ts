@@ -60,6 +60,7 @@ export function createLocationMapLayer(
   let observedLevel = map.getLevel();
   let pendingZoom = false;
   let pendingMove = false;
+  let routeMode = false;
   const dot = new sdk.CustomOverlay({
     content:
       '<span class="current-location-dot" role="img" aria-label="내 현재 위치"></span>',
@@ -111,8 +112,8 @@ export function createLocationMapLayer(
     pendingZoom = false;
     pendingMove = false;
     rememberView();
-    if (changedZoom) callbacks.zoomChanged(map.getLevel());
-    if (moved) callbacks.mapMoved();
+    if (changedZoom && !routeMode) callbacks.zoomChanged(map.getLevel());
+    if (moved && !routeMode) callbacks.mapMoved();
   };
   const listeners = {
     zoom_changed: zoom,
@@ -125,6 +126,10 @@ export function createLocationMapLayer(
   );
 
   return {
+    setRouteMode(enabled: boolean) {
+      routeMode = enabled;
+      if (enabled) circle?.setMap(null);
+    },
     update(
       position: GeoPoint | null,
       scope: GeoSearchScope,
@@ -136,7 +141,7 @@ export function createLocationMapLayer(
         dot.setPosition(new sdk.LatLng(position.latitude, position.longitude));
         dot.setMap(map);
       } else dot.setMap(null);
-      if (locationRadius) {
+      if (locationRadius && !routeMode) {
         const center = new sdk.LatLng(
           locationRadius.center.latitude,
           locationRadius.center.longitude,
@@ -169,12 +174,17 @@ export function createLocationMapLayer(
       } else circle?.setMap(null);
     },
     fitInitialResults(fit: () => void) {
-      if (disposed || memory.initialFitDone || memory.userMoved) return;
+      if (disposed || routeMode || memory.initialFitDone || memory.userMoved) return;
+      memory.initialFitDone = true;
+      programmatic(fit);
+    },
+    fitRoute(fit: () => void) {
+      if (disposed) return;
       memory.initialFitDone = true;
       programmatic(fit);
     },
     research() {
-      if (disposed) return;
+      if (disposed || routeMode) return;
       callbacks.zoomChanged(map.getLevel());
       pendingZoom = false;
       pendingMove = false;

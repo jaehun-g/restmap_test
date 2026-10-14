@@ -8,7 +8,7 @@ const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 
 // 1. 다운로드한 GS칼텍스 JSON 읽기
-const file = await fs.readFile("./gsdata/gs_stations.json", "utf8");
+const file = await fs.readFile("./public/data/gs_stations.json", "utf8");
 
 const data = JSON.parse(file);
 

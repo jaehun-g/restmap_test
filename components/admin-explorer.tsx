@@ -297,6 +297,7 @@ export default function AdminExplorer() {
           <div className="admin-map">
             <KakaoMap
               areas={results}
+              selectedRouteName={filters.missingRoute ? null : filters.routeName}
               selectedId={selected?.id ?? null}
               onSelect={select}
               onDetails={details}

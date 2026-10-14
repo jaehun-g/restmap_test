@@ -221,6 +221,7 @@ svg {
   left: 14px;
   right: 14px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
@@ -599,6 +600,23 @@ svg {
   color: #526b91;
   font-size: 11px;
   line-height: 1.6;
+}
+.map-route-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fffffff2;
+  box-shadow: 0 2px 8px #26374d12;
+  color: #526b91;
+  font-size: 11px;
+  pointer-events: auto;
+}
+.map-route-error .map-button {
+  flex-shrink: 0;
 }
 .current-location-dot {
   display: block;
@@ -1356,6 +1374,12 @@ input[type="checkbox"] {
 }
 .map-legend .legend-lounge {
   background: #ed8a23;
+}
+.map-legend .legend-route {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px #fff;
 }
 .map-info-card {
   width: 238px;
