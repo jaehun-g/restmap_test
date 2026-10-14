@@ -20,7 +20,7 @@ import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
 const noAreas: ReturnType<typeof filterMobileRestAreas> = [];
 
-type Panel = "collapsed" | "list" | "detail" | "routes" | "facilities";
+type Panel = "collapsed" | "list" | "detail" | "routes" | "facilities" | "stationServices";
 export default function MobileExplorer() {
   const {data, areas, loading, error, reload} = useRestAreas();
   const location = useMobileLocation();
@@ -198,15 +198,7 @@ export default function MobileExplorer() {
   return (
     <main className="mobile-shell" ref={shellRef}>
       <header className="mobile-header" ref={headerRef}>
-        <div className="mobile-brand">
-          <span className="mobile-brand-mark">
-            <Icon name="pin" size={23} />
-          </span>
-          <h1>휴게소·주유소 찾기</h1>
-          <span className="mobile-test-label" role="status">
-            {loading || gas.loading ? "조회 중" : `${resultCount}개 결과`}
-          </span>
-        </div>
+        <h1 className="sr-only">휴게소·주유소 찾기</h1>
         <SearchBox search={search} includeStations={placeView !== "rest"} />
         <PlaceControls
           view={placeView}
@@ -216,8 +208,6 @@ export default function MobileExplorer() {
             setSelectedStationId(null);
             setPanel("collapsed");
           }}
-          services={stationFilters}
-          onServices={setStationFilters}
         />
         <div className="mobile-filters">
           <button
@@ -237,6 +227,17 @@ export default function MobileExplorer() {
             >
               휴게소 편의시설
               {filters.facilities.length > 0 && <b>{filters.facilities.length}</b>}
+              <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
+            </button>
+          )}
+          {placeView !== "rest" && (
+            <button
+              className={`filter-chip ${stationFilters.length ? "active" : ""}`}
+              onClick={event => open("stationServices", event.currentTarget)}
+              aria-expanded={panel === "stationServices"}
+            >
+              주유소 조건
+              {stationFilters.length > 0 && <b>{stationFilters.length}</b>}
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </button>
           )}
@@ -307,7 +308,9 @@ export default function MobileExplorer() {
                 ? "노선 필터"
                 : effectivePanel === "facilities"
                   ? "편의시설 필터"
-                  : "휴게소 목록"
+                  : effectivePanel === "stationServices"
+                    ? "주유소 조건 필터"
+                    : "휴게소 목록"
           }
         >
           <div className="sheet-handle" aria-hidden="true" />
@@ -343,15 +346,19 @@ export default function MobileExplorer() {
             </button>
           ) : (
             <div ref={panelRef} className="sheet-content" tabIndex={-1}>
-              {effectivePanel === "routes" || effectivePanel === "facilities" ? (
+              {effectivePanel === "routes" ||
+              effectivePanel === "facilities" ||
+              effectivePanel === "stationServices" ? (
                 <MobileFilterSheet
                   key={effectivePanel}
                   kind={effectivePanel}
                   areas={areas}
                   filters={filters}
+                  stationServices={stationFilters}
                   onChange={next => {
                     setFilters(next);
                   }}
+                  onStationServices={setStationFilters}
                   onClose={collapse}
                 />
               ) : effectivePanel === "detail" && selectedStation ? (

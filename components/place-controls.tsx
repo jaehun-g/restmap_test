@@ -1,18 +1,16 @@
 "use client";
-import {stationServices, type StationServiceKey} from "@/lib/gas-stations";
 import type {PlaceView} from "@/lib/map-places";
+import type {StationServiceKey} from "@/lib/gas-stations";
 
 export default function PlaceControls({
   view,
   onView,
-  services,
-  onServices,
   disabled = false,
 }: {
   view: PlaceView;
   onView: (view: PlaceView) => void;
-  services: StationServiceKey[];
-  onServices: (services: StationServiceKey[]) => void;
+  services?: StationServiceKey[];
+  onServices?: (services: StationServiceKey[]) => void;
   disabled?: boolean;
 }) {
   return (
@@ -37,37 +35,6 @@ export default function PlaceControls({
           </button>
         ))}
       </nav>
-      {view !== "rest" && (
-        <details className="station-filter-picker">
-          <summary
-            onClick={event => {
-              if (disabled) event.preventDefault();
-            }}
-          >
-            주유소 조건{services.length ? ` (${services.length})` : ""}
-          </summary>
-          <div className="station-filter-options">
-            <p>GS 주유소에 적용 · 선택한 조건을 모두 포함</p>
-            {stationServices.map(({key, label}) => (
-              <label key={key}>
-                <input
-                  type="checkbox"
-                  disabled={disabled}
-                  checked={services.includes(key)}
-                  onChange={event =>
-                    onServices(
-                      event.target.checked
-                        ? [...services, key]
-                        : services.filter(value => value !== key),
-                    )
-                  }
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </details>
-      )}
     </div>
   );
 }
