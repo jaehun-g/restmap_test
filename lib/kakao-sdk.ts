@@ -70,6 +70,7 @@ export interface KakaoClusterer {
   addMarker(marker: KakaoMarker, nodraw?: boolean): void;
   removeMarker(marker: KakaoMarker, nodraw?: boolean): void;
   redraw(): void;
+  setMinLevel(level: number): void;
   clear(): void;
 }
 
