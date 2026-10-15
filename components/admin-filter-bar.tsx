@@ -1,4 +1,6 @@
 "use client";
+import {Select} from "@/components/ui/field";
+import {Button} from "@/components/ui/button";
 import {facilityDefinitions, type RestArea} from "@/lib/rest-areas";
 import {
   routeOptions,
@@ -9,7 +11,6 @@ import {
 import type {useSearchQuery} from "@/hooks/use-search-query";
 import SearchBox from "./search-box";
 import Icon from "./icon";
-
 export default function AdminFilterBar({
   areas,
   filters,
@@ -35,12 +36,15 @@ export default function AdminFilterBar({
       ? `route:${filters.routeName}`
       : "all";
   return (
-    <section className="admin-filter-bar" aria-label="휴게소 검색·필터">
-      <div className="admin-filter-controls">
+    <section
+      className="admin-filter-bar mb-[16px] p-[13px_15px_9px] bg-white [border:1px_solid_#e2e8f0] rounded-[10px]"
+      aria-label="휴게소 검색·필터"
+    >
+      <div className="admin-filter-controls flex items-end gap-[10px] flex-wrap">
         <SearchBox search={search} disabled={disabled} includeStations={includeStations} />
-        <label className="filter-select">
+        <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
           노선
-          <select
+          <Select
             aria-label="노선 필터"
             value={routeValue}
             disabled={disabled}
@@ -61,10 +65,10 @@ export default function AdminFilterBar({
                 {name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {!hideRestFilters && (
-          <details className="facility-picker">
+          <details className="facility-picker relative">
             <summary
               onClick={event => {
                 if (disabled) event.preventDefault();
@@ -73,7 +77,7 @@ export default function AdminFilterBar({
               휴게소 편의시설{" "}
               {filters.facilities.length ? `(${filters.facilities.length})` : "전체"} ▾
             </summary>
-            <div className="facility-picker-options">
+            <div className="facility-picker-options absolute z-[10] top-[42px] left-[0] w-[230px] grid grid-cols-[1fr_1fr] gap-[12px_8px] p-[15px] [border:1px_solid_#dde6f2] rounded-[9px] bg-white [box-shadow:0_4px_18px_#23416a1c]">
               <p>선택한 시설을 모두 포함</p>
               {selectableFacilities.map(([key, label]) => (
                 <label key={key}>
@@ -97,9 +101,9 @@ export default function AdminFilterBar({
           </details>
         )}
         {!hideRestFilters && (
-          <label className="filter-select">
+          <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
             휴게소 라운지
-            <select
+            <Select
               aria-label="화물차 라운지 필터"
               value={filters.lounge}
               disabled={disabled}
@@ -114,14 +118,17 @@ export default function AdminFilterBar({
               <option value="present">있음</option>
               <option value="absent">없음</option>
               <option value="unknown">미확인</option>
-            </select>
+            </Select>
           </label>
         )}
-        <button className="button secondary" disabled={disabled} onClick={onReset}>
+        <Button disabled={disabled} onClick={onReset} variant="secondary">
           필터 초기화
-        </button>
+        </Button>
       </div>
-      <div className="active-filter-tags" aria-label="적용 조건">
+      <div
+        className="active-filter-tags flex flex-wrap gap-[6px] items-center pt-[10px] min-h-[32px]"
+        aria-label="적용 조건"
+      >
         {search.query && (
           <button disabled={disabled} onClick={() => search.clear()}>
             검색: {search.query}

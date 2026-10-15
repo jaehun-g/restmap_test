@@ -1,11 +1,13 @@
 "use client";
+import {Badge} from "@/components/ui/badge";
+import {sharedClasses} from "@/lib/shared-classes";
+import {Button} from "@/components/ui/button";
 import {useState} from "react";
 import {sortFields, type SortField} from "@/lib/rest-area-fields";
 import {hasCoordinates, type FacilityKey, type RestAreaRecord} from "@/lib/rest-areas";
 import FacilitySummary from "./facility-summary";
 import QueryState from "./query-state";
 import Icon from "./icon";
-
 const defaultColumns: SortField[] = [
   "name",
   "routeName",
@@ -14,7 +16,6 @@ const defaultColumns: SortField[] = [
   "parkingCount",
   "has_truck_lounge",
 ];
-
 export default function AdminRestAreaTable({
   rows,
   selectedId,
@@ -49,7 +50,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           <button
-            className="table-area-name"
+            className="table-area-name text-[#33445d] text-[12px] font-[650] p-[2px_0] [border:0] bg-[transparent] text-left"
             aria-pressed={selectedId === area.id}
             onClick={event => {
               event.stopPropagation();
@@ -58,23 +59,31 @@ export default function AdminRestAreaTable({
           >
             {area.name}
           </button>
-          {!allColumns && <span className="table-meta">{area.phone || "전화번호 미등록"}</span>}
+          {!allColumns && (
+            <span className="table-meta block text-[9px] mt-[5px] text-[#97a3b3]">
+              {area.phone || "전화번호 미등록"}
+            </span>
+          )}
         </>
       );
     if (key === "routeName")
       return (
         <>
-          {area.routeName ?? <span className="missing-value">미등록</span>}
-          {!allColumns && area.routeNumber && (
-            <span className="route-number">{area.routeNumber}</span>
+          {area.routeName ?? (
+            <span className="missing-value text-[#b58a48] text-[10px]">미등록</span>
           )}
+          {!allColumns && area.routeNumber && <Badge variant="route">{area.routeNumber}</Badge>}
         </>
       );
     if (key === "directionLabel")
       return (
         <>
           {area.directionLabel ?? "—"}
-          {!allColumns && <span className="table-meta">{area.routeDirection ?? ""}</span>}
+          {!allColumns && (
+            <span className="table-meta block text-[9px] mt-[5px] text-[#97a3b3]">
+              {area.routeDirection ?? ""}
+            </span>
+          )}
         </>
       );
     if (key.startsWith("has_")) {
@@ -85,8 +94,8 @@ export default function AdminRestAreaTable({
             value === true && key === "has_truck_lounge"
               ? "lounge-badge"
               : value === null
-                ? "missing-value"
-                : "table-meta"
+                ? "missing-value text-[#b58a48] text-[10px]"
+                : "table-meta block text-[9px] mt-[5px] text-[#97a3b3]"
           }
         >
           {value === true ? "있음" : value === false ? "없음" : "미확인"}
@@ -100,19 +109,19 @@ export default function AdminRestAreaTable({
   };
   return (
     <>
-      <div className="panel-heading">
+      <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
         <h3 id="table-heading">
           휴게소 목록 <span>{rows.length}</span>
         </h3>
-        <div className="table-heading-actions">
-          <span className="table-source">
+        <div className="table-heading-actions flex items-center gap-[9px]">
+          <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
             {sortField === "id"
               ? "DB ID"
               : sortFields.find(field => field.key === sortField)?.label}{" "}
             · {direction === "asc" ? "오름차순" : "내림차순"}
           </span>
           <button
-            className="table-columns-toggle"
+            className="table-columns-toggle p-[7px_9px] min-h-[35px] [border:1px_solid_#e3e9f1] rounded-[6px] bg-[#f9fbfe] text-[#7185a1] text-[10px]"
             aria-pressed={allColumns}
             onClick={() => {
               const next = !allColumns;
@@ -124,20 +133,20 @@ export default function AdminRestAreaTable({
           </button>
         </div>
       </div>
-      <div className="table-scroll" aria-busy={loading}>
+      <div className="table-scroll flex-1 min-h-0 overflow-auto" aria-busy={loading}>
         {loading || error || !hasData ? (
           <QueryState loading={loading} error={error} onRetry={onRetry} />
         ) : !rows.length ? (
-          <div className="query-state">
+          <div className={sharedClasses.queryState}>
             <Icon name="search" size={27} />
             <strong>조건에 맞는 휴게소가 없습니다</strong>
-            <button className="button secondary" onClick={onReset}>
+            <Button onClick={onReset} variant="secondary">
               조건 초기화
-            </button>
+            </Button>
           </div>
         ) : (
-          <table className="rest-area-table">
-            <caption className="sr-only">
+          <table className="rest-area-table w-full [border-collapse:collapse] text-left text-[11px] min-w-[910px]">
+            <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
               휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
             </caption>
             <thead>
@@ -186,7 +195,7 @@ export default function AdminRestAreaTable({
                         key === "id"
                           ? "id-cell"
                           : key === "parkingCount"
-                            ? "numeric-cell"
+                            ? "numeric-cell whitespace-nowrap"
                             : undefined
                       }
                     >
@@ -198,7 +207,7 @@ export default function AdminRestAreaTable({
                   </td>
                   <td>
                     <span
-                      className={`coordinate-badge ${hasCoordinates(area) ? "valid" : "missing"}`}
+                      className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(area) ? "valid" : "missing"}`}
                     >
                       {hasCoordinates(area) ? "등록" : "미등록 / 오류"}
                     </span>

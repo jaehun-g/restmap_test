@@ -1,8 +1,9 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {Button} from "@/components/ui/button";
 import {useEffect, useMemo, useState} from "react";
 import type {GasStationRecord} from "@/lib/gas-stations";
 import QueryState from "./query-state";
-
 export default function GasStationTable({
   rows,
   selectedId,
@@ -19,7 +20,10 @@ export default function GasStationTable({
   onRetry: () => void;
 }) {
   const [page, setPage] = useState(0);
-  const [sort, setSort] = useState<{key: "name" | "address"; asc: boolean}>({
+  const [sort, setSort] = useState<{
+    key: "name" | "address";
+    asc: boolean;
+  }>({
     key: "name",
     asc: true,
   });
@@ -50,8 +54,11 @@ export default function GasStationTable({
     setPage(0);
   };
   return (
-    <section className="station-table-panel" aria-label="주유소 목록">
-      <div className="panel-heading">
+    <section
+      className="station-table-panel flex-1 min-h-[230px] flex flex-col [border-top:1px_solid_var(--line)]"
+      aria-label="주유소 목록"
+    >
+      <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
         <h3>
           GS 주유·충전소 <span>{rows.length}개</span>
         </h3>
@@ -59,10 +66,10 @@ export default function GasStationTable({
       {loading || error ? (
         <QueryState loading={loading} error={error} onRetry={onRetry} />
       ) : !rows.length ? (
-        <p className="query-state">조건에 맞는 주유소가 없습니다.</p>
+        <p className={sharedClasses.queryState}>조건에 맞는 주유소가 없습니다.</p>
       ) : (
         <>
-          <div className="station-table-scroll">
+          <div className="station-table-scroll flex-1 min-h-0 overflow-auto">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -111,24 +118,24 @@ export default function GasStationTable({
               </tbody>
             </table>
           </div>
-          <div className="station-pagination">
-            <button
-              className="button secondary"
+          <div className="station-pagination flex items-center justify-between gap-[8px] p-[8px_12px] text-[10px] [border-top:1px_solid_var(--line)]">
+            <Button
               disabled={current === 0}
               onClick={() => setPage(current - 1)}
+              variant="secondary"
             >
               이전
-            </button>
+            </Button>
             <span>
               {current + 1} / {pages} · 페이지당 50개
             </span>
-            <button
-              className="button secondary"
+            <Button
               disabled={current + 1 === pages}
               onClick={() => setPage(current + 1)}
+              variant="secondary"
             >
               다음
-            </button>
+            </Button>
           </div>
         </>
       )}

@@ -1,11 +1,16 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {Input, Select} from "@/components/ui/field";
+import {Button} from "@/components/ui/button";
 import {useState} from "react";
 import {scalarFields, type ScalarKey} from "@/lib/rest-area-fields";
 import {facilityDefinitions, type RestAreaRecord} from "@/lib/rest-areas";
 import {editorIsDirty, requestFromDraft, type EditorDraft} from "@/lib/rest-area-editor";
 import Icon from "./icon";
-
-const groups: {label: string; fields: ScalarKey[]}[] = [
+const groups: {
+  label: string;
+  fields: ScalarKey[];
+}[] = [
   {label: "기본정보", fields: ["name", "phone", "restAreaType"]},
   {
     label: "노선정보",
@@ -14,7 +19,6 @@ const groups: {label: string; fields: ScalarKey[]}[] = [
   {label: "좌표", fields: ["latitude", "longitude"]},
   {label: "주차", fields: ["parkingCount"]},
 ];
-
 export default function RestAreaEditor({
   original,
   draft,
@@ -39,7 +43,7 @@ export default function RestAreaEditor({
   const dirty = editorIsDirty(original, draft);
   return (
     <form
-      className="editor-panel"
+      className={sharedClasses.editorPanel}
       onKeyDown={event => {
         if (
           event.key === "Enter" &&
@@ -82,16 +86,21 @@ export default function RestAreaEditor({
         }
       }}
     >
-      <div className="editor-heading">
+      <div className={sharedClasses.editorHeading}>
         <div>
-          <span className="eyebrow">ID {original.id} · test_lounge</span>
+          <span className={sharedClasses.eyebrow}>ID {original.id} · test_lounge</span>
           <h2>휴게소 정보 수정</h2>
         </div>
-        <span className="edit-status">{dirty ? "미저장 변경" : "변경 없음"}</span>
+        <span className="edit-status text-[9px] text-[#a68350]">
+          {dirty ? "미저장 변경" : "변경 없음"}
+        </span>
       </div>
-      <div className="editor-scroll">
+      <div className={sharedClasses.editorScroll}>
         {!authenticated && (
-          <p className="form-error" role="alert">
+          <p
+            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            role="alert"
+          >
             인증이 만료되었거나 편집이 잠겼습니다. 관리자 인증 후 저장해주세요. 입력 초안은
             유지됩니다.
           </p>
@@ -99,7 +108,7 @@ export default function RestAreaEditor({
         {groups.map(group => (
           <fieldset key={group.label} disabled={saving}>
             <legend>{group.label}</legend>
-            <div className="editor-grid">
+            <div className={sharedClasses.editorGrid}>
               {group.fields.map(key => {
                 const field = scalarFields.find(entry => entry.key === key)!;
                 const before = original[key] === null ? "" : String(original[key]);
@@ -119,7 +128,7 @@ export default function RestAreaEditor({
                       {field.label}
                       {changed && <small>수정됨</small>}
                     </span>
-                    <input
+                    <Input
                       value={draft.values[key]}
                       onChange={event =>
                         onChange({
@@ -141,7 +150,9 @@ export default function RestAreaEditor({
                       placeholder={"required" in field ? "필수" : "미등록"}
                     />
                     {changed && (
-                      <small className="previous-value">기존: {before || "미등록"}</small>
+                      <small className="previous-value block text-[#a2adbd] text-[8px] mt-[3px] [overflow-wrap:anywhere]">
+                        기존: {before || "미등록"}
+                      </small>
                     )}
                   </label>
                 );
@@ -151,7 +162,7 @@ export default function RestAreaEditor({
         ))}
         <fieldset disabled={saving}>
           <legend>편의시설</legend>
-          <div className="editor-grid">
+          <div className={sharedClasses.editorGrid}>
             {facilityDefinitions.map(([key, label]) => (
               <label
                 key={key}
@@ -167,7 +178,7 @@ export default function RestAreaEditor({
                   {label}
                   {draft.facilities[key] !== original.facilities[key] && <small>수정됨</small>}
                 </span>
-                <select
+                <Select
                   value={
                     draft.facilities[key] === null
                       ? "unknown"
@@ -191,25 +202,28 @@ export default function RestAreaEditor({
                   <option value="unknown">미확인</option>
                   <option value="present">있음</option>
                   <option value="absent">없음</option>
-                </select>
+                </Select>
               </label>
             ))}
           </div>
         </fieldset>
         {error && (
-          <p className="form-error" role="alert">
+          <p
+            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            role="alert"
+          >
             {error}
           </p>
         )}
       </div>
-      <div className="editor-actions">
-        <button type="button" className="button secondary" disabled={saving} onClick={onCancel}>
+      <div className={sharedClasses.editorActions}>
+        <Button type="button" disabled={saving} onClick={onCancel} variant="secondary">
           취소
-        </button>
-        <button className="button primary" disabled={!dirty || !authenticated || saving}>
+        </Button>
+        <Button disabled={!dirty || !authenticated || saving} variant="primary">
           <Icon name="check" size={16} />
           {saving ? "저장 중…" : "변경사항 저장"}
-        </button>
+        </Button>
       </div>
     </form>
   );
