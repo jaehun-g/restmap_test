@@ -10,7 +10,7 @@ PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같�
 - `/`: `/mobile`로 이동합니다. 기기 자동 판별은 하지 않습니다.
 - `/api/rest-areas`: DB 조회 결과를 JSON으로 반환하는 GET API입니다.
 - `/api/highway-routes?routeName=경부선`: 선택한 노선의 경계와 `[위도, 경도][][]` 좌표를 반환하는 GET API입니다. `test_highway_routes`에 SELECT만 수행합니다.
-- `/api/gas-stations`: `test_gscargo`의 GS 주유·충전소를 조회합니다. 위치 반경·지도 영역 또는 `routeName` 검색 범위를 지원합니다.
+- `/api/gas-stations`: `test_gscargo`의 GS 주유·충전소와 `test_ex_station_geocodes`의 EX 주유소를 함께 조회합니다. 위치 반경·지도 영역 또는 `routeName` 주변 2km 검색 범위를 지원합니다. 두 출처는 별도 장소로 유지하며, EX의 양수 유가만 인포윈도우·상세정보에 원/L 단위로 표시합니다. EX 정보는 읽기 전용이고, 미확인 시설은 시설 조건 필터에서 제외됩니다.
 
 모바일·관리자에서 통합·휴게소·주유소 보기를 선택할 수 있습니다. 휴게소 조건과 주유소 시설 조건은 각각 적용합니다.
 노선 선택 시 주유소는 분리된 노선 구간 각각과의 직선거리 **2km 이내**만 조회하며, 고속도로 소속이나 실제 진입 가능 여부를 뜻하지 않습니다.
@@ -84,6 +84,8 @@ PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같�
 | 환경변수                        | 내용                                                                                         |
 | ------------------------------- | -------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` | 카카오 JavaScript 키. REST API 키 또는 Admin 키가 아닙니다.                                  |
+| `KAKAO_REST_API_KEY`             | EX 주유소의 신규·변경 주소를 좌표로 변환하는 서버 전용 카카오 REST API 키                    |
+| `EX_OPEN_API_KEY`                | 한국도로공사 `curStateStation` 호출에 쓰는 서버 전용 Open API 키                             |
 | `DB_HOST`                       | Cafe24 DB 외부 접속 호스트                                                                   |
 | `DB_PORT`                       | DB 포트. 기본값 3306                                                                         |
 | `DB_USER`                       | DB 사용자                                                                                    |
@@ -96,6 +98,13 @@ PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같�
 `http://localhost:3000`을 등록하세요. `127.0.0.1`이나 다른 포트로 접속하면 해당 주소도 별도로 등록해야 합니다.
 DB 외부 접속을 위해 Cafe24 MySQL 외부 IP 허용 목록에 현재 PC의 공인 IP를 등록해야 합니다.
 환경변수를 변경하면 개발 서버를 재시작하세요.
+
+EX 주유소 동기화 전에 한 번만 다음 테이블을 준비하세요.
+
+```powershell
+npm.cmd run db:setup-ex-station-geocodes
+npm.cmd run db:setup-ex-station-geocode-overrides
+```
 
 - [카카오 Web SDK 가이드](https://apis.map.kakao.com/web/guide/)
 - [카카오맵 활성화 안내](https://developers.kakao.com/docs/ko/kakaomap/common)
@@ -137,7 +146,7 @@ DB 코드는 `lib/db.ts`에만 있으며 `server-only` 모듈입니다.
 브라우저에는 DB 접속 정보가 포함되지 않습니다.
 조회는 `test_lounge`의 고정된 23개 컬럼만 읽습니다.
 관리자가 인증 후 **변경사항 저장** 버튼을 실행한 경우에만 기존 행의 ID를 제외한 22개 컬럼을 수정할 수 있습니다.
-요청에서 SQL·테이블명·임의 컬럼을 입력받지 않으며, 다른 테이블 수정·행 추가·삭제·마이그레이션은 구현하지 않았습니다.
+요청에서 SQL·테이블명·임의 컬럼을 입력받지 않습니다. EX 주유소 동기화만 별도 인증 API와 고정된 테이블·컬럼으로 최신 스냅샷을 upsert하고, 원본 목록에서 사라진 EX 행을 삭제합니다.
 첫 화면 진입과 명시적인 다시 조회/재시도에서만 조회합니다.
 연결 풀은 최대 3개 연결과 제한된 대기열을 사용합니다.
 
@@ -146,10 +155,17 @@ DB 코드는 `lib/db.ts`에만 있으며 `server-only` 모듈입니다.
 미저장 상태의 행 이동·닫기·다시 조회·편집 잠금에는 변경사항 폐기 확인을 표시합니다.
 숫자 입력란의 Enter만으로는 저장하지 않습니다.
 
+관리자 인증 후 헤더의 **EX 동기화**를 누르면 한국도로공사 API의 전체 응답을 검증한 뒤 EX 주유소 최신값을 저장합니다. 신규 또는 주소·오버라이드가 바뀐 주유소만 지오코딩하며, 완료 후 EX 목록을 다시 조회합니다. 개발 중 터미널에서 직접 실행하려면 다음 명령을 사용하세요.
+
+```powershell
+npm.cmd run sync:ex-stations
+```
+
 - `GET /api/admin/session`: 설정 여부·인증 상태·만료 시각을 반환합니다.
 - `POST /api/admin/session`: `{ "password": "…" }`로 인증합니다. 서버 메모리 세션은 8시간 뒤 만료하며 서버 재시작 시 초기화됩니다.
   쿠키는 HttpOnly·SameSite=Strict이고 HTTPS에서는 Secure를 적용합니다. 인증 실패는 5분간 5회로 제한합니다.
 - `DELETE /api/admin/session`: 세션을 폐기하고 편집을 잠급니다.
+- `POST /api/admin/ex-stations/sync`: 동일 출처의 관리자 인증 세션에서만 EX 주유소 동기화를 시작합니다. 실행 중 중복 요청은 `409`를 반환합니다.
 - `PATCH /api/admin/rest-areas/[id]`: `{ changes, expectedRevision }`을 받습니다.
   변경 필드는 API의 camelCase 이름이며 시설은 `facilities` 내부의 DB 필드명과 `true`·`false`·`null`을 사용합니다.
   이름은 필수이고 테이블의 문자열 길이·기존 UTF-8 문자 집합·좌표 범위/7자리·주차 정수 조건을 서버에서도 검사합니다.

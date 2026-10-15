@@ -12,7 +12,8 @@
     "db:setup-ex-station-geocodes": "node scripts/create-ex-station-geocodes-table.mjs",
     "db:setup-ex-station-geocode-overrides": "node scripts/create-ex-station-geocode-overrides-table.mjs",
     "db:upsert-ex-station-geocode-overrides": "node scripts/upsert-ex-station-geocode-overrides.mjs",
-    "sync:ex-station-geocodes": "node scripts/sync-ex-station-geocodes.mjs"
+    "sync:ex-station-geocodes": "node scripts/sync-ex-station-geocodes.mjs",
+    "sync:ex-stations": "node scripts/sync-ex-station-geocodes.mjs --apply"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

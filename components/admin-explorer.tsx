@@ -26,8 +26,9 @@ import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {filterStations, type PlaceView} from "@/lib/map-places";
+import {filterStations, filterStationView, showsRestAreas, type PlaceView} from "@/lib/map-places";
 import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
+import {stationKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
 import GasStationTable from "./gas-station-table";
 import GasStationDetails from "./gas-station-details";
@@ -49,7 +50,7 @@ export default function AdminExplorer() {
       ? null
       : stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope),
   );
-  const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
   const [stationDirty, setStationDirty] = useState(false);
   const [sortField, setSortField] = useState<SortField>("name");
@@ -61,6 +62,8 @@ export default function AdminExplorer() {
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [syncingExStations, setSyncingExStations] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const dirty = (!!editing && editorIsDirty(editing.base, editing.draft)) || stationDirty;
@@ -84,11 +87,11 @@ export default function AdminExplorer() {
   );
   const selected = results.find(area => area.id === selectedId);
   const stationResults = useMemo(
-    () => filterStations(gas.stations, search.query, stationFilters),
-    [gas.stations, search.query, stationFilters],
+    () => filterStations(filterStationView(gas.stations, placeView), search.query, stationFilters),
+    [gas.stations, placeView, search.query, stationFilters],
   );
-  const visibleAreas = placeView === "station" ? noAreas : results;
-  const selectedStation = stationResults.find(station => station.id === selectedStationId);
+  const visibleAreas = showsRestAreas(placeView) ? results : noAreas;
+  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
   const mayLeave = useCallback(
     () =>
       !editState.current.saving &&
@@ -127,7 +130,7 @@ export default function AdminExplorer() {
     setSelectedStationId(null);
   }, []);
   const selectStation = useCallback(
-    (id: number | null) => {
+    (id: string | null) => {
       if (!mayLeave()) return;
       returnFocus.current =
         document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -140,7 +143,7 @@ export default function AdminExplorer() {
     },
     [mayLeave],
   );
-  const stationDetails = useCallback((id: number) => selectStation(id), [selectStation]);
+  const stationDetails = useCallback((id: string) => selectStation(id), [selectStation]);
   useEffect(() => {
     if (selectedStationId === null || selectedStation || gas.loading || editingStation) return;
     let active = true;
@@ -226,6 +229,30 @@ export default function AdminExplorer() {
       void gas.reload();
     }
   };
+  const syncExStations = async () => {
+    if (!auth.authenticated || syncingExStations || saving || anyEditing) return;
+    setSyncingExStations(true);
+    setSyncError(null);
+    try {
+      const response = await fetch("/api/admin/ex-stations/sync", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 401) void auth.refresh();
+        throw new Error(payload?.error?.message ?? "EX 주유소 동기화에 실패했습니다.");
+      }
+      setNotice(
+        `EX 동기화 완료: 전체 ${payload.total}건 · 지오코딩 ${payload.geocoded}건 · 미해결 ${payload.unresolved}건 · 삭제 ${payload.deleted}건`,
+      );
+      void gas.reload();
+    } catch (reason) {
+      setSyncError(reason instanceof Error ? reason.message : "EX 주유소 동기화에 실패했습니다.");
+    } finally {
+      setSyncingExStations(false);
+    }
+  };
   return (
     <main className="admin-shell min-w-[1080px] min-h-[100vh] p-[0_30px_26px]">
       <header className="admin-header h-[86px] flex items-center justify-between [border-bottom:1px_solid_#e3e8ef] gap-[25px]">
@@ -254,6 +281,14 @@ export default function AdminExplorer() {
               }
             }}
           />
+          <Button
+            disabled={!auth.authenticated || syncingExStations || saving || anyEditing}
+            onClick={() => void syncExStations()}
+            variant="secondary"
+          >
+            <Icon name="refresh" size={16} />
+            {syncingExStations ? "EX 동기화 중" : "EX 동기화"}
+          </Button>
           <Link href="/mobile" className={buttonClasses("secondary")} target="_blank">
             사용자 화면
             <Icon name="arrow" size={16} />
@@ -317,6 +352,7 @@ export default function AdminExplorer() {
         onView={next => {
           if (!mayLeave()) return;
           setPlaceView(next);
+          setStationFilters([]);
           setFilters(current => ({...current, missingRoute: false}));
           setSelectedId(null);
           setSelectedStationId(null);
@@ -333,14 +369,15 @@ export default function AdminExplorer() {
         onReset={reset}
         disabled={anyEditing}
         includeStations={placeView !== "rest"}
-        hideRestFilters={placeView === "station"}
+        hideRestFilters={!showsRestAreas(placeView)}
         stationFilters={stationFilters}
+        stationServiceOptions={placeView === "ex" ? ["lpg"] : undefined}
         onStationFilters={next => {
           setStationFilters(next);
           view.preserveView();
         }}
       />
-      {filters.routeName && placeView !== "rest" && (
+      {filters.routeName && (placeView === "all" || placeView === "gs") && (
         <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
           GS 주유소는 선택 노선 주변 2km · 직선거리 기준이며 고속도로 소속을 뜻하지 않습니다.
         </p>
@@ -357,9 +394,20 @@ export default function AdminExplorer() {
           </IconButton>
         </div>
       )}
-      <div className="admin-workspace grid grid-cols-[minmax(600px,_1fr)_minmax(380px,_38%)] gap-[20px] h-[max(680px,_calc(100vh_-_355px))]">
+      {syncError && (
+        <div
+          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-[11px]"
+          role="alert"
+        >
+          {syncError}
+          <IconButton aria-label="동기화 오류 안내 닫기" onClick={() => setSyncError(null)}>
+            <Icon name="close" size={16} />
+          </IconButton>
+        </div>
+      )}
+      <div className="admin-workspace grid grid-cols-[minmax(600px,_1fr)_minmax(380px,_38%)] gap-[20px] h-[max(720px,_calc(100vh_-_355px))]">
         <section className="admin-table-panel" aria-labelledby="table-heading">
-          {placeView !== "station" && (
+          {showsRestAreas(placeView) && (
             <AdminRestAreaTable
               rows={sorted}
               selectedId={selectedId}
@@ -410,11 +458,11 @@ export default function AdminExplorer() {
               KAKAO MAP
             </span>
           </div>
-          <div className="admin-map h-[46%] min-h-[280px] shrink-0 [border-bottom:1px_solid_var(--line)]">
+          <div className="admin-map h-[56%] min-h-[420px] shrink-0 [border-bottom:1px_solid_var(--line)]">
             <KakaoMap
               areas={visibleAreas}
               stations={stationResults}
-              selectedStationId={selectedStation?.id ?? null}
+              selectedStationId={selectedStation ? stationKey(selectedStation) : null}
               onStationSelect={selectStation}
               onStationDetails={stationDetails}
               stationsLoading={gas.loading}
@@ -437,7 +485,7 @@ export default function AdminExplorer() {
           <div
             className="admin-details min-h-0 flex-1 [outline:none] overflow-hidden flex flex-col"
             ref={detailRef}
-            tabIndex={selected ? -1 : undefined}
+            tabIndex={selected || selectedStation ? -1 : undefined}
           >
             {editingStation ? (
               <GasStationEditor
@@ -502,18 +550,23 @@ export default function AdminExplorer() {
             ) : selectedStation ? (
               <>
                 <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-[9px]">
-                  <span>GS 코드 {selectedStation.siteCode}</span>
-                  <Button
-                    disabled={!auth.authenticated}
-                    onClick={() => setEditingStation(selectedStation)}
-                    variant="secondary"
-                  >
-                    {auth.authenticated ? "정보 수정" : "인증 후 수정 가능"}
-                  </Button>
+                  <span>
+                    {selectedStation.brand === "EX" ? "EX 원본 키" : "GS 코드"}{" "}
+                    {selectedStation.siteCode}
+                  </span>
+                  {selectedStation.brand === "GS" && (
+                    <Button
+                      disabled={!auth.authenticated}
+                      onClick={() => setEditingStation(selectedStation)}
+                      variant="secondary"
+                    >
+                      {auth.authenticated ? "정보 수정" : "인증 후 수정 가능"}
+                    </Button>
+                  )}
                 </div>
                 <div className="admin-detail-body min-h-0 flex-1">
                   <GasStationDetails
-                    key={selectedStation.id}
+                    key={stationKey(selectedStation)}
                     station={selectedStation}
                     onClose={close}
                     audience="admin"
