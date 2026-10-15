@@ -10,5 +10,20 @@
   {"sourceKey": "0101|B00269|순천|AD", "searchAddress": "전남광주 장흥군 부산면 남해고속도로 41"},
   {"sourceKey": "0100|B00069|부산|S", "searchAddress": "경남 김해시 진영읍 우동리 414"},
   {"sourceKey": "0010|B00023|서울|AD", "searchAddress": "충남 천안시 동남구 쉼1길 40 충전소및주유소"},
-  {"sourceKey": "0010|B00049|서울|AD", "searchAddress": "경북 칠곡군 왜관읍 경부고속도로 158"}
+  {"sourceKey": "0010|B00049|서울|AD", "searchAddress": "경북 칠곡군 왜관읍 경부고속도로 158"},
+  {"sourceKey": "0500|B00087|인천|AD", "searchAddress": "강원 강릉시 성산면 영동고속도로 231"},
+  {"sourceKey": "1000|B00219|퇴계원|AD", "searchAddress": "경기 구리시 수도권제1순환고속도로 32"},
+  {"sourceKey": "1000|B00206|판교|AD", "searchAddress": "경기 구리시 수도권제1순환고속도로 27 한국도로공사구리남양주영업소 구리남양주주유소"},
+  {"sourceKey": "0500|B00170|인천|SK", "searchAddress": "경기 이천시 마장면 덕이로154번길 287-74"},
+  {"sourceKey": "0450|B00137|양평|AD", "searchAddress": "경북 문경시 중부내륙고속도로 173-1 문경마산방향휴게소"},
+  {"sourceKey": "0351|B00071|하남|AD", "searchAddress": "경남 산청군 단성면 통영대전고속도로 76 산청휴게소"},
+  {"sourceKey": "0300|B00144|청원|AD", "searchAddress": "충북 보은군 마로면 적암길 56-18"},
+  {"sourceKey": "0300|B00151|상주|AD", "searchAddress": "충남 예산군 신양면 당진영덕고속도로 33"},
+  {"sourceKey": "0352|B00005|하남|AD", "searchAddress": "경기 이천시 신둔면 서이천로853번길 346-151"},
+  {"sourceKey": "1040|B00058|냉정|AD", "searchAddress": "경남 김해시 장유로116번길 44-82"},
+  {"sourceKey": "0550|B00115|부산|AD", "searchAddress": "강원 춘천시 동내면 영서로 1432 춘천휴게소(내) EX-OIL주유소"},
+  {"sourceKey": "0500|B00079|강릉|AD", "searchAddress": "강원 평창군 용평면 경강로 2159-58"},
+  {"sourceKey": "0500|B00075|인천|AD", "searchAddress": "강원 평창군 용평면 탑거리길 63"},
+  {"sourceKey": "0550|B00109|춘천|AD", "searchAddress": "강원 홍천군 북방면 도사곡길 223"},
+  {"sourceKey": "0500|B00016|강릉|AD", "searchAddress": "강원 횡성군 안흥면 영동고속도로 154-1"}
 ]
