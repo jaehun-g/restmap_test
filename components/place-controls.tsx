@@ -1,20 +1,25 @@
 "use client";
 
 import type {PlaceView} from "@/lib/map-places";
-import type {StationServiceKey} from "@/lib/gas-stations";
 export default function PlaceControls({
   view,
   onView,
   disabled = false,
+  audience = "mobile",
 }: {
   view: PlaceView;
   onView: (view: PlaceView) => void;
-  services?: StationServiceKey[];
-  onServices?: (services: StationServiceKey[]) => void;
   disabled?: boolean;
+  audience?: "mobile" | "admin";
 }) {
   return (
-    <div className="place-controls flex items-center justify-start m-[8px_0_0] relative z-[12]">
+    <div
+      className={
+        audience === "admin"
+          ? "place-controls flex items-center justify-start m-[14px_0_10px] relative z-[12]"
+          : "place-controls flex items-center justify-start m-[8px_0_0] relative z-[12]"
+      }
+    >
       <nav
         className="place-tabs inline-flex p-[3px] gap-[3px] [border:1px_solid_#dde6f2] rounded-[10px] bg-white [box-shadow:0_2px_8px_#23416a10]"
         aria-label="표시할 정보 종류"

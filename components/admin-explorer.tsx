@@ -322,12 +322,8 @@ export default function AdminExplorer() {
           setSelectedStationId(null);
           view.requestFit();
         }}
-        services={stationFilters}
-        onServices={next => {
-          setStationFilters(next);
-          view.preserveView();
-        }}
         disabled={anyEditing}
+        audience="admin"
       />
       <AdminFilterBar
         areas={areas}
@@ -338,6 +334,11 @@ export default function AdminExplorer() {
         disabled={anyEditing}
         includeStations={placeView !== "rest"}
         hideRestFilters={placeView === "station"}
+        stationFilters={stationFilters}
+        onStationFilters={next => {
+          setStationFilters(next);
+          view.preserveView();
+        }}
       />
       {filters.routeName && placeView !== "rest" && (
         <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
@@ -380,6 +381,7 @@ export default function AdminExplorer() {
               onSelect={stationDetails}
               loading={gas.loading}
               error={gas.error}
+              onReset={reset}
               onRetry={() => {
                 void gas.reload();
               }}

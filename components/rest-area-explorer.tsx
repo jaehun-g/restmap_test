@@ -13,7 +13,7 @@ import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map
 import {filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
 import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
-import {facilityDefinitions, hasCoordinates, routeDescription} from "@/lib/rest-areas";
+import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import QueryState from "./query-state";
@@ -132,16 +132,7 @@ export default function MobileExplorer() {
       ? "list"
       : panel;
   const expanded = effectivePanel !== "collapsed";
-  const mapped = listPlaces.filter(place => hasCoordinates(place.record)).length;
   const resultCount = listPlaces.length;
-  const filtered = Boolean(
-    search.input ||
-    filters.routeName ||
-    filters.facilities.length ||
-    filters.lounge !== "all" ||
-    stationFilters.length ||
-    placeView !== "all",
-  );
   const select = useCallback((id: number | null) => {
     setSelectedStationId(null);
     setSelectedId(id);
@@ -305,12 +296,6 @@ export default function MobileExplorer() {
             </FilterChip>
           )}
         </div>
-        {filtered && (
-          <div className="mobile-result-info flex items-center justify-between mt-[8px] text-[9px] text-[#435e80] [text-shadow:0_1px_3px_#fff,_0_0_5px_#fff]">
-            <span>지도에 {mapped}개 표시</span>
-            <button onClick={reset}>조건 초기화</button>
-          </div>
-        )}
         {filters.routeName && placeView !== "rest" && (
           <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
             주유소는 선택 노선 주변 2km · 직선거리 기준

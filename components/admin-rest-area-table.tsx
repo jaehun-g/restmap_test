@@ -2,12 +2,14 @@
 import {Badge} from "@/components/ui/badge";
 import {sharedClasses} from "@/lib/shared-classes";
 import {Button} from "@/components/ui/button";
-import {useState} from "react";
+import {useEffect, useMemo, useState} from "react";
+import {pageForIndex, pageItems, tablePageSize} from "@/lib/pagination";
 import {sortFields, type SortField} from "@/lib/rest-area-fields";
 import {hasCoordinates, type FacilityKey, type RestAreaRecord} from "@/lib/rest-areas";
 import FacilitySummary from "./facility-summary";
 import QueryState from "./query-state";
 import Icon from "./icon";
+import TablePagination from "./table-pagination";
 const defaultColumns: SortField[] = [
   "name",
   "routeName",
@@ -42,9 +44,21 @@ export default function AdminRestAreaTable({
   onReset: () => void;
 }) {
   const [allColumns, setAllColumns] = useState(false);
+  const [page, setPage] = useState(0);
   const columns = allColumns
     ? [...sortFields.filter(field => field.key !== "id"), {key: "id" as const, label: "DB ID"}]
     : defaultColumns.map(key => sortFields.find(field => field.key === key)!);
+  const selectedIndex = rows.findIndex(area => area.id === selectedId);
+  const visibleRows = useMemo(() => pageItems(rows, page), [rows, page]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPage(0), 0);
+    return () => window.clearTimeout(timer);
+  }, [rows]);
+  useEffect(() => {
+    if (selectedIndex < 0) return;
+    const timer = window.setTimeout(() => setPage(pageForIndex(selectedIndex)), 0);
+    return () => window.clearTimeout(timer);
+  }, [selectedIndex]);
   const cell = (area: RestAreaRecord, key: SortField) => {
     if (key === "name")
       return (
@@ -133,10 +147,12 @@ export default function AdminRestAreaTable({
           </button>
         </div>
       </div>
-      <div className="table-scroll flex-1 min-h-0 overflow-auto" aria-busy={loading}>
-        {loading || error || !hasData ? (
+      {loading || error || !hasData ? (
+        <div className="table-scroll flex-1 min-h-0 overflow-auto" aria-busy={loading}>
           <QueryState loading={loading} error={error} onRetry={onRetry} />
-        ) : !rows.length ? (
+        </div>
+      ) : !rows.length ? (
+        <div className="table-scroll flex-1 min-h-0 overflow-auto">
           <div className={sharedClasses.queryState}>
             <Icon name="search" size={27} />
             <strong>조건에 맞는 휴게소가 없습니다</strong>
@@ -144,80 +160,85 @@ export default function AdminRestAreaTable({
               조건 초기화
             </Button>
           </div>
-        ) : (
-          <table className="rest-area-table w-full [border-collapse:collapse] text-left text-[11px] min-w-[910px]">
-            <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
-              휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col" className="row-number-cell">
-                  No
-                </th>
-                {columns.map(({key, label}) => (
-                  <th
-                    key={key}
-                    aria-sort={
-                      sortField === key
-                        ? direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                  >
-                    <button
-                      onClick={() =>
-                        onSort(key, sortField === key && direction === "asc" ? "desc" : "asc")
-                      }
-                    >
-                      {label}
-                      {sortField === key && (direction === "asc" ? " ↑" : " ↓")}
-                    </button>
+        </div>
+      ) : (
+        <>
+          <div className="table-scroll flex-1 min-h-0 overflow-auto">
+            <table className="admin-data-table rest-area-table w-full [border-collapse:collapse] text-left text-[11px] min-w-[910px]">
+              <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
+                휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="row-number-cell">
+                    No
                   </th>
-                ))}
-                <th>편의시설 요약</th>
-                <th>좌표 상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((area, index) => (
-                <tr
-                  key={area.id}
-                  id={`rest-area-row-${area.id}`}
-                  className={selectedId === area.id ? "selected-row" : ""}
-                  onClick={() => onSelect(area.id)}
-                >
-                  <td className="row-number-cell">{rows.length - index}</td>
-                  {columns.map(({key}) => (
-                    <td
+                  {columns.map(({key, label}) => (
+                    <th
                       key={key}
-                      className={
-                        key === "id"
-                          ? "id-cell"
-                          : key === "parkingCount"
-                            ? "numeric-cell whitespace-nowrap"
-                            : undefined
+                      aria-sort={
+                        sortField === key
+                          ? direction === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
                       }
                     >
-                      {cell(area, key)}
-                    </td>
+                      <button
+                        onClick={() =>
+                          onSort(key, sortField === key && direction === "asc" ? "desc" : "asc")
+                        }
+                      >
+                        {label}
+                        {sortField === key && (direction === "asc" ? " ↑" : " ↓")}
+                      </button>
+                    </th>
                   ))}
-                  <td>
-                    <FacilitySummary area={area} />
-                  </td>
-                  <td>
-                    <span
-                      className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(area) ? "valid" : "missing"}`}
-                    >
-                      {hasCoordinates(area) ? "등록" : "미등록 / 오류"}
-                    </span>
-                  </td>
+                  <th>편의시설 요약</th>
+                  <th>좌표 상태</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {visibleRows.map((area, index) => (
+                  <tr
+                    key={area.id}
+                    id={`rest-area-row-${area.id}`}
+                    className={selectedId === area.id ? "selected-row" : ""}
+                    onClick={() => onSelect(area.id)}
+                  >
+                    <td className="row-number-cell">{page * tablePageSize + index + 1}</td>
+                    {columns.map(({key}) => (
+                      <td
+                        key={key}
+                        className={
+                          key === "id"
+                            ? "id-cell"
+                            : key === "parkingCount"
+                              ? "numeric-cell whitespace-nowrap"
+                              : undefined
+                        }
+                      >
+                        {cell(area, key)}
+                      </td>
+                    ))}
+                    <td>
+                      <FacilitySummary area={area} />
+                    </td>
+                    <td>
+                      <span
+                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(area) ? "valid" : "missing"}`}
+                      >
+                        {hasCoordinates(area) ? "등록" : "미등록 / 오류"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <TablePagination total={rows.length} page={page} onPageChange={setPage} />
+        </>
+      )}
     </>
   );
 }

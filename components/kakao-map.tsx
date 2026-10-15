@@ -14,7 +14,6 @@ import {useHighwayRoute} from "@/hooks/use-highway-route";
 import {createMapCard} from "@/lib/map-card";
 import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
 import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
-import {scopeLabel} from "@/lib/geo-search";
 import {
   createLocationMapLayer,
   type MobileMapLocation,
@@ -408,15 +407,13 @@ export default function KakaoMap({
         >
           {mobileEnabled && mobileLocation ? (
             <>
-              {(selectedRouteName || mobileLocation.scope.kind !== "radius") && (
+              {selectedRouteName && (
                 <div className="mobile-navigation-row flex items-center justify-between gap-[8px] w-full">
                   <span
                     className="map-scope-label p-[8px_10px] rounded-[20px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-[11px]"
                     role="status"
                   >
-                    {selectedRouteName
-                      ? `${selectedRouteName} 전체 구간`
-                      : scopeLabel(mobileLocation.scope)}
+                    {selectedRouteName} 전체 구간
                   </span>
                 </div>
               )}

@@ -780,18 +780,6 @@
     }
   },
   {
-    "name": "mobile-result-info",
-    "properties": {
-      "display": "flex",
-      "align-items": "center",
-      "justify-content": "space-between",
-      "margin-top": "8px",
-      "font-size": "9px",
-      "color": "#435e80",
-      "text-shadow": "0 1px 3px #fff,\n    0 0 5px #fff"
-    }
-  },
-  {
     "name": "sheet-route-search",
     "properties": {
       "padding": "5px 20px 10px",
@@ -1110,7 +1098,7 @@
       "display": "flex",
       "align-items": "center",
       "justify-content": "flex-start",
-      "margin": "8px 0 0",
+      "margin": "14px 0 10px",
       "position": "relative",
       "z-index": "12"
     }
@@ -1144,8 +1132,7 @@
       "flex": "1",
       "min-height": "230px",
       "display": "flex",
-      "flex-direction": "column",
-      "border-top": "1px solid var(--line)"
+      "flex-direction": "column"
     }
   },
   {
@@ -1154,18 +1141,6 @@
       "flex": "1",
       "min-height": "0",
       "overflow": "auto"
-    }
-  },
-  {
-    "name": "station-pagination",
-    "properties": {
-      "display": "flex",
-      "align-items": "center",
-      "justify-content": "space-between",
-      "gap": "8px",
-      "padding": "8px 12px",
-      "font-size": "10px",
-      "border-top": "1px solid var(--line)"
     }
   },
   {
