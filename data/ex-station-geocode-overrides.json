@@ -1,0 +1,14 @@
+[
+  {"sourceKey": "0010|B00050|서울|AD", "searchAddress": "경북 경산시 진량읍 대학로 1089"},
+  {"sourceKey": "0251|B00046|순천|AD", "searchAddress": "전남광주 곡성군 겸면"},
+  {"sourceKey": "0150|B00085|시흥|SK", "searchAddress": "충남 보령시 주교면 서해안고속도로 199"},
+  {"sourceKey": "0251|B00077|순천|AD", "searchAddress": "전남광주 장성군 북일면 호남고속도로 107-1"},
+  {"sourceKey": "0010|B00014|부산|AD", "searchAddress": "경기 안성시 원곡면 경부고속도로 365"},
+  {"sourceKey": "0010|B00078|서울|AD", "searchAddress": "경남 양산시 동면 목장길 15-50"},
+  {"sourceKey": "0010|B00081|부산|AD", "searchAddress": "충북 옥천군 옥천읍 서대구일로 265-19"},
+  {"sourceKey": "0140|B00271|밀양|AD", "searchAddress": "울산 울주군 삼동면 함양울산고속도로 133"},
+  {"sourceKey": "0101|B00269|순천|AD", "searchAddress": "전남광주 장흥군 부산면 남해고속도로 41"},
+  {"sourceKey": "0100|B00069|부산|S", "searchAddress": "경남 김해시 진영읍 우동리 414"},
+  {"sourceKey": "0010|B00023|서울|AD", "searchAddress": "충남 천안시 동남구 쉼1길 40 충전소및주유소"},
+  {"sourceKey": "0010|B00049|서울|AD", "searchAddress": "경북 칠곡군 왜관읍 경부고속도로 158"}
+]

@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS `test_ex_station_geocode_overrides` (
+  `source_key` VARCHAR(255) NOT NULL,
+  `search_address` VARCHAR(255) NOT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`source_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;

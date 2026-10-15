@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/*.test.mts",
-    "format": "prettier --write \"**/*.{js,ts,jsx,tsx,json,css,html}\""
+    "format": "prettier --write \"**/*.{js,ts,jsx,tsx,json,css,html}\"",
+    "db:setup-ex-station-geocodes": "node scripts/create-ex-station-geocodes-table.mjs",
+    "db:setup-ex-station-geocode-overrides": "node scripts/create-ex-station-geocode-overrides-table.mjs",
+    "db:upsert-ex-station-geocode-overrides": "node scripts/upsert-ex-station-geocode-overrides.mjs",
+    "sync:ex-station-geocodes": "node scripts/sync-ex-station-geocodes.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
