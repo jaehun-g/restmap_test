@@ -22,6 +22,7 @@ export default function AdminFilterBar({
   includeStations = false,
   hideRestFilters = false,
   stationFilters = [],
+  stationServiceOptions,
   onStationFilters,
 }: {
   areas: RestArea[];
@@ -33,6 +34,7 @@ export default function AdminFilterBar({
   includeStations?: boolean;
   hideRestFilters?: boolean;
   stationFilters?: StationServiceKey[];
+  stationServiceOptions?: StationServiceKey[];
   onStationFilters?: (filters: StationServiceKey[]) => void;
 }) {
   const routeValue = filters.missingRoute
@@ -115,24 +117,26 @@ export default function AdminFilterBar({
               주유소 조건 {stationFilters.length ? `(${stationFilters.length})` : "전체"} ▾
             </summary>
             <div className="facility-picker-options absolute z-[10] top-[42px] left-[0] w-[230px] grid grid-cols-[1fr_1fr] gap-[12px_8px] p-[15px] [border:1px_solid_#dde6f2] rounded-[9px] bg-white [box-shadow:0_4px_18px_#23416a1c]">
-              <p>선택한 조건을 모두 포함</p>
-              {stationServices.map(({key, label}) => (
-                <label key={key}>
-                  <input
-                    type="checkbox"
-                    disabled={disabled}
-                    checked={stationFilters.includes(key)}
-                    onChange={event =>
-                      onStationFilters(
-                        event.target.checked
-                          ? [...stationFilters, key]
-                          : stationFilters.filter(value => value !== key),
-                      )
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
+              <p>선택한 조건이 모두 확인된 장소</p>
+              {stationServices
+                .filter(({key}) => !stationServiceOptions || stationServiceOptions.includes(key))
+                .map(({key, label}) => (
+                  <label key={key}>
+                    <input
+                      type="checkbox"
+                      disabled={disabled}
+                      checked={stationFilters.includes(key)}
+                      onChange={event =>
+                        onStationFilters(
+                          event.target.checked
+                            ? [...stationFilters, key]
+                            : stationFilters.filter(value => value !== key),
+                        )
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
             </div>
           </details>
         )}

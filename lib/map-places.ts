@@ -1,6 +1,14 @@
 import type {RestArea} from "./rest-areas.ts";
 import type {GasStation} from "./gas-stations.ts";
-export type PlaceView = "all" | "rest" | "station";
+import {stationKey} from "./gas-stations.ts";
+export type PlaceView = "all" | "rest" | "station" | "gs" | "ex";
+export const showsRestAreas = (view: PlaceView) => view === "all" || view === "rest";
+export function filterStationView<T extends GasStation>(stations: T[], view: PlaceView): T[] {
+  if (view === "rest") return [];
+  if (view === "gs" || view === "ex")
+    return stations.filter(station => station.brand === (view === "gs" ? "GS" : "EX"));
+  return stations;
+}
 export type MapPlace =
   | {kind: "rest"; key: string; record: RestArea}
   | {kind: "station"; key: string; record: GasStation};
@@ -11,7 +19,7 @@ export const restPlace = (record: RestArea): MapPlace => ({
 });
 export const stationPlace = (record: GasStation): MapPlace => ({
   kind: "station",
-  key: `station:${record.brand}:${record.siteCode}`,
+  key: stationKey(record),
   record,
 });
 export function placeSummary(places: MapPlace[]) {

@@ -6,6 +6,8 @@ import {pageForIndex, pageItems, tablePageSize} from "@/lib/pagination";
 import {hasCoordinates} from "@/lib/rest-areas";
 import {
   stationServices,
+  stationKey,
+  stationLabel,
   type GasStationRecord,
   type StationScalarKey,
   type StationServiceKey,
@@ -26,7 +28,7 @@ const basicColumns: StationColumn[] = [
 ];
 const fullColumns: StationColumn[] = [
   {key: "name", label: "주유소명"},
-  {key: "siteCode", label: "GS 코드"},
+  {key: "siteCode", label: "출처별 코드"},
   {key: "address", label: "주소"},
   {key: "detailAddress", label: "상세주소"},
   {key: "phone", label: "전화번호"},
@@ -72,8 +74,8 @@ export default function GasStationTable({
   onReset,
 }: {
   rows: GasStationRecord[];
-  selectedId: number | null;
-  onSelect: (id: number) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   loading: boolean;
   error: string | null;
   onRetry: () => void;
@@ -102,7 +104,7 @@ export default function GasStationTable({
       }),
     [rows, sort],
   );
-  const selectedIndex = sorted.findIndex(station => station.id === selectedId);
+  const selectedIndex = sorted.findIndex(station => stationKey(station) === selectedId);
   const visibleRows = useMemo(() => pageItems(sorted, page), [sorted, page]);
   useEffect(() => {
     const timer = window.setTimeout(() => setPage(0), 0);
@@ -120,16 +122,19 @@ export default function GasStationTable({
   const cell = (station: GasStationRecord, key: StationColumnKey) => {
     if (key === "name")
       return (
-        <button
-          className="table-name-button"
-          aria-pressed={selectedId === station.id}
-          onClick={event => {
-            event.stopPropagation();
-            onSelect(station.id);
-          }}
-        >
-          {station.name}
-        </button>
+        <>
+          <button
+            className="table-name-button"
+            aria-pressed={selectedId === stationKey(station)}
+            onClick={event => {
+              event.stopPropagation();
+              onSelect(stationKey(station));
+            }}
+          >
+            {station.name}
+          </button>
+          <small className="block text-[10px] text-[#637995]">{stationLabel(station)}</small>
+        </>
       );
     if (stationServices.some(service => service.key === key))
       return serviceLabel(station.services[key as StationServiceKey]);
@@ -146,7 +151,7 @@ export default function GasStationTable({
     >
       <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
         <h3>
-          GS 주유·충전소 <span>{rows.length}</span>
+          주유·충전소 <span>{rows.length}</span>
         </h3>
         <div className="table-heading-actions flex items-center gap-[9px]">
           <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
@@ -212,10 +217,10 @@ export default function GasStationTable({
               <tbody>
                 {visibleRows.map((station, index) => (
                   <tr
-                    key={station.siteCode}
-                    id={`station-row-${station.id}`}
-                    className={selectedId === station.id ? "selected-row" : ""}
-                    onClick={() => onSelect(station.id)}
+                    key={stationKey(station)}
+                    id={`station-row-${stationKey(station)}`}
+                    className={selectedId === stationKey(station) ? "selected-row" : ""}
+                    onClick={() => onSelect(stationKey(station))}
                   >
                     <td className="row-number-cell">{page * tablePageSize + index + 1}</td>
                     {columns.map(({key}) => (

@@ -173,15 +173,24 @@ input[type="checkbox"] {
 .map-legend .legend-lounge {
   @apply bg-[#ed8a23];
 }
+.map-legend .legend-ex-station {
+  background: #7c3aed;
+}
 .map-legend .legend-route {
   @apply w-[12px] h-[3px] rounded-[2px] [box-shadow:0_0_0_2px_#fff];
 }
 .map-info-card {
-  @apply w-[280px] max-w-[calc(100vw_-_60px)] flex flex-col min-h-0 p-[12px_13px_0] [border:1px_solid_#e0e7f0] rounded-[12px] bg-white [box-shadow:0_5px_20px_#1c365934] text-[#334661] [transform:translateY(-43px)] whitespace-normal overflow-visible;
+  @apply w-[280px] max-w-[calc(100vw_-_60px)] flex flex-col min-h-0 p-[12px_13px_0] [border:1px_solid_#e0e7f0] rounded-[12px] bg-white [box-shadow:0_5px_20px_#1c365934] text-[#334661] whitespace-normal overflow-visible;
 }
 .map-info-card::after {
-  @apply absolute left-[calc(50%_-_6px)] bottom-[-7px] w-[12px] h-[12px] [border-bottom:1px_solid_#e0e7f0] [border-right:1px_solid_#e0e7f0] bg-white [transform:rotate(45deg)];
+  @apply absolute left-[calc(50%_-_6px)] top-[-7px] w-[12px] h-[12px] [border-bottom:1px_solid_#e0e7f0] [border-right:1px_solid_#e0e7f0] bg-white [transform:rotate(225deg)];
   content: "";
+}
+.map-info-card.placement-above {
+  @apply [transform:translateY(-43px)];
+}
+.map-info-card.placement-above::after {
+  @apply top-auto bottom-[-7px] [transform:rotate(45deg)];
 }
 .map-card-heading {
   @apply flex items-center gap-[5px] shrink-0;
@@ -203,6 +212,40 @@ input[type="checkbox"] {
 }
 .map-card-body {
   @apply [flex:0_1_auto] min-h-[24px] overflow-y-auto overscroll-contain text-[11px] leading-[1.6] [overflow-wrap:anywhere];
+}
+.station-fuel-prices {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f1f7ff;
+}
+.station-fuel-prices > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.station-fuel-prices dt {
+  color: #526882;
+}
+.station-fuel-prices dd {
+  margin: 0;
+  color: #1d4ed8;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.station-price-section {
+  margin: 18px 0;
+}
+.station-price-section h3 {
+  font-size: 13px;
+}
+.station-price-section > p {
+  color: #526882;
+  font-size: 10px;
+  line-height: 1.6;
 }
 .map-card-address,
 .map-card-hours {
@@ -451,7 +494,7 @@ input[type="checkbox"] {
   @apply max-w-[min(280px,_calc(100vw_-_32px))];
 }
 .cluster-popover-list {
-  @apply m-[8px_0] p-[0] [list-style:none] [flex:0_1_auto] min-h-[24px] max-h-[240px] overflow-y-auto overscroll-contain pr-[3px];
+  @apply m-[8px_0] p-[0] [list-style:none] [flex:1_1_auto] min-h-[24px] max-h-[240px] overflow-y-auto overscroll-contain pr-[3px];
 }
 .cluster-popover-list li button {
   @apply w-full p-[6px_5px] min-h-[48px] h-[48px] flex flex-col items-start justify-center gap-[2px] [border:0] [border-bottom:1px_solid_#edf1f6] text-left bg-white text-[#193d6b] text-[12px] cursor-pointer;

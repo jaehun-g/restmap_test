@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {cardDisplayArea, cardPanOffset, cardSizeLimit} from "../lib/map-card-layout.ts";
+import {
+  cardDisplayArea,
+  cardPanOffset,
+  cardSizeLimit,
+  mapCardOverlayArea,
+} from "../lib/map-card-layout.ts";
 
 const rect = (left: number, top: number, width: number, height: number) => ({
   left,
@@ -39,4 +44,17 @@ test("only overflowing card edges request minimal camera translation", () => {
   assert.deepEqual(cardPanOffset(rect(20, 180, 280, 240), area), {x: 0, y: 0});
   assert.deepEqual(cardPanOffset(rect(-10, 100, 280, 240), area), {x: -26, y: -68});
   assert.deepEqual(cardPanOffset(rect(110, 350, 280, 230), area), {x: 31, y: 28});
+});
+
+test("administrator card viewport excludes map notices and bottom legend, retaining scrollable space", () => {
+  const canvas = rect(900, 300, 420, 360);
+  const area = mapCardOverlayArea(canvas, rect(916, 316, 388, 40), rect(912, 604, 340, 20));
+  assert.deepEqual(area, rect(900, 364, 420, 232));
+  assert.equal(cardSizeLimit(area, 100).hidden, false);
+  assert.equal(cardSizeLimit(area, 100).height, 216);
+  assert.deepEqual(mapCardOverlayArea(canvas), canvas);
+  assert.equal(
+    mapCardOverlayArea(canvas, rect(900, 300, 420, 360), rect(900, 600, 100, 20)).height,
+    0,
+  );
 });

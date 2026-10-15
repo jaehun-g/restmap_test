@@ -7,6 +7,8 @@ import {loadKakaoMaps, type KakaoMap as MapInstance} from "@/lib/kakao-sdk";
 import {createPlaceMarkers} from "@/lib/kakao-place-markers";
 import {restPlace, stationPlace, type MapPlace} from "@/lib/map-places";
 import type {GasStation} from "@/lib/gas-stations";
+import {stationKey} from "@/lib/gas-stations";
+import {mapCardOverlayArea} from "@/lib/map-card-layout";
 import {createStationMapCard} from "@/lib/station-map-card";
 import {createHighwayRouteLayer} from "@/lib/kakao-highway-route";
 import {createHighwayRouteViewport} from "@/lib/kakao-route-viewport";
@@ -61,9 +63,9 @@ export default function KakaoMap({
   selectedRouteName?: string | null;
   onClearRoute?: () => void;
   stations?: GasStation[];
-  selectedStationId?: number | null;
-  onStationSelect?: (id: number | null) => void;
-  onStationDetails?: (id: number) => void;
+  selectedStationId?: string | null;
+  onStationSelect?: (id: string | null) => void;
+  onStationDetails?: (id: string) => void;
   stationsLoading?: boolean;
   stationError?: string | null;
   onRetryStations?: () => void;
@@ -71,6 +73,7 @@ export default function KakaoMap({
 }) {
   const container = useRef<HTMLDivElement>(null);
   const topbar = useRef<HTMLDivElement>(null);
+  const legend = useRef<HTMLDivElement>(null);
   const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
   const places = useMemo(
     () => [...areas.map(restPlace), ...stations.map(stationPlace)],
@@ -83,7 +86,7 @@ export default function KakaoMap({
   }, [onSelect, onStationSelect]);
   const selectPlace = useCallback(
     (place: MapPlace) => {
-      if (place.kind === "station") onStationSelect?.(place.record.id);
+      if (place.kind === "station") onStationSelect?.(stationKey(place.record));
       else onSelect(place.record.id);
     },
     [onSelect, onStationSelect],
@@ -118,7 +121,7 @@ export default function KakaoMap({
         ? createStationMapCard(
             place.record,
             () => onStationSelect?.(null),
-            () => onStationDetails?.(place.record.id),
+            () => onStationDetails?.(stationKey(place.record)),
           )
         : createMapCard(
             place.record,
@@ -172,12 +175,15 @@ export default function KakaoMap({
       () => {
         const bounds = container.current!.getBoundingClientRect();
         const view = cardViewport ? cardViewport(bounds) : bounds;
-        const bar = topbar.current?.getBoundingClientRect();
-        if (audience !== "mobile" || !bar?.height) return view;
-        const top = Math.max(view.top, bar.bottom + 8);
-        return new DOMRect(view.left, top, view.width, Math.max(0, view.bottom - top));
+        const area = mapCardOverlayArea(
+          view,
+          topbar.current?.getBoundingClientRect(),
+          legend.current?.getBoundingClientRect(),
+        );
+        return new DOMRect(area.left, area.top, area.width, area.height);
       },
       clearSelection,
+      audience === "mobile" ? "above" : "below",
     );
     layer.current = current;
     return () => {
@@ -191,6 +197,7 @@ export default function KakaoMap({
     const observer = new ResizeObserver(adjust);
     observer.observe(container.current);
     if (topbar.current) observer.observe(topbar.current);
+    if (legend.current) observer.observe(legend.current);
     window.addEventListener("resize", adjust);
     window.visualViewport?.addEventListener("resize", adjust);
     window.visualViewport?.addEventListener("scroll", adjust);
@@ -223,7 +230,7 @@ export default function KakaoMap({
         research,
         dragStart: () => {
           layer.current?.select(null);
-          onSelect(null);
+          clearSelection();
         },
         zoomStart: () => layer.current?.suspendCardAdjustment(),
       },
@@ -250,6 +257,7 @@ export default function KakaoMap({
     research,
     onSelect,
     onStationSelect,
+    clearSelection,
     cardViewport,
   ]);
   const position = mobileLocation?.position;
@@ -326,8 +334,9 @@ export default function KakaoMap({
   }, [map, selectedRouteName, highway.route, positionedItems]);
   const selectedKey =
     selectedStationId !== null
-      ? (places.find(place => place.kind === "station" && place.record.id === selectedStationId)
-          ?.key ?? null)
+      ? (places.find(
+          place => place.kind === "station" && stationKey(place.record) === selectedStationId,
+        )?.key ?? null)
       : selectedId !== null
         ? `rest:${selectedId}`
         : null;
@@ -335,7 +344,17 @@ export default function KakaoMap({
     const move = lastSelection.current.map !== map || lastSelection.current.key !== selectedKey;
     layer.current?.select(selectedKey, showCard, move);
     lastSelection.current = {map, key: selectedKey};
-  }, [map, places, selectedKey, showCard, card, cardViewport]);
+  }, [
+    map,
+    places,
+    selectedKey,
+    showCard,
+    card,
+    cardViewport,
+    selectPlace,
+    clearSelection,
+    audience,
+  ]);
   useEffect(() => {
     layer.current?.adjustCard();
   }, [map, viewportVersion]);
@@ -344,12 +363,12 @@ export default function KakaoMap({
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
-        onSelect(null);
+        clearSelection();
       }
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [selectedKey, onSelect, onStationSelect]);
+  }, [selectedKey, clearSelection]);
   const ready = !!map && !error;
   return (
     <section
@@ -421,7 +440,7 @@ export default function KakaoMap({
                 <button
                   className={cn(sharedClasses.mapButton, "map-research-button")}
                   onClick={() => {
-                    onSelect(null);
+                    clearSelection();
                     locationLayer.current?.research();
                   }}
                 >
@@ -446,7 +465,7 @@ export default function KakaoMap({
               <button
                 className={sharedClasses.mapButton}
                 onClick={() => {
-                  onSelect(null);
+                  clearSelection();
                   if (selectedRouteName)
                     routeViewport.current?.view.update(
                       selectedRouteName,
@@ -490,7 +509,10 @@ export default function KakaoMap({
       )}
       {ready && (
         <>
-          <div className="map-legend absolute z-[3] bottom-[36px] left-[12px] flex gap-[10px] items-center p-[6px_9px] rounded-[5px] bg-[#fffffff0] text-[9px] text-[#6c7c90] pointer-events-none">
+          <div
+            ref={legend}
+            className="map-legend absolute z-[3] bottom-[36px] left-[12px] flex flex-wrap gap-[10px] items-center max-w-[calc(100%_-_24px)] p-[6px_9px] rounded-[5px] bg-[#fffffff0] text-[9px] text-[#6c7c90] pointer-events-none"
+          >
             <span>
               <i />
               일반
@@ -499,10 +521,16 @@ export default function KakaoMap({
               <i className="legend-lounge" />
               화물차 라운지
             </span>
-            {stations.length > 0 && (
+            {stations.some(station => station.brand === "GS") && (
               <span>
                 <i className="legend-station" />
                 GS 주유소
+              </span>
+            )}
+            {stations.some(station => station.brand === "EX") && (
+              <span>
+                <i className="legend-ex-station" />
+                고속도로 주유소
               </span>
             )}
             {stations.length > 0 && areas.length > 0 && (
@@ -525,7 +553,7 @@ export default function KakaoMap({
                 aria-label="내 위치로 이동"
                 disabled={mobileLocation.requesting || locationDisabled}
                 onClick={() => {
-                  onSelect(null);
+                  clearSelection();
                   if (selectedRouteName) onClearRoute?.();
                   mobileLocation.locate();
                 }}
@@ -538,7 +566,7 @@ export default function KakaoMap({
         </>
       )}
       {ready && !mobileEnabled && mobileLocation && (
-        <div className="admin-location-status absolute left-[16px] right-[16px] top-[70px] flex flex-col items-start gap-[6px] z-[6]">
+        <div className="admin-location-status absolute left-[16px] right-[16px] top-[70px] flex flex-col items-start gap-[6px] z-[6] pointer-events-none">
           {mobileLocation.error && (
             <p
               className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-[11px] leading-[1.6]"
@@ -552,7 +580,7 @@ export default function KakaoMap({
               className="map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-[12px] font-[600] [box-shadow:0_2px_8px_#26374d10]"
               disabled={locationDisabled}
               onClick={() => {
-                onSelect(null);
+                clearSelection();
                 locationLayer.current?.research();
               }}
             >

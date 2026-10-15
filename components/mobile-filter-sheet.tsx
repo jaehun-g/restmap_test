@@ -48,7 +48,7 @@ export default function MobileFilterSheet({
               ? "원하는 노선을 검색하거나 선택하세요."
               : kind === "facilities"
                 ? "선택한 시설을 모두 갖춘 휴게소를 보여드려요."
-                : "선택한 조건을 모두 갖춘 GS 주유소를 보여드려요."}
+                : "선택한 조건이 모두 확인된 주유소를 보여드려요."}
           </p>
         </div>
         <IconButton aria-label="필터 선택창 닫기" onClick={onClose}>

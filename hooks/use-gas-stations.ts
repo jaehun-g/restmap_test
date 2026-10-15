@@ -1,6 +1,7 @@
 "use client";
 import {useCallback, useEffect, useRef, useState} from "react";
 import type {GasStationsResponse, GasStationRecord} from "@/lib/gas-stations";
+import {stationKey} from "@/lib/gas-stations";
 
 const empty: GasStationRecord[] = [];
 export function useGasStations(query: string | null) {
@@ -58,7 +59,9 @@ export function useGasStations(query: string | null) {
               ...current,
               data: {
                 ...current.data,
-                items: current.data.items.map(station => (station.id === item.id ? item : station)),
+                items: current.data.items.map(station =>
+                  stationKey(station) === stationKey(item) ? item : station,
+                ),
               },
             }
           : current,

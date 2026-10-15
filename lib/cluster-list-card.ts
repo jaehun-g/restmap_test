@@ -1,6 +1,7 @@
 import {placeSummary, type MapPlace} from "./map-places.ts";
 import {routeDescription} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
+import {stationLabel} from "./gas-stations.ts";
 
 export const clusterListPreviewSize = 5;
 export type ClusterListState = {shownCount: number; scrollTop: number; selectedKey: string | null};
@@ -16,7 +17,7 @@ export function visibleClusterListPlaces(places: MapPlace[], count = clusterList
 
 const kindLabel = (place: MapPlace) =>
   place.kind === "station"
-    ? "GS 주유소"
+    ? stationLabel(place.record)
     : place.record.facilities.has_truck_lounge === true
       ? "화물차 라운지"
       : "휴게소";

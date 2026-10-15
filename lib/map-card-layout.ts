@@ -30,6 +30,21 @@ export function cardSizeLimit(view: ScreenRect, fixedHeight: number) {
   return {width, height, hidden: width < 120 || height < fixedHeight + 24};
 }
 
+/** 지도 내부 안내와 범례를 피합니다. 관리자·모바일 모두 같은 기준을 사용합니다. */
+export function mapCardOverlayArea(
+  view: ScreenRect,
+  topbar?: ScreenRect,
+  legend?: ScreenRect,
+): ScreenRect {
+  const top = Math.max(view.top, topbar?.height ? topbar.bottom + 8 : view.top);
+  const bottom = Math.max(
+    top,
+    Math.min(view.bottom, legend?.height ? legend.top - 8 : view.bottom),
+  );
+  // DOMRect의 속성은 프로토타입 getter라 스프레드로 복사되지 않으므로 명시적으로 지정합니다.
+  return {left: view.left, right: view.right, width: view.width, top, bottom, height: bottom - top};
+}
+
 /** panBy는 카드가 벗어난 거리만 이동하며 줌과 검색 범위를 바꾸지 않습니다. */
 export function cardPanOffset(box: ScreenRect, view: ScreenRect) {
   const left = view.left + 16,

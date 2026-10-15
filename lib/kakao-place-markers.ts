@@ -1,4 +1,5 @@
 import {hasCoordinates} from "./rest-areas.ts";
+import {stationLabel} from "./gas-stations.ts";
 import {placeSummary, sortPlacesForList, type MapPlace} from "./map-places.ts";
 import {
   createClusterListCard,
@@ -40,7 +41,13 @@ export function createPlaceMarkers(
   createCard: (place: MapPlace) => HTMLElement,
   viewport?: () => DOMRect,
   onClear?: () => void,
+  /** 카드가 마커 아래("below", 기본) 또는 위("above")에 표시되는 방향. */
+  placement: "above" | "below" = "below",
 ) {
+  const above = placement === "above";
+  const placeCard = (target: HTMLElement) => {
+    if (above) target.classList.add("placement-above");
+  };
   const image = (path: string, active = false) =>
     new sdk.MarkerImage(path, new sdk.Size(active ? 36 : 32, active ? 42 : 38), {
       offset: new sdk.Point(active ? 18 : 16, active ? 41 : 37),
@@ -55,18 +62,24 @@ export function createPlaceMarkers(
   const stationActive = places.some(place => place.kind === "station")
     ? image("/marker-station-selected.svg", true)
     : active;
+  const exImage = places.some(place => place.kind === "station" && place.record.brand === "EX")
+    ? image("/marker-ex-station.svg")
+    : stationImage;
+  const exActive = places.some(place => place.kind === "station" && place.record.brand === "EX")
+    ? image("/marker-ex-station-selected.svg", true)
+    : stationActive;
   const overlay = new sdk.CustomOverlay({
     content: "",
     clickable: true,
     xAnchor: 0.5,
-    yAnchor: 1,
+    yAnchor: above ? 1 : 0,
     zIndex: 5,
   });
   const listOverlay = new sdk.CustomOverlay({
     content: "",
     clickable: true,
     xAnchor: 0.5,
-    yAnchor: 1,
+    yAnchor: above ? 1 : 0,
     zIndex: 6,
   });
   let listItems: MapPlace[] | null = null,
@@ -87,6 +100,7 @@ export function createPlaceMarkers(
         minClusterSize: 2,
         averageCenter: true,
         disableClickZoom: true,
+        clickable: true,
         styles: [
           {
             width: `${PIN_WIDTH}px`,
@@ -114,9 +128,20 @@ export function createPlaceMarkers(
     frame: number | null = null,
     activeKey: string | null = null;
   let allowAdjustment = true;
+  // Kakao Maps can emit its map click immediately after a marker/overlay click.
+  // Keep that follow-up event from dismissing the card that was just opened.
+  let suppressMapClickUntil = 0;
+  function suppressFollowUpMapClick() {
+    suppressMapClickUntil = Date.now() + 250;
+    sdk.event.preventMap?.();
+  }
   const isLounge = (place: MapPlace) =>
     place.kind === "rest" && place.record.facilities.has_truck_lounge === true;
   const baseZ = (place: MapPlace) => (isLounge(place) ? 3 : place.kind === "rest" ? 2 : 1);
+  function protectMapInteraction(content: HTMLElement) {
+    for (const name of ["mousedown", "touchstart", "click"])
+      content.addEventListener?.(name, suppressFollowUpMapClick, {capture: true});
+  }
   function closeListOverlay() {
     if (focusFrame !== null) cancelAnimationFrame(focusFrame);
     focusFrame = null;
@@ -139,8 +164,17 @@ export function createPlaceMarkers(
     onClear?.();
   }
   function handleMapClick() {
+    if (Date.now() <= suppressMapClickUntil) return;
     closeList();
     closeCardFromMap();
+  }
+  /** 목록에서 장소를 고르면 그 장소를 중심으로 개별 마커 레벨까지 확대합니다. 이미 더 확대돼 있으면 유지합니다. */
+  function zoomToPlace(place: MapPlace) {
+    if (!hasCoordinates(place.record)) return;
+    const target = CLUSTER_MIN_LEVEL - 1;
+    if (map.getLevel() <= target) return;
+    map.setCenter(new sdk.LatLng(place.record.latitude, place.record.longitude));
+    map.setLevel(target);
   }
   function canZoom(bounds: KakaoBounds) {
     const sw = bounds.getSouthWest(),
@@ -163,7 +197,8 @@ export function createPlaceMarkers(
       items,
       {
         onPick: place => {
-          closeListOverlay();
+          zoomToPlace(place);
+          select(place.key, true, true);
           onSelect(place);
         },
         onClose: closeList,
@@ -186,6 +221,8 @@ export function createPlaceMarkers(
       listState,
     );
     listCard = content;
+    placeCard(content);
+    protectMapInteraction(content);
     listOverlay.setContent(content);
     listOverlay.setPosition(center);
     listOverlay.setMap(map);
@@ -282,9 +319,13 @@ export function createPlaceMarkers(
   if (typeof window !== "undefined") window.addEventListener("keydown", escape);
   const placeImage = (place: MapPlace, selected: boolean) =>
     place.kind === "station"
-      ? selected
-        ? stationActive
-        : stationImage
+      ? place.record.brand === "EX"
+        ? selected
+          ? exActive
+          : exImage
+        : selected
+          ? stationActive
+          : stationImage
       : isLounge(place)
         ? selected
           ? loungeActive
@@ -293,9 +334,12 @@ export function createPlaceMarkers(
           ? active
           : normal;
   const groupImages = new Map<string, KakaoMarkerImage>();
+  const pinKind = (items: MapPlace[]) =>
+    items.every(place => place.kind === "station" && place.record.brand === "EX")
+      ? ("exStation" as const)
+      : pinKindFor(placeSummary(items));
   const groupImage = (grouped: MapPlace[]) => {
-    const summary = placeSummary(grouped);
-    const kind = pinKindFor(summary);
+    const kind = pinKind(grouped);
     const cacheKey = `${kind}:${grouped.length}`;
     let image = groupImages.get(cacheKey);
     if (!image) {
@@ -316,6 +360,54 @@ export function createPlaceMarkers(
     onClear?.();
     showList(sortPlacesForList(unit.places), center, bounds);
   }
+  function select(key: string | null, showCard = true, move = true) {
+    allowAdjustment = move;
+    if (key === activeKey && card && showCard) {
+      scheduleAdjustment();
+      return;
+    }
+    const previous = activeKey === null ? undefined : unitOfPlace.get(activeKey);
+    const selected = key === null ? undefined : unitOfPlace.get(key);
+    if (clusterer && key !== activeKey) {
+      if (previous) {
+        previous.marker.setMap(null);
+        clusterer.addMarker(previous.marker, true);
+      }
+      if (selected) {
+        clusterer.removeMarker(selected.marker, true);
+        selected.marker.setMap(map);
+      }
+      clusterer.redraw();
+    }
+    activeKey = key;
+    clearCard();
+    if (key === null) {
+      if (!listOpen) closeList();
+    } else if (listItems && !listItems.some(item => item.key === key)) closeList();
+    else if (listOpen) closeListOverlay();
+    units.forEach(unit => {
+      const isSelected = unit === selected;
+      if (unit.places.length === 1) unit.marker.setImage(placeImage(unit.places[0], isSelected));
+      unit.marker.setZIndex(isSelected ? 4 : unitZ(unit.places));
+    });
+    const selectedPlace = key === null ? undefined : placeByKey.get(key);
+    if (!selectedPlace || !hasCoordinates(selectedPlace.record)) return;
+    const point = selectedPlace.record,
+      position = new sdk.LatLng(point.latitude, point.longitude);
+    if (move) map.panTo(position);
+    if (showCard) {
+      card = createCard(selectedPlace);
+      placeCard(card);
+      protectMapInteraction(card);
+      if (listItems && listItems.some(item => item.key === key)) addBackButton(card);
+      if (viewport) constrainCard(viewport(), card);
+      overlay.setContent(card);
+      overlay.setPosition(position);
+      overlay.setMap(map);
+      resizeObserver?.observe(card);
+      scheduleAdjustment();
+    }
+  }
   const located = places.flatMap(place => {
     const record = place.record;
     return hasCoordinates(record)
@@ -331,13 +423,23 @@ export function createPlaceMarkers(
       ...(clusterer ? {} : {map}),
       position: new sdk.LatLng(latitude, longitude),
       title: single
-        ? `${first.record.name}${isLounge(first) ? " · 화물차 라운지" : first.kind === "station" ? " · GS 주유소" : ""}`
+        ? `${first.record.name}${isLounge(first) ? " · 화물차 라운지" : first.kind === "station" ? ` · ${stationLabel(first.record)}` : ""}`
         : `이 위치의 장소 ${grouped.length}개`,
+      clickable: true,
       image: single ? placeImage(first, false) : groupImage(grouped),
     });
     marker.setZIndex(unitZ(grouped));
     const unit: Unit = {marker, places: grouped, latitude, longitude, click: () => {}};
-    unit.click = single ? () => onSelect(first) : () => groupClick(unit);
+    unit.click = single
+      ? () => {
+          suppressFollowUpMapClick();
+          select(first.key);
+          onSelect(first);
+        }
+      : () => {
+          suppressFollowUpMapClick();
+          groupClick(unit);
+        };
     sdk.event.addListener(marker, "click", unit.click);
     units.set(single ? first.key : `group:${first.key}`, unit);
     for (const place of grouped) {
@@ -366,7 +468,14 @@ export function createPlaceMarkers(
   }
   const members = (cluster: KakaoCluster) =>
     cluster.getMarkers().flatMap(marker => placesByMarker.get(marker) ?? []);
+  let lastCluster: KakaoCluster | null = null;
+  let lastClusterOpenedAt = 0;
   function clusterClick(cluster: KakaoCluster) {
+    suppressFollowUpMapClick();
+    const now = Date.now();
+    if (lastCluster === cluster && now - lastClusterOpenedAt < 250) return;
+    lastCluster = cluster;
+    lastClusterOpenedAt = now;
     const items = sortPlacesForList(members(cluster)),
       bounds = cluster.getBounds();
     if (!items.length) return;
@@ -383,11 +492,12 @@ export function createPlaceMarkers(
     for (const cluster of clusters) {
       const summary = placeSummary(members(cluster));
       if (summary.total < 2) continue;
-      const kind = pinKindFor(summary);
+      const kind = pinKind(members(cluster));
       const content = document.createElement("div");
       content.className = "place-cluster-pin";
       content.setAttribute("role", "button");
       content.tabIndex = 0;
+      protectMapInteraction(content);
       content.setAttribute(
         "aria-label",
         `${summary.total}개 장소: 휴게소 ${summary.rest}, 주유소 ${summary.station}${summary.lounge ? `, 라운지 ${summary.lounge}` : ""}. 목록 보기`,
@@ -412,6 +522,7 @@ export function createPlaceMarkers(
     }
   }
   if (clusterer) {
+    sdk.event.addListener<KakaoCluster>(clusterer, "clusterclick", clusterClick);
     sdk.event.addListener(clusterer, "clustered", clustered);
     clusterer.addMarkers([...units.values()].map(({marker}) => marker));
     applyClusterMode();
@@ -439,52 +550,7 @@ export function createPlaceMarkers(
         map.setBounds(bounds, 65, 45, 65, 45);
       }
     },
-    select(key: string | null, showCard = true, move = true) {
-      allowAdjustment = move;
-      if (key === activeKey && card && showCard) {
-        scheduleAdjustment();
-        return;
-      }
-      const previous = activeKey === null ? undefined : unitOfPlace.get(activeKey);
-      const selected = key === null ? undefined : unitOfPlace.get(key);
-      if (clusterer && key !== activeKey) {
-        if (previous) {
-          previous.marker.setMap(null);
-          clusterer.addMarker(previous.marker, true);
-        }
-        if (selected) {
-          clusterer.removeMarker(selected.marker, true);
-          selected.marker.setMap(map);
-        }
-        clusterer.redraw();
-      }
-      activeKey = key;
-      clearCard();
-      if (key === null) {
-        if (!listOpen) closeList();
-      } else if (listItems && !listItems.some(item => item.key === key)) closeList();
-      else if (listOpen) closeListOverlay();
-      units.forEach(unit => {
-        const isSelected = unit === selected;
-        if (unit.places.length === 1) unit.marker.setImage(placeImage(unit.places[0], isSelected));
-        unit.marker.setZIndex(isSelected ? 4 : unitZ(unit.places));
-      });
-      const selectedPlace = key === null ? undefined : placeByKey.get(key);
-      if (!selectedPlace || !hasCoordinates(selectedPlace.record)) return;
-      const point = selectedPlace.record,
-        position = new sdk.LatLng(point.latitude, point.longitude);
-      if (move) map.panTo(position);
-      if (showCard) {
-        card = createCard(selectedPlace);
-        if (listItems && listItems.some(item => item.key === key)) addBackButton(card);
-        if (viewport) constrainCard(viewport(), card);
-        overlay.setContent(card);
-        overlay.setPosition(position);
-        overlay.setMap(map);
-        resizeObserver?.observe(card);
-        scheduleAdjustment();
-      }
-    },
+    select,
     dispose() {
       disposed = true;
       clearCard();
@@ -495,6 +561,7 @@ export function createPlaceMarkers(
       sdk.event.removeListener(map, "dragstart", closeList);
       if (typeof window !== "undefined") window.removeEventListener("keydown", escape);
       if (clusterer) {
+        sdk.event.removeListener(clusterer, "clusterclick", clusterClick);
         sdk.event.removeListener(clusterer, "clustered", clustered);
         sdk.event.removeListener(map, "idle", applyClusterMode);
         clusterer.clear();

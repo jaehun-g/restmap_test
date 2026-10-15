@@ -30,7 +30,7 @@ export type StationScalarKey = (typeof stationFields)[number]["key"];
 export type GasStation = {
   id: number;
   siteCode: string;
-  brand: "GS";
+  brand: "GS" | "EX";
   name: string;
   latitude: number | null;
   longitude: number | null;
@@ -40,6 +40,11 @@ export type GasStation = {
   openTime: string | null;
   closeTime: string | null;
   services: Record<StationServiceKey, boolean | null>;
+  routeName?: string | null;
+  direction?: string | null;
+  oilCompany?: string | null;
+  prices?: {gasoline: number | null; diesel: number | null; lpg: number | null};
+  priceUpdatedAt?: string | null;
 };
 export type GasStationRecord = GasStation & {
   revision: string;
@@ -50,6 +55,31 @@ export type GasStationsResponse = {
   unmappedCount: number;
   fetchedAt: string;
 };
+export const stationKey = (station: Pick<GasStation, "brand" | "siteCode">) =>
+  `station:${station.brand}:${station.siteCode}`;
+export const stationLabel = (station: GasStation) =>
+  station.brand === "EX" ? "고속도로 주유소" : "GS 주유·충전소";
+export function stationPriceItems(station: GasStation) {
+  return (
+    [
+      ["gasoline", "휘발유"],
+      ["diesel", "경유"],
+      ["lpg", "LPG"],
+    ] as const
+  ).flatMap(([key, label]) => {
+    const price = station.prices?.[key];
+    return typeof price === "number" && Number.isFinite(price) && price > 0
+      ? [
+          {
+            key,
+            label,
+            price,
+            text: `${price.toLocaleString("ko-KR", {maximumFractionDigits: 1})}원/L`,
+          },
+        ]
+      : [];
+  });
+}
 export type StationChanges = Partial<Pick<GasStation, StationScalarKey>> & {
   services?: Partial<GasStation["services"]>;
 };

@@ -93,6 +93,7 @@ export interface KakaoMaps {
     minClusterSize: number;
     averageCenter: boolean;
     disableClickZoom: boolean;
+    clickable?: boolean;
     styles?: Record<string, string>[];
   }) => KakaoClusterer;
   load(callback: () => void): void;
@@ -106,6 +107,7 @@ export interface KakaoMaps {
     map?: KakaoMap;
     position: KakaoLatLng;
     title: string;
+    clickable?: boolean;
     image: KakaoMarkerImage;
   }) => KakaoMarker;
   InfoWindow: new (options: {zIndex: number}) => KakaoInfoWindow;
@@ -136,6 +138,7 @@ export interface KakaoMaps {
     zIndex: number;
   }) => KakaoPolyline;
   event: {
+    preventMap?(): void;
     addListener<T = never>(
       target: KakaoMarker | KakaoMap | KakaoClusterer,
       name: string,

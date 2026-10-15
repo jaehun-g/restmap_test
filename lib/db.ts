@@ -27,6 +27,8 @@ import {compileRouteProximity, expandedBounds, routeStationRadiusMeters} from ".
 import {filterByGeoScope} from "./geo-search";
 import {saveGasStation} from "./gas-station-save";
 import type {StationUpdateRequest} from "./gas-station-validation";
+import {normalizeExGasStations, selectExStationColumns} from "./ex-gas-stations";
+import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-sync";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -141,6 +143,14 @@ export async function queryGasStations(
       if (!parsed.ok) return parsed;
       records.push(parsed.value);
     }
+    const exWhere = where.replace(/\blat\b/g, "latitude").replace(/\blongi\b/g, "longitude");
+    const [exRows] = await pool.value.query<RowDataPacket[]>(
+      {sql: `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`, timeout: 10_000},
+      values,
+    );
+    const exStations = normalizeExGasStations(exRows);
+    if (!exStations.ok) return exStations;
+    records.push(...exStations.value);
     const items = nearRoute
       ? records.filter(station => positioned(station) && nearRoute(station))
       : filterByGeoScope(records, query.scope, null);
@@ -155,9 +165,16 @@ export async function queryGasStations(
   } catch (reason) {
     const error = databaseError(reason);
     if (error.code === "DB_SCHEMA_ERROR")
-      error.message = "주유소 테이블(test_gscargo)을 확인해주세요.";
+      error.message = "주유소 테이블(test_gscargo, test_ex_station_geocodes)을 확인해주세요.";
     return {ok: false, error};
   }
+}
+
+/** Updates the read-only EX station snapshot from the Korea Expressway Corporation API. */
+export async function syncExStationStatuses(): Promise<Result<ExStationSyncSummary>> {
+  const pool = getPool();
+  if (!pool.ok) return pool;
+  return synchronizeExStations({pool: pool.value});
 }
 
 export async function queryGasStation(id: number): Promise<Result<GasStationRecord>> {

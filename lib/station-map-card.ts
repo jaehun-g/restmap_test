@@ -1,4 +1,4 @@
-import {stationHours, type GasStation} from "./gas-stations.ts";
+import {stationHours, stationLabel, stationPriceItems, type GasStation} from "./gas-stations.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 export function createStationMapCard(
   station: GasStation,
@@ -11,7 +11,7 @@ export function createStationMapCard(
   const heading = document.createElement("div");
   heading.className = "map-card-heading";
   const icon = document.createElement("img");
-  icon.src = "/marker-station.svg";
+  icon.src = station.brand === "EX" ? "/marker-ex-station.svg" : "/marker-station.svg";
   icon.alt = "";
   const title = document.createElement("strong");
   title.textContent = station.name;
@@ -30,8 +30,16 @@ export function createStationMapCard(
   body.className = "map-card-body";
   const source = document.createElement("p");
   source.className = "map-card-route";
-  source.textContent = `GS 주유·충전소${station.services.cargo ? " · 화물 특화" : ""}`;
+  source.textContent = `${stationLabel(station)}${station.services.cargo ? " · 화물 특화" : ""}`;
   body.append(source);
+  if (station.routeName || station.direction) {
+    const route = document.createElement("p");
+    route.className = "map-card-route";
+    route.textContent = [station.routeName, station.direction ? `${station.direction} 방향` : null]
+      .filter(Boolean)
+      .join(" · ");
+    body.append(route);
+  }
   const address = document.createElement("p");
   address.textContent = [station.address, station.detailAddress].filter(Boolean).join(" ");
   address.className = "map-card-address";
@@ -40,6 +48,26 @@ export function createStationMapCard(
   hours.textContent = stationHours(station);
   hours.className = "map-card-hours";
   body.append(hours);
+  const prices = stationPriceItems(station);
+  if (prices.length) {
+    const list = document.createElement("dl");
+    list.className = "station-fuel-prices";
+    list.setAttribute("aria-label", "유가 정보");
+    for (const price of prices) {
+      const row = document.createElement("div");
+      const label = document.createElement("dt");
+      label.textContent = price.label;
+      const value = document.createElement("dd");
+      value.textContent = price.text;
+      row.append(label, value);
+      list.append(row);
+    }
+    body.append(list);
+    const note = document.createElement("p");
+    note.className = "map-card-hours";
+    note.textContent = "한국도로공사 제공 · 현장 가격과 다를 수 있습니다.";
+    body.append(note);
+  }
   const details = document.createElement("button");
   details.className = "map-card-details";
   details.type = "button";

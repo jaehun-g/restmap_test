@@ -8,7 +8,7 @@ import {useSearchQuery} from "@/hooks/use-search-query";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {stationHours, type StationServiceKey} from "@/lib/gas-stations";
+import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/lib/gas-stations";
 import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
 import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
@@ -36,7 +36,7 @@ export default function MobileExplorer() {
   );
   const [panel, setPanel] = useState<Panel>("collapsed");
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
+  const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -126,7 +126,7 @@ export default function MobileExplorer() {
     return places;
   }, [visibleAreas, stationResults, location.position]);
   const selected = visibleAreas.find(area => area.id === selectedId);
-  const selectedStation = stationResults.find(station => station.id === selectedStationId);
+  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
@@ -148,12 +148,12 @@ export default function MobileExplorer() {
     setSelectedId(null);
     setSelectedStationId(null);
   }, []);
-  const selectStation = useCallback((id: number | null) => {
+  const selectStation = useCallback((id: string | null) => {
     setSelectedId(null);
     setSelectedStationId(id);
     setPanel("collapsed");
   }, []);
-  const stationDetails = useCallback((id: number) => {
+  const stationDetails = useCallback((id: string) => {
     setSelectedId(null);
     setSelectedStationId(id);
     setPanel("detail");
@@ -307,7 +307,7 @@ export default function MobileExplorer() {
           <KakaoMap
             areas={visibleAreas}
             stations={stationResults}
-            selectedStationId={selectedStation?.id ?? null}
+            selectedStationId={selectedStation ? stationKey(selectedStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
             stationsLoading={gas.loading}
@@ -400,7 +400,7 @@ export default function MobileExplorer() {
                 />
               ) : effectivePanel === "detail" && selectedStation ? (
                 <GasStationDetails
-                  key={selectedStation.id}
+                  key={stationKey(selectedStation)}
                   station={selectedStation}
                   onClose={collapse}
                   routeName={filters.routeName}
@@ -472,7 +472,7 @@ export default function MobileExplorer() {
                               <li key={place.key}>
                                 <button
                                   className="mobile-area-card flex gap-[12px] items-start w-full p-[19px_0] [border:0] bg-[transparent] text-left"
-                                  onClick={() => stationDetails(station.id)}
+                                  onClick={() => stationDetails(stationKey(station))}
                                   aria-label={`${station.name} 주유소 상세정보 보기`}
                                 >
                                   <span className="list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 is-station">
@@ -491,7 +491,8 @@ export default function MobileExplorer() {
                                       <Icon name="chevron" size={16} />
                                     </strong>
                                     <span>
-                                      GS 주유·충전소{station.services.cargo ? " · 화물 특화" : ""}
+                                      {stationLabel(station)}
+                                      {station.services.cargo ? " · 화물 특화" : ""}
                                     </span>
                                     <span>{station.address || stationHours(station)}</span>
                                   </span>

@@ -601,7 +601,7 @@
       "display": "grid",
       "grid-template-columns": "minmax(600px, 1fr) minmax(380px, 38%)",
       "gap": "20px",
-      "height": "max(680px, calc(100vh - 355px))"
+      "height": "max(720px, calc(100vh - 355px))"
     }
   },
   {
@@ -696,8 +696,8 @@
   {
     "name": "admin-map",
     "properties": {
-      "height": "46%",
-      "min-height": "280px",
+      "height": "56%",
+      "min-height": "420px",
       "flex-shrink": "0",
       "border-bottom": "1px solid var(--line)"
     }

@@ -7,6 +7,9 @@ import {normalizeRestAreas, type RestArea} from "../lib/rest-areas.ts";
 import type {KakaoMaps, KakaoMap} from "../lib/kakao-sdk.ts";
 import {createMapCard} from "../lib/map-card.ts";
 import {CardElement, installCardDOM} from "./helpers/card-dom.mts";
+import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
+import {normalizeGasStations} from "../lib/gas-stations.ts";
+import {stationPlace} from "../lib/map-places.ts";
 
 function mockKakao() {
   const state = {
@@ -26,6 +29,8 @@ function mockKakao() {
     sizes: [] as number[][],
     ids: [] as string[],
     content: [] as unknown[],
+    clickable: [] as boolean[],
+    prevented: 0,
   };
   class LatLng {
     latitude: number;
@@ -66,9 +71,12 @@ function mockKakao() {
     }
   }
   class Marker {
-    constructor(options: {image: MarkerImage}) {
+    clickable: boolean;
+    constructor(options: {image: MarkerImage; clickable?: boolean}) {
       state.created++;
       state.images.push(options.image.path);
+      this.clickable = options.clickable ?? false;
+      state.clickable.push(this.clickable);
     }
     setMap(map: unknown) {
       if (map === null) state.detached++;
@@ -97,9 +105,16 @@ function mockKakao() {
     Point: class {},
     CustomOverlay: Overlay,
     event: {
+      preventMap() {
+        state.prevented++;
+      },
       addListener(target: unknown, name: string, callback: () => void) {
         if (name === "click") {
-          if (target instanceof Marker) state.clicks.push(callback);
+          if (target instanceof Marker)
+            state.clicks.push(() => {
+              callback();
+              state.mapClicks.forEach(click => click());
+            });
           else state.mapClicks.push(callback);
         }
         if (name === "idle") state.idle.push(callback);
@@ -139,6 +154,53 @@ function areas(): RestArea[] {
   return result.value;
 }
 const label = () => ({}) as HTMLElement;
+test("marker clicks do not bubble into map-close and EX selections keep their distinct identity and icon", t => {
+  installCardDOM(t);
+  const ex = normalizeExGasStations([
+    {
+      id: 1,
+      source_key: "0010|B00001|부산|AD",
+      service_area_name: "고속도로 주유소",
+      latitude: 37,
+      longitude: 127,
+    },
+  ]);
+  const gs = normalizeGasStations([
+    {id: 1, siteCd: "same-numeric-id", siteNm: "별도 GS", lat: 37.01, longi: 127},
+  ]);
+  assert.ok(ex.ok && gs.ok);
+  const places = [stationPlace(ex.value[0]), stationPlace(gs.value[0])];
+  const {sdk, map, state} = mockKakao();
+  let selected: string | null = null;
+  let cleared = 0;
+  const card = new CardElement("section");
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    places,
+    place => {
+      selected = place.key;
+      layer.select(place.key);
+    },
+    () => card as unknown as HTMLElement,
+    undefined,
+    () => {
+      cleared++;
+    },
+  );
+  state.clicks[0]();
+  assert.equal(selected, places[0].key);
+  assert.deepEqual(state.clickable, [true, true]);
+  assert.equal(cleared, 0);
+  assert.ok(state.images.includes("/marker-ex-station.svg"));
+  assert.ok(state.ids.includes("/marker-ex-station-selected.svg"));
+  card.dispatch("mousedown");
+  assert.equal(state.prevented, 2);
+  state.clicks[1]();
+  assert.equal(selected, places[1].key);
+  assert.equal(cleared, 0);
+  layer.dispose();
+});
 test("only positioned records produce markers and clicks select the correct ID", () => {
   const {sdk, map, state} = mockKakao();
   let selected: number | undefined;
@@ -154,8 +216,10 @@ test("only positioned records produce markers and clicks select the correct ID",
   assert.equal(state.created, 2);
   state.clicks[0]();
   assert.equal(selected, 1);
+  assert.equal(state.shown, 1, "marker click opens its card before parent state is reconciled");
   state.clicks[1]();
   assert.equal(selected, 2);
+  assert.equal(state.shown, 2);
 });
 test("lounge and ordinary markers use distinct icon assets at the requested sizes", () => {
   const {sdk, map, state} = mockKakao();

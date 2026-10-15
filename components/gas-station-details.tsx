@@ -2,7 +2,13 @@
 import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton, Button} from "@/components/ui/button";
 import {useEffect, useState} from "react";
-import {stationHours, stationServices, type GasStationRecord} from "@/lib/gas-stations";
+import {
+  stationHours,
+  stationLabel,
+  stationPriceItems,
+  stationServices,
+  type GasStationRecord,
+} from "@/lib/gas-stations";
 import {hasCoordinates} from "@/lib/rest-areas";
 import Icon from "./icon";
 export default function GasStationDetails({
@@ -20,7 +26,7 @@ export default function GasStationDetails({
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (audience !== "admin") return;
+    if (audience !== "admin" || station.brand !== "GS") return;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       void globalThis
@@ -43,13 +49,15 @@ export default function GasStationDetails({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [station.id, audience, attempt]);
+  }, [station.id, station.brand, audience, attempt]);
   const phone = station.phone?.replace(/[^\d+]/g, "");
+  const prices = stationPriceItems(station);
+  const priceTime = station.priceUpdatedAt ? new Date(station.priceUpdatedAt) : null;
   return (
     <section className={sharedClasses.detailPanel} aria-labelledby="station-detail-title">
       <div className={sharedClasses.detailHeading}>
         <div>
-          <span className={sharedClasses.eyebrow}>GS 주유·충전소</span>
+          <span className={sharedClasses.eyebrow}>{stationLabel(station)}</span>
           <h2 id="station-detail-title">{station.name}</h2>
         </div>
         <IconButton aria-label="주유소 상세정보 닫기" onClick={onClose}>
@@ -57,7 +65,7 @@ export default function GasStationDetails({
         </IconButton>
       </div>
       <div className={sharedClasses.detailScroll}>
-        {routeName && (
+        {routeName && station.brand === "GS" && (
           <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6]">
             {routeName} 주변 2km · 직선거리 기준
             <br />
@@ -65,6 +73,12 @@ export default function GasStationDetails({
           </p>
         )}
         <dl className={sharedClasses.detailFacts}>
+          {(station.routeName || station.direction) && (
+            <div className="wide">
+              <dt>노선 · 방향</dt>
+              <dd>{[station.routeName, station.direction].filter(Boolean).join(" · ")}</dd>
+            </div>
+          )}
           <div className="wide">
             <dt>주소</dt>
             <dd>
@@ -89,6 +103,27 @@ export default function GasStationDetails({
             </dd>
           </div>
         </dl>
+        {prices.length > 0 && (
+          <section aria-label="유가 정보" className="station-price-section">
+            <h3>유가 정보</h3>
+            <dl className="station-fuel-prices">
+              {prices.map(price => (
+                <div key={price.key}>
+                  <dt>{price.label}</dt>
+                  <dd>{price.text}</dd>
+                </div>
+              ))}
+            </dl>
+            <p>
+              한국도로공사 제공
+              {priceTime && Number.isFinite(priceTime.getTime())
+                ? ` · 수집 ${priceTime.toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})}`
+                : ""}
+              <br />
+              현장 가격과 다를 수 있습니다.
+            </p>
+          </section>
+        )}
         <div className={sharedClasses.facilityHeading}>
           <h3>주유소 시설·서비스</h3>
           <span>있음 / 없음 / 미확인</span>
@@ -116,7 +151,7 @@ export default function GasStationDetails({
             ? `위도 ${station.latitude.toFixed(10)} · 경도 ${station.longitude.toFixed(10)}`
             : "좌표 정보가 없어 지도에 표시되지 않습니다."}
         </p>
-        {audience === "admin" && (
+        {audience === "admin" && station.brand === "GS" && (
           <details className="station-source-details p-[10px_0] text-[11px]">
             <summary>읽기 전용 원본 정보 · GS 코드 {station.siteCode}</summary>
             {error ? (

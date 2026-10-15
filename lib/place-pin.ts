@@ -1,4 +1,4 @@
-export type PinKind = "rest" | "lounge" | "station" | "mixed";
+export type PinKind = "rest" | "lounge" | "station" | "exStation" | "mixed";
 
 /**
  * 핀 이미지 크기와 앵커(핀 끝).
@@ -26,6 +26,10 @@ export function countLabel(total: number): string {
 const PIN_PATH = "M16 37S1 25 1 16a15 15 0 0 1 30 0c0 9-15 21-15 21Z";
 
 const pinBodies: Record<PinKind, string> = {
+  exStation:
+    `<path fill="#7c3aed" stroke="#fff" stroke-width="2" d="${PIN_PATH}"/>` +
+    `<g fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">` +
+    `<path d="M10 23V10h9v13M8 23h13M10 15h9M19 16h3v5a2 2 0 0 0 4 0v-7l-3-3"/><path d="M24 12v3h2"/></g>`,
   rest:
     `<path d="m11 27 5 10 5-10" fill="#0865ff"/><circle cx="16" cy="16" r="14" fill="#fff" stroke="#0865ff" stroke-width="2"/>` +
     `<g stroke="#0865ff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
