@@ -1,6 +1,7 @@
+import {sharedClasses} from "@/lib/shared-classes";
+import {IconButton} from "@/components/ui/button";
 import {hasCoordinates, type RestArea, visibleFacilities, routeDescription} from "@/lib/rest-areas";
 import Icon from "./icon";
-
 export default function RestAreaDetails({
   area,
   onClose,
@@ -12,25 +13,25 @@ export default function RestAreaDetails({
 }) {
   const number = area.phone?.replace(/[^\d+]/g, "");
   return (
-    <section className="detail-panel" aria-labelledby="detail-title">
-      <div className="detail-handle" aria-hidden="true" />
-      <div className="detail-heading">
+    <section className={sharedClasses.detailPanel} aria-labelledby="detail-title">
+      <div className="detail-handle hidden" aria-hidden="true" />
+      <div className={sharedClasses.detailHeading}>
         <div>
-          <span className="eyebrow">휴게소 상세정보</span>
+          <span className={sharedClasses.eyebrow}>휴게소 상세정보</span>
           <h2 id="detail-title">{area.name}</h2>
         </div>
-        <button className="icon-button" onClick={onClose} aria-label="상세정보 닫기">
+        <IconButton onClick={onClose} aria-label="상세정보 닫기">
           <Icon name="close" />
-        </button>
+        </IconButton>
       </div>
-      <div className="detail-scroll">
+      <div className={sharedClasses.detailScroll}>
         {routeDescription(area, audience) && (
-          <div className="detail-route">
+          <div className="detail-route flex items-center gap-[7px] text-[#5179b5] text-[12px] pb-[17px]">
             <Icon name="pin" size={17} />
             <span>{routeDescription(area, audience)}</span>
           </div>
         )}
-        <dl className="detail-facts">
+        <dl className={sharedClasses.detailFacts}>
           <div>
             <dt>노선 번호</dt>
             <dd>{area.routeNumber ?? "정보 없음"}</dd>
@@ -65,11 +66,11 @@ export default function RestAreaDetails({
             </dd>
           </div>
         </dl>
-        <div className="facility-heading">
+        <div className={sharedClasses.facilityHeading}>
           <h3>편의시설</h3>
           <span>있음 / 없음 / 미확인</span>
         </div>
-        <ul className="facility-list">
+        <ul className={sharedClasses.facilityList}>
           {visibleFacilities(area, audience).map(([key, label]) => {
             const value = area.facilities[key];
             return (
@@ -80,14 +81,14 @@ export default function RestAreaDetails({
                 }
               >
                 <span>{label}</span>
-                <span className="facility-state">
+                <span className="facility-state shrink-0 text-[9px]">
                   {value === true ? "있음" : value === false ? "없음" : "미확인"}
                 </span>
               </li>
             );
           })}
         </ul>
-        <p className="coordinate-note">
+        <p className={sharedClasses.coordinateNote}>
           {hasCoordinates(area)
             ? `위도 ${area.latitude.toFixed(7)} · 경도 ${area.longitude.toFixed(7)}`
             : "좌표 정보가 없어 지도에 표시되지 않습니다."}

@@ -1,7 +1,9 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {Input} from "@/components/ui/field";
+import {IconButton} from "@/components/ui/button";
 import Icon from "./icon";
 import type {useSearchQuery} from "@/hooks/use-search-query";
-
 export default function SearchBox({
   search,
   disabled = false,
@@ -12,9 +14,9 @@ export default function SearchBox({
   includeStations?: boolean;
 }) {
   return (
-    <div className="search-box">
+    <div className={sharedClasses.searchBox}>
       <Icon name="search" size={18} />
-      <input
+      <Input
         type="search"
         value={search.input}
         placeholder={includeStations ? "휴게소·노선·주유소 검색" : "휴게소명·노선명 검색"}
@@ -31,16 +33,12 @@ export default function SearchBox({
             search.flush();
           }
         }}
+        variant="search"
       />
       {search.input && (
-        <button
-          className="icon-button"
-          disabled={disabled}
-          aria-label="검색어 지우기"
-          onClick={() => search.clear()}
-        >
+        <IconButton disabled={disabled} aria-label="검색어 지우기" onClick={() => search.clear()}>
           <Icon name="close" size={16} />
-        </button>
+        </IconButton>
       )}
     </div>
   );

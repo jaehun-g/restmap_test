@@ -1,9 +1,10 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {IconButton, Button} from "@/components/ui/button";
 import {useEffect, useState} from "react";
 import {stationHours, stationServices, type GasStationRecord} from "@/lib/gas-stations";
 import {hasCoordinates} from "@/lib/rest-areas";
 import Icon from "./icon";
-
 export default function GasStationDetails({
   station,
   onClose,
@@ -45,25 +46,25 @@ export default function GasStationDetails({
   }, [station.id, audience, attempt]);
   const phone = station.phone?.replace(/[^\d+]/g, "");
   return (
-    <section className="detail-panel" aria-labelledby="station-detail-title">
-      <div className="detail-heading">
+    <section className={sharedClasses.detailPanel} aria-labelledby="station-detail-title">
+      <div className={sharedClasses.detailHeading}>
         <div>
-          <span className="eyebrow">GS 주유·충전소</span>
+          <span className={sharedClasses.eyebrow}>GS 주유·충전소</span>
           <h2 id="station-detail-title">{station.name}</h2>
         </div>
-        <button className="icon-button" aria-label="주유소 상세정보 닫기" onClick={onClose}>
+        <IconButton aria-label="주유소 상세정보 닫기" onClick={onClose}>
           <Icon name="close" />
-        </button>
+        </IconButton>
       </div>
-      <div className="detail-scroll">
+      <div className={sharedClasses.detailScroll}>
         {routeName && (
-          <p className="station-route-note">
+          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6]">
             {routeName} 주변 2km · 직선거리 기준
             <br />
             고속도로 내부 또는 진입 가능 여부는 확인이 필요합니다.
           </p>
         )}
-        <dl className="detail-facts">
+        <dl className={sharedClasses.detailFacts}>
           <div className="wide">
             <dt>주소</dt>
             <dd>
@@ -88,11 +89,11 @@ export default function GasStationDetails({
             </dd>
           </div>
         </dl>
-        <div className="facility-heading">
+        <div className={sharedClasses.facilityHeading}>
           <h3>주유소 시설·서비스</h3>
           <span>있음 / 없음 / 미확인</span>
         </div>
-        <ul className="facility-list">
+        <ul className={sharedClasses.facilityList}>
           {stationServices.map(({key, label}) => {
             const value = station.services[key];
             return (
@@ -103,30 +104,30 @@ export default function GasStationDetails({
                 }
               >
                 <span>{label}</span>
-                <span className="facility-state">
+                <span className="facility-state shrink-0 text-[9px]">
                   {value === true ? "있음" : value === false ? "없음" : "미확인"}
                 </span>
               </li>
             );
           })}
         </ul>
-        <p className="coordinate-note">
+        <p className={sharedClasses.coordinateNote}>
           {hasCoordinates(station)
             ? `위도 ${station.latitude.toFixed(10)} · 경도 ${station.longitude.toFixed(10)}`
             : "좌표 정보가 없어 지도에 표시되지 않습니다."}
         </p>
         {audience === "admin" && (
-          <details className="station-source-details">
+          <details className="station-source-details p-[10px_0] text-[11px]">
             <summary>읽기 전용 원본 정보 · GS 코드 {station.siteCode}</summary>
             {error ? (
               <p role="status">
                 {error}{" "}
-                <button className="button secondary" onClick={() => setAttempt(value => value + 1)}>
+                <Button onClick={() => setAttempt(value => value + 1)} variant="secondary">
                   다시 조회
-                </button>
+                </Button>
               </p>
             ) : detail?.id === station.id && detail.sourceDetails ? (
-              <dl className="detail-facts">
+              <dl className={sharedClasses.detailFacts}>
                 {Object.entries(detail.sourceDetails).map(([key, value]) => (
                   <div key={key}>
                     <dt>{key}</dt>
