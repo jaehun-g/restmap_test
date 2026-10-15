@@ -1,4 +1,7 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {IconButton, Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/field";
 import {useMemo, useState} from "react";
 import {routeOptions, selectableFacilities, type RestAreaFilters} from "@/lib/rest-area-filters";
 import type {RestArea} from "@/lib/rest-areas";
@@ -7,7 +10,6 @@ import {
   type StationServiceKey,
 } from "@/lib/gas-stations";
 import Icon from "./icon";
-
 export default function MobileFilterSheet({
   kind,
   areas,
@@ -32,7 +34,7 @@ export default function MobileFilterSheet({
   );
   return (
     <>
-      <div className="sheet-list-heading">
+      <div className={sharedClasses.sheetListHeading}>
         <div>
           <h2>
             {kind === "routes"
@@ -49,25 +51,26 @@ export default function MobileFilterSheet({
                 : "선택한 조건을 모두 갖춘 GS 주유소를 보여드려요."}
           </p>
         </div>
-        <button className="icon-button" aria-label="필터 선택창 닫기" onClick={onClose}>
+        <IconButton aria-label="필터 선택창 닫기" onClick={onClose}>
           <Icon name="close" />
-        </button>
+        </IconButton>
       </div>
       {kind === "routes" ? (
         <>
-          <div className="sheet-route-search">
-            <div className="search-box">
+          <div className="sheet-route-search p-[5px_20px_10px] shrink-0">
+            <div className={sharedClasses.searchBox}>
               <Icon name="search" size={17} />
-              <input
+              <Input
                 type="search"
                 aria-label="선택할 노선 검색"
                 placeholder="노선명 검색"
                 value={routeQuery}
                 onChange={event => setRouteQuery(event.target.value)}
+                variant="search"
               />
             </div>
           </div>
-          <div className="filter-sheet-scroll">
+          <div className={sharedClasses.filterSheetScroll}>
             <ul className="route-options">
               <li>
                 <button
@@ -110,13 +113,15 @@ export default function MobileFilterSheet({
               ))}
             </ul>
             {!found.length && routeQuery && (
-              <p className="filter-empty">일치하는 노선이 없습니다.</p>
+              <p className="filter-empty p-[15px] text-center text-muted text-[12px]">
+                일치하는 노선이 없습니다.
+              </p>
             )}
           </div>
         </>
       ) : kind === "facilities" ? (
         <>
-          <div className="facility-sheet-top">
+          <div className={sharedClasses.facilitySheetTop}>
             <span>{filters.facilities.length}개 선택</span>
             <button
               onClick={() => onChange({...filters, facilities: []})}
@@ -125,8 +130,8 @@ export default function MobileFilterSheet({
               전체 해제
             </button>
           </div>
-          <div className="filter-sheet-scroll">
-            <div className="facility-checkboxes">
+          <div className={sharedClasses.filterSheetScroll}>
+            <div className={sharedClasses.facilityCheckboxes}>
               {selectableFacilities.map(([key, label]) => (
                 <label key={key} className={filters.facilities.includes(key) ? "selected" : ""}>
                   <input
@@ -146,22 +151,22 @@ export default function MobileFilterSheet({
               ))}
             </div>
           </div>
-          <div className="sheet-filter-footer">
-            <button className="button primary" onClick={onClose}>
+          <div className={sharedClasses.sheetFilterFooter}>
+            <Button onClick={onClose} variant="primary">
               선택 완료
-            </button>
+            </Button>
           </div>
         </>
       ) : (
         <>
-          <div className="facility-sheet-top">
+          <div className={sharedClasses.facilitySheetTop}>
             <span>{stationServices.length}개 선택</span>
             <button onClick={() => onStationServices([])} disabled={!stationServices.length}>
               전체 해제
             </button>
           </div>
-          <div className="filter-sheet-scroll">
-            <div className="facility-checkboxes">
+          <div className={sharedClasses.filterSheetScroll}>
+            <div className={sharedClasses.facilityCheckboxes}>
               {stationServiceDefinitions.map(({key, label}) => (
                 <label key={key} className={stationServices.includes(key) ? "selected" : ""}>
                   <input
@@ -180,10 +185,10 @@ export default function MobileFilterSheet({
               ))}
             </div>
           </div>
-          <div className="sheet-filter-footer">
-            <button className="button primary" onClick={onClose}>
+          <div className={sharedClasses.sheetFilterFooter}>
+            <Button onClick={onClose} variant="primary">
               선택 완료
-            </button>
+            </Button>
           </div>
         </>
       )}

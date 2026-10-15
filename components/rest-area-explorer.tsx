@@ -1,4 +1,7 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
+import {IconButton, Button} from "@/components/ui/button";
+import {FilterChip} from "@/components/ui/filter-chip";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useRestAreas} from "@/hooks/use-rest-areas";
 import {useSearchQuery} from "@/hooks/use-search-query";
@@ -20,7 +23,6 @@ import Icon from "./icon";
 import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
 const noAreas: ReturnType<typeof filterMobileRestAreas> = [];
-
 type Panel = "collapsed" | "list" | "detail" | "routes" | "facilities" | "stationServices";
 export default function MobileExplorer() {
   const {data, areas, loading, error, reload} = useRestAreas();
@@ -227,11 +229,18 @@ export default function MobileExplorer() {
     setSelectedId(null);
     setSelectedStationId(null);
   }, []);
-
   return (
-    <main className="mobile-shell" ref={shellRef}>
-      <header className="mobile-header" ref={headerRef}>
-        <h1 className="sr-only">휴게소·주유소 찾기</h1>
+    <main
+      className="mobile-shell relative w-full max-w-[480px] m-[0_auto] flex flex-col bg-white [box-shadow:0_0_28px_#24364a0c] overflow-hidden"
+      ref={shellRef}
+    >
+      <header
+        className="mobile-header absolute inset-[0_0_auto] bg-[transparent] pointer-events-none z-[4] p-[calc(10px_+_env(safe-area-inset-top,_0px))_18px_12px]"
+        ref={headerRef}
+      >
+        <h1 className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
+          휴게소·주유소 찾기
+        </h1>
         <SearchBox search={search} includeStations={placeView !== "rest"} />
         <PlaceControls
           view={placeView}
@@ -242,41 +251,42 @@ export default function MobileExplorer() {
             setPanel("collapsed");
           }}
         />
-        <div className="mobile-filters">
-          <button
-            className={`filter-chip ${filters.routeName ? "active" : ""}`}
+        <div className="mobile-filters flex items-center flex-nowrap gap-[6px] m-[8px_-18px_0] p-[2px_18px_6px] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [scroll-padding:0_18px]">
+          <FilterChip
+            active={Boolean(filters.routeName)}
             onClick={event => open("routes", event.currentTarget)}
             aria-expanded={panel === "routes"}
             disabled={loading}
           >
             <span>{filters.routeName || "전체 노선"}</span>
             <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
-          </button>
+          </FilterChip>
           {placeView !== "station" && (
-            <button
-              className={`filter-chip ${filters.facilities.length ? "active" : ""}`}
+            <FilterChip
+              active={filters.facilities.length > 0}
               onClick={event => open("facilities", event.currentTarget)}
               aria-expanded={panel === "facilities"}
             >
               휴게소 편의시설
               {filters.facilities.length > 0 && <b>{filters.facilities.length}</b>}
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
-            </button>
+            </FilterChip>
           )}
           {placeView !== "rest" && (
-            <button
-              className={`filter-chip ${stationFilters.length ? "active" : ""}`}
+            <FilterChip
+              active={stationFilters.length > 0}
               onClick={event => open("stationServices", event.currentTarget)}
               aria-expanded={panel === "stationServices"}
             >
               주유소 조건
               {stationFilters.length > 0 && <b>{stationFilters.length}</b>}
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
-            </button>
+            </FilterChip>
           )}
           {placeView !== "station" && (
-            <button
-              className={`filter-chip lounge-toggle ${filters.lounge === "present" ? "on" : ""}`}
+            <FilterChip
+              variant="lounge"
+              active={filters.lounge === "present"}
               aria-pressed={filters.lounge === "present"}
               aria-label={
                 filters.lounge === "present"
@@ -292,21 +302,23 @@ export default function MobileExplorer() {
             >
               <Icon name="truck" size={14} />
               라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
-            </button>
+            </FilterChip>
           )}
         </div>
         {filtered && (
-          <div className="mobile-result-info">
+          <div className="mobile-result-info flex items-center justify-between mt-[8px] text-[9px] text-[#435e80] [text-shadow:0_1px_3px_#fff,_0_0_5px_#fff]">
             <span>지도에 {mapped}개 표시</span>
             <button onClick={reset}>조건 초기화</button>
           </div>
         )}
         {filters.routeName && placeView !== "rest" && (
-          <p className="station-route-note compact">주유소는 선택 노선 주변 2km · 직선거리 기준</p>
+          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
+            주유소는 선택 노선 주변 2km · 직선거리 기준
+          </p>
         )}
       </header>
-      <div className="mobile-content">
-        <div className="mobile-map">
+      <div className="mobile-content flex-1 min-h-0 flex flex-col relative">
+        <div className="mobile-map absolute inset-[0]">
           <KakaoMap
             areas={visibleAreas}
             stations={stationResults}
@@ -333,7 +345,7 @@ export default function MobileExplorer() {
         </div>
         <section
           ref={sheetRef}
-          className={`mobile-sheet ${expanded ? "is-open" : ""}`}
+          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""}`}
           aria-label={
             effectivePanel === "detail"
               ? "휴게소 상세정보"
@@ -346,15 +358,18 @@ export default function MobileExplorer() {
                     : "휴게소 목록"
           }
         >
-          <div className="sheet-handle" aria-hidden="true" />
+          <div
+            className="sheet-handle w-[30px] h-[4px] m-[9px_auto_2px] bg-[#dce2e9] rounded-[5px] shrink-0"
+            aria-hidden="true"
+          />
           {!expanded ? (
             <button
               ref={summaryRef}
-              className="sheet-summary"
+              className="sheet-summary flex items-center gap-[12px] w-full p-[13px_20px_14px] [border:0] bg-[transparent] text-left text-ink"
               onClick={event => open("list", event.currentTarget)}
               aria-expanded={false}
             >
-              <span className="summary-list-icon">
+              <span className="summary-list-icon w-[36px] h-[36px] flex items-center justify-center rounded-[11px] bg-primary-soft text-primary shrink-0">
                 <Icon name="list" size={21} />
               </span>
               <span>
@@ -378,7 +393,11 @@ export default function MobileExplorer() {
               <Icon name="chevronUp" size={20} />
             </button>
           ) : (
-            <div ref={panelRef} className="sheet-content" tabIndex={-1}>
+            <div
+              ref={panelRef}
+              className="sheet-content flex-1 min-h-0 flex flex-col [outline:none]"
+              tabIndex={-1}
+            >
               {effectivePanel === "routes" ||
               effectivePanel === "facilities" ||
               effectivePanel === "stationServices" ? (
@@ -404,7 +423,7 @@ export default function MobileExplorer() {
               ) : effectivePanel === "detail" && selected ? (
                 <>
                   <button
-                    className="back-to-list"
+                    className="back-to-list [align-self:flex-start] flex items-center gap-[5px] min-h-[36px] p-[7px_20px_0] [border:0] bg-[transparent] text-[#7b8aa0] text-[11px] shrink-0"
                     onClick={() => {
                       setSelectedId(null);
                       setPanel("list");
@@ -417,7 +436,7 @@ export default function MobileExplorer() {
                 </>
               ) : (
                 <>
-                  <div className="sheet-list-heading">
+                  <div className={sharedClasses.sheetListHeading}>
                     <div>
                       <h2>
                         장소 목록 <span>{resultCount}</span>
@@ -428,15 +447,14 @@ export default function MobileExplorer() {
                           : "원하는 휴게소를 선택하세요."}
                       </p>
                     </div>
-                    <button
-                      className="icon-button"
-                      onClick={collapse}
-                      aria-label="휴게소 목록 접기"
-                    >
+                    <IconButton onClick={collapse} aria-label="휴게소 목록 접기">
                       <Icon name="close" />
-                    </button>
+                    </IconButton>
                   </div>
-                  <div className="mobile-area-list" aria-busy={loading}>
+                  <div
+                    className="mobile-area-list overflow-y-auto min-h-0 flex-1 overscroll-contain"
+                    aria-busy={loading}
+                  >
                     {!resultCount && (loading || gas.loading || error || gas.error) ? (
                       <QueryState
                         loading={loading || gas.loading}
@@ -447,7 +465,7 @@ export default function MobileExplorer() {
                         }}
                       />
                     ) : !resultCount ? (
-                      <div className="query-state">
+                      <div className={sharedClasses.queryState}>
                         <Icon name="search" size={25} />
                         <strong>조건에 맞는 장소가 없습니다</strong>
                         <p>
@@ -455,9 +473,9 @@ export default function MobileExplorer() {
                             ? "검색어·편의시설·라운지 조건을 변경하거나 필터를 초기화해보세요."
                             : "필터를 초기화하거나 지도를 이동한 뒤 지도 내 재검색을 눌러보세요."}
                         </p>
-                        <button className="button secondary" onClick={reset}>
+                        <Button onClick={reset} variant="secondary">
                           조건 초기화
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <ul>
@@ -468,18 +486,20 @@ export default function MobileExplorer() {
                             return (
                               <li key={place.key}>
                                 <button
-                                  className="mobile-area-card"
+                                  className="mobile-area-card flex gap-[12px] items-start w-full p-[19px_0] [border:0] bg-[transparent] text-left"
                                   onClick={() => stationDetails(station.id)}
                                   aria-label={`${station.name} 주유소 상세정보 보기`}
                                 >
-                                  <span className="list-pin is-station">
+                                  <span className="list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 is-station">
                                     <Icon name="pin" size={19} />
                                   </span>
-                                  <span className="mobile-area-info">
+                                  <span className="mobile-area-info flex-1 min-w-0">
                                     <strong>
-                                      <span className="mobile-area-name">{station.name}</span>
+                                      <span className="mobile-area-name flex-1 min-w-0">
+                                        {station.name}
+                                      </span>
                                       {distance !== null && (
-                                        <small className="mobile-area-distance">
+                                        <small className="mobile-area-distance shrink-0 text-primary text-[11px] font-[600]">
                                           {formatDistance(distance)}
                                         </small>
                                       )}
@@ -503,12 +523,12 @@ export default function MobileExplorer() {
                           return (
                             <li key={place.key}>
                               <button
-                                className="mobile-area-card"
+                                className="mobile-area-card flex gap-[12px] items-start w-full p-[19px_0] [border:0] bg-[transparent] text-left"
                                 onClick={() => details(area.id)}
                                 aria-label={`${area.name} 상세정보 보기`}
                               >
                                 <span
-                                  className={`list-pin ${area.facilities.has_truck_lounge === true ? "is-lounge" : ""}`}
+                                  className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 ${area.facilities.has_truck_lounge === true ? "is-lounge" : ""}`}
                                 >
                                   <Icon
                                     name={
@@ -517,12 +537,14 @@ export default function MobileExplorer() {
                                     size={19}
                                   />
                                 </span>
-                                <span className="mobile-area-info">
+                                <span className="mobile-area-info flex-1 min-w-0">
                                   <strong>
-                                    <span className="mobile-area-name">{area.name}</span>
+                                    <span className="mobile-area-name flex-1 min-w-0">
+                                      {area.name}
+                                    </span>
                                     {distance !== null && (
                                       <small
-                                        className="mobile-area-distance"
+                                        className="mobile-area-distance shrink-0 text-primary text-[11px] font-[600]"
                                         aria-label={`내 위치에서 직선거리 ${formatDistance(distance)}`}
                                       >
                                         {formatDistance(distance)}
