@@ -1,0 +1,80 @@
+/* Shared map and detail presentation; each route owns its surrounding layout. */
+.map-research-button {
+  @apply rounded-[24px] text-primary px-[15px];
+}
+.map-placeholder {
+  background-image:
+    linear-gradient(#e9eef580 1px, transparent 1px),
+    linear-gradient(90deg, #e9eef580 1px, transparent 1px);
+}
+.map-placeholder h2 {
+  @apply text-[17px] tracking-[-0.035em];
+}
+.map-placeholder p {
+  @apply text-[#6e7e91] text-[12px] max-w-[330px] leading-[1.8] [word-break:keep-all];
+}
+.map-placeholder .placeholder-hint {
+  @apply text-[11px];
+}
+.location-control button {
+  @apply w-[52px] min-h-[54px] p-[8px_4px] flex flex-col items-center justify-center gap-[3px] bg-white text-[#355073] [border:0] text-[10px];
+}
+.location-control button:hover {
+  @apply bg-[#f3f7ff];
+}
+.map-label {
+  font-family: "Malgun Gothic", sans-serif;
+}
+.map-label strong {
+  @apply block text-[13px] text-[#223450] [overflow-wrap:anywhere];
+}
+.map-label span {
+  @apply block mt-[4px] text-[10px] text-[#79869a];
+}
+.query-state strong {
+  @apply text-[14px];
+}
+.query-state p {
+  @apply text-muted text-[12px] leading-[1.8] max-w-[340px] [overflow-wrap:anywhere];
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.detail-heading h2 {
+  @apply mt-[4px] text-[20px] font-[750] tracking-[-0.04em] [overflow-wrap:anywhere];
+}
+.detail-facts dt {
+  @apply text-muted text-[10px];
+}
+.detail-facts dd {
+  @apply mt-[3px] text-[#3b485a] text-[12px] font-[600] [overflow-wrap:anywhere];
+}
+.detail-facts .wide {
+  @apply col-span-full;
+}
+.detail-facts a {
+  @apply inline-flex items-center gap-[7px] text-primary min-h-[30px];
+}
+.facility-heading h3 {
+  @apply text-[13px];
+}
+.facility-heading > span {
+  @apply text-[9px] text-[#8895a6];
+}
+.facility-list li {
+  @apply flex justify-between items-center gap-[4px] min-h-[35px] p-[8px_9px] [border:1px_solid_var(--line)] rounded-[7px] text-[11px];
+}
+.facility-list .available {
+  @apply border-[#d9e8ff] bg-[#f4f8ff] text-[#315b9a];
+}
+.facility-list .unavailable {
+  @apply text-[#7c8796] bg-[#fafbfd];
+}
+.facility-list .unknown {
+  @apply text-[#7c8796];
+}
+.available .facility-state {
+  @apply text-primary font-[700];
+}

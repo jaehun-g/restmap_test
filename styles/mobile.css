@@ -1,0 +1,101 @@
+/* Mobile user route: map with a bottom list/detail sheet. */
+.mobile-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+.mobile-header > * {
+  @apply pointer-events-auto;
+}
+.mobile-brand h1 {
+  @apply text-[17px] font-[750] tracking-[-0.045em];
+}
+.mobile-map .map-hint {
+  @apply hidden;
+}
+.mobile-map .map-topbar {
+  @apply justify-end top-[calc(var(--mobile-header-height,_150px)_+_10px)];
+}
+.mobile-map .mobile-navigation {
+  @apply flex-col items-center;
+}
+.mobile-navigation-row .map-button {
+  @apply shrink-0;
+}
+.map-route-error .map-button {
+  @apply shrink-0;
+}
+.current-location-dot {
+  @apply block w-[19px] h-[19px] [border:3px_solid_#fff] rounded-[50%] bg-[#397af0] [box-shadow:0_0_0_6px_#397af025,_0_2px_6px_#1d416d45];
+}
+.mobile-map .map-placeholder {
+  @apply gap-[10px] p-[15px];
+}
+.mobile-map .map-placeholder h2 {
+  @apply text-[15px];
+}
+.mobile-map .map-placeholder .placeholder-hint {
+  @apply hidden;
+}
+.mobile-sheet.is-open {
+  @apply h-[min(50dvh,_540px)];
+}
+.mobile-map .location-control {
+  @apply bottom-[calc(105px_+_env(safe-area-inset-bottom,_0px))];
+}
+.mobile-map .map-legend {
+  @apply bottom-[calc(94px_+_env(safe-area-inset-bottom,_0px))];
+}
+.sheet-summary strong {
+  @apply block text-[13px];
+}
+.sheet-summary small {
+  @apply block mt-[3px] text-[10px] text-[#8591a1];
+}
+.sheet-summary > svg {
+  @apply ml-[auto] text-[#8b98aa];
+}
+.sheet-list-heading h2 {
+  @apply text-[17px] font-[700];
+}
+.sheet-list-heading h2 span {
+  @apply text-primary text-[14px] pl-[3px];
+}
+.sheet-list-heading p {
+  @apply mt-[5px] text-[11px] text-[#8b97a6];
+}
+.mobile-area-list ul {
+  @apply p-[0_20px];
+}
+.mobile-area-list li + li {
+  @apply [border-top:1px_solid_var(--line)];
+}
+.mobile-area-info > strong {
+  @apply flex justify-between items-center gap-[8px] text-[13px] font-[650] text-[#303b4b];
+}
+.mobile-area-info > strong > svg {
+  @apply text-[#a8b3c1] shrink-0;
+}
+.mobile-area-info > span {
+  @apply block mt-[6px] text-[10px] text-[#8592a3];
+}
+.mobile-area-info .facility-tags {
+  @apply flex gap-[4px] flex-wrap mt-[9px];
+}
+.facility-tags > span {
+  @apply inline-block p-[2px_5px] rounded-[4px] bg-[#f0f6ff] text-[#6c86ac] text-[9px];
+}
+.sheet-content > .detail-panel {
+  @apply flex-1 min-h-0 h-auto;
+}
+.mobile-sheet .detail-heading {
+  @apply pt-[10px];
+}
+.mobile-sheet .detail-heading h2 {
+  @apply text-[19px];
+}
+.mobile-sheet .detail-scroll {
+  @apply pb-[18px];
+}
+.mobile-sheet.is-open .query-state {
+  @apply min-h-[200px];
+}

@@ -1,0 +1,51 @@
+@layer base {
+  * {
+    @apply [box-sizing:border-box];
+  }
+  html,
+  body {
+    @apply m-[0] min-h-[100%];
+  }
+  body {
+    @apply bg-surface text-ink text-[14px] leading-[1.5] font-sans;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  a,
+  input {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button {
+    @apply cursor-pointer;
+    font: inherit;
+  }
+  button:disabled {
+    @apply cursor-wait opacity-[0.5];
+  }
+  button,
+  a {
+    @apply [touch-action:manipulation];
+  }
+  a {
+    @apply text-[inherit] [text-decoration:none];
+  }
+  h1,
+  h2,
+  h3,
+  p,
+  dl,
+  dd {
+    @apply m-[0];
+  }
+  ul {
+    @apply m-[0] p-[0] [list-style:none];
+  }
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible {
+    @apply [outline:3px_solid_#78abff] outline-offset-[3px];
+  }
+  svg {
+    @apply shrink-0;
+  }
+}
