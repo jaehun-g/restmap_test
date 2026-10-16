@@ -541,8 +541,11 @@
     "name": "admin-shell",
     "properties": {
       "min-width": "1080px",
-      "min-height": "100vh",
-      "padding": "0 30px 26px"
+      "height": "100dvh",
+      "overflow": "hidden",
+      "padding": "0 24px 18px",
+      "display": "flex",
+      "flex-direction": "column"
     }
   },
   {
@@ -592,16 +595,18 @@
       "justify-content": "space-between",
       "align-items": "center",
       "gap": "24px",
-      "padding": "22px 0"
+      "padding": "14px 0",
+      "flex-shrink": "0"
     }
   },
   {
     "name": "admin-workspace",
     "properties": {
       "display": "grid",
-      "grid-template-columns": "minmax(600px, 1fr) minmax(380px, 38%)",
-      "gap": "20px",
-      "height": "max(720px, calc(100vh - 355px))"
+      "grid-template-columns": "minmax(340px, 30%) minmax(640px, 1fr)",
+      "gap": "16px",
+      "flex": "1",
+      "min-height": "0"
     }
   },
   {
@@ -696,10 +701,8 @@
   {
     "name": "admin-map",
     "properties": {
-      "height": "56%",
-      "min-height": "420px",
-      "flex-shrink": "0",
-      "border-bottom": "1px solid var(--line)"
+      "height": "100%",
+      "min-height": "0"
     }
   },
   {

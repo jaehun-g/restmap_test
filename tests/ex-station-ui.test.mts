@@ -41,6 +41,9 @@ const {default: Details} = (await import(
 const {default: Controls} = (await import(await componentUrl("components/place-controls.tsx"))) as {
   default: ComponentType<Record<string, unknown>>;
 };
+const {default: DetailModal} = (await import(
+  await componentUrl("components/admin-detail-modal.tsx")
+)) as {default: ComponentType<Record<string, unknown>>};
 
 function station() {
   const result = normalizeExGasStations([
@@ -98,4 +101,13 @@ test("administrator controls split GS and highway stations while mobile retains 
   );
   assert.match(mobile, /aria-pressed="true"[^>]*>주유소/);
   assert.equal((mobile.match(/<button/g) ?? []).length, 3);
+});
+
+test("administrator detail modal exposes an accessible dialog container", () => {
+  const html = renderToStaticMarkup(
+    createElement(DetailModal, {onClose() {}}, createElement("p", null, "상세 내용")),
+  );
+  assert.match(html, /role="dialog"/);
+  assert.match(html, /aria-modal="true"/);
+  assert.match(html, /상세 내용/);
 });

@@ -141,6 +141,10 @@ export function createPlaceMarkers(
   function protectMapInteraction(content: HTMLElement) {
     for (const name of ["mousedown", "touchstart", "click"])
       content.addEventListener?.(name, suppressFollowUpMapClick, {capture: true});
+    content.addEventListener?.("wheel", event => {
+      event.stopPropagation();
+      suppressFollowUpMapClick();
+    });
   }
   function closeListOverlay() {
     if (focusFrame !== null) cancelAnimationFrame(focusFrame);

@@ -35,6 +35,7 @@ import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {filterByGeoScope} from "@/lib/geo-search";
+import AdminDetailModal from "./admin-detail-modal";
 const noAreas: RestAreaRecord[] = [];
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
@@ -64,7 +65,10 @@ export default function AdminExplorer() {
   const [notice, setNotice] = useState<string | null>(null);
   const [syncingExStations, setSyncingExStations] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [detailModal, setDetailModal] = useState(false);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
+  const mapPanelRef = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const dirty = (!!editing && editorIsDirty(editing.base, editing.draft)) || stationDirty;
   const anyEditing = !!editing || !!editingStation;
@@ -115,6 +119,7 @@ export default function AdminExplorer() {
   );
   const close = useCallback(() => {
     if (!mayLeave()) return;
+    setDetailModal(false);
     setEditing(null);
     setEditingStation(null);
     setStationDirty(false);
@@ -123,7 +128,21 @@ export default function AdminExplorer() {
     setSelectedId(null);
     returnFocus.current?.focus({preventScroll: true});
   }, [mayLeave]);
-  const details = useCallback((id: number) => select(id), [select]);
+  const details = useCallback(
+    (id: number) => {
+      if (!mayLeave()) return;
+      returnFocus.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setEditing(null);
+      setEditingStation(null);
+      setStationDirty(false);
+      editState.current.dirty = false;
+      setSelectedStationId(null);
+      setSelectedId(id);
+      setDetailModal(true);
+    },
+    [mayLeave],
+  );
   const clearRoute = useCallback(() => {
     setFilters(current => ({...current, routeName: null, missingRoute: false}));
     setSelectedId(null);
@@ -144,6 +163,26 @@ export default function AdminExplorer() {
     [mayLeave],
   );
   const stationDetails = useCallback((id: string) => selectStation(id), [selectStation]);
+  const openStationDetails = useCallback(
+    (id: string) => {
+      if (!mayLeave()) return;
+      returnFocus.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setEditing(null);
+      setEditingStation(null);
+      setStationDirty(false);
+      editState.current.dirty = false;
+      setSelectedId(null);
+      setSelectedStationId(id);
+      setDetailModal(true);
+    },
+    [mayLeave],
+  );
+  useEffect(() => {
+    const updateFullscreen = () => setMapFullscreen(document.fullscreenElement === mapPanelRef.current);
+    document.addEventListener("fullscreenchange", updateFullscreen);
+    return () => document.removeEventListener("fullscreenchange", updateFullscreen);
+  }, []);
   useEffect(() => {
     if (selectedStationId === null || selectedStation || gas.loading || editingStation) return;
     let active = true;
@@ -253,8 +292,18 @@ export default function AdminExplorer() {
       setSyncingExStations(false);
     }
   };
+  const toggleMapFullscreen = async () => {
+    const panel = mapPanelRef.current;
+    if (!panel) return;
+    try {
+      if (document.fullscreenElement === panel) await document.exitFullscreen();
+      else await panel.requestFullscreen();
+    } catch {
+      setSyncError("전체화면 지도를 열지 못했습니다. 브라우저 권한을 확인해주세요.");
+    }
+  };
   return (
-    <main className="admin-shell min-w-[1080px] min-h-[100vh] p-[0_30px_26px]">
+    <main className="admin-shell min-w-[1080px] h-[100dvh] overflow-hidden p-[0_24px_18px] flex flex-col">
       <header className="admin-header h-[86px] flex items-center justify-between [border-bottom:1px_solid_#e3e8ef] gap-[25px]">
         <div className="admin-brand flex items-center gap-[11px]">
           <span className="brand-icon flex items-center justify-center w-[43px] h-[43px] rounded-[12px] bg-primary text-[#fff]">
@@ -299,7 +348,7 @@ export default function AdminExplorer() {
           </Button>
         </div>
       </header>
-      <section className="admin-intro flex justify-between items-center gap-[24px] p-[22px_0]">
+      <section className="admin-intro flex justify-between items-center gap-[24px] p-[14px_0] shrink-0">
         <div>
           <span className={sharedClasses.eyebrow}>휴게소·주유소 데이터</span>
           <h2>조회하고, 필요한 정보를 보완하세요.</h2>
@@ -396,7 +445,7 @@ export default function AdminExplorer() {
       )}
       {syncError && (
         <div
-          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-[11px]"
+          className="sync-error-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-[11px]"
           role="alert"
         >
           {syncError}
@@ -405,7 +454,7 @@ export default function AdminExplorer() {
           </IconButton>
         </div>
       )}
-      <div className="admin-workspace grid grid-cols-[minmax(600px,_1fr)_minmax(380px,_38%)] gap-[20px] h-[max(720px,_calc(100vh_-_355px))]">
+      <div className="admin-workspace grid grid-cols-[minmax(340px,_30%)_minmax(640px,_1fr)] gap-[16px] flex-1 min-h-0">
         <section className="admin-table-panel" aria-labelledby="table-heading">
           {showsRestAreas(placeView) && (
             <AdminRestAreaTable
@@ -451,20 +500,20 @@ export default function AdminExplorer() {
             )}
           </div>
         </section>
-        <section className="admin-map-panel" aria-label="지도 및 상세정보">
+        <section ref={mapPanelRef} className="admin-map-panel" aria-label="지도">
           <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
             <h3>휴게소·주유소 위치</h3>
             <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
               KAKAO MAP
             </span>
           </div>
-          <div className="admin-map h-[56%] min-h-[420px] shrink-0 [border-bottom:1px_solid_var(--line)]">
+          <div className="admin-map h-full min-h-0">
             <KakaoMap
               areas={visibleAreas}
               stations={stationResults}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
               onStationSelect={selectStation}
-              onStationDetails={stationDetails}
+              onStationDetails={openStationDetails}
               stationsLoading={gas.loading}
               stationError={gas.error}
               onRetryStations={() => {
@@ -480,8 +529,14 @@ export default function AdminExplorer() {
               showCard={!anyEditing}
               fitRequest={view.fitRequest}
               dataVersion={`${data?.fetchedAt ?? ""}|${gas.data?.fetchedAt ?? ""}`}
+              onFullscreen={() => void toggleMapFullscreen()}
+              fullscreen={mapFullscreen}
             />
           </div>
+        </section>
+      </div>
+      {detailModal && (
+        <AdminDetailModal onClose={close}>
           <div
             className="admin-details min-h-0 flex-1 [outline:none] overflow-hidden flex flex-col"
             ref={detailRef}
@@ -605,8 +660,8 @@ export default function AdminExplorer() {
               </div>
             )}
           </div>
-        </section>
-      </div>
+        </AdminDetailModal>
+      )}
     </main>
   );
 }

@@ -33,6 +33,22 @@
 .admin-map-panel {
   @apply flex flex-col min-h-0 bg-white [border:1px_solid_#e2e8f0] rounded-[12px] overflow-hidden [box-shadow:0_4px_12px_#253e5b03];
 }
+.admin-shell {
+  isolation: isolate;
+}
+.admin-map-panel:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+}
+.admin-map-panel:fullscreen .panel-heading {
+  display: none;
+}
+.admin-map-panel:fullscreen .admin-map {
+  height: 100%;
+}
 .panel-heading h3 {
   @apply text-[13px] font-[700];
 }
@@ -421,7 +437,8 @@ input[type="checkbox"] {
 .read-only-badge.edit-unlocked {
   @apply text-[#a9712f] border-[#f2d8b7] bg-[#fff8ee];
 }
-.save-notice .icon-button {
+.save-notice .icon-button,
+.sync-error-notice .icon-button {
   @apply ml-[auto];
 }
 .admin-detail-actions .button {

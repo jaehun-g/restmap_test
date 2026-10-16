@@ -47,6 +47,8 @@ export default function KakaoMap({
   stationError,
   onRetryStations,
   locationDisabled = false,
+  onFullscreen,
+  fullscreen = false,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -70,6 +72,8 @@ export default function KakaoMap({
   stationError?: string | null;
   onRetryStations?: () => void;
   locationDisabled?: boolean;
+  onFullscreen?: () => void;
+  fullscreen?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const topbar = useRef<HTMLDivElement>(null);
@@ -466,6 +470,10 @@ export default function KakaoMap({
                 className={sharedClasses.mapButton}
                 onClick={() => {
                   clearSelection();
+                  if (onFullscreen) {
+                    onFullscreen();
+                    return;
+                  }
                   if (selectedRouteName)
                     routeViewport.current?.view.update(
                       selectedRouteName,
@@ -476,10 +484,10 @@ export default function KakaoMap({
                     );
                   else layer.current?.fit();
                 }}
-                disabled={!highway.route && !positionedItems.some(hasCoordinates)}
+                disabled={!onFullscreen && !highway.route && !positionedItems.some(hasCoordinates)}
               >
                 <Icon name="fit" size={17} />
-                결과 전체 보기
+                {onFullscreen ? (fullscreen ? "전체화면 닫기" : "전체화면으로 지도 보기") : "결과 전체 보기"}
               </button>
             </>
           )}

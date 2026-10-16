@@ -201,6 +201,35 @@ test("marker clicks do not bubble into map-close and EX selections keep their di
   assert.equal(cleared, 0);
   layer.dispose();
 });
+
+test("cluster popover wheel events stay inside its scrollable list", t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const result = normalizeRestAreas(
+    Array.from({length: 6}, (_, index) => ({
+      id: index + 1,
+      name: `\uD734\uAC8C\uC18C ${index + 1}`,
+      latitude: "37",
+      longitude: "127",
+      has_truck_lounge: 0,
+    })),
+  );
+  assert.ok(result.ok);
+  const markers = createPlaceMarkers(
+    sdk,
+    map,
+    result.value.map(restPlace),
+    () => {},
+    label,
+  );
+  state.clicks[0]();
+  const card = [...state.content].reverse().find(content => content instanceof CardElement) as CardElement;
+  assert.ok(card.querySelector(".cluster-popover-list"));
+  const before = state.prevented;
+  card.dispatch("wheel");
+  assert.equal(state.prevented, before + 1);
+  markers.dispose();
+});
 test("only positioned records produce markers and clicks select the correct ID", () => {
   const {sdk, map, state} = mockKakao();
   let selected: number | undefined;
