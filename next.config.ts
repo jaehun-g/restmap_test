@@ -2,7 +2,7 @@ import type {NextConfig} from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  serverExternalPackages: ["mysql2"],
+  serverExternalPackages: ["pg"],
   allowedDevOrigins: ["172.30.1.37"],
   experimental: {
     agentFeedback: true,

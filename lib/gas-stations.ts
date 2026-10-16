@@ -106,7 +106,8 @@ export const stationReadOnlyColumns = [
   "hyundaiPayYn",
   "tossPayYn",
 ];
-export const selectStationColumns = `SELECT ${stationColumns.map(column => `\`${column}\``).join(", ")} FROM test_gscargo`;
+export const selectStationColumn = (column: string) => `"${column.toLowerCase()}" AS "${column}"`;
+export const selectStationColumns = `SELECT ${stationColumns.map(selectStationColumn).join(", ")} FROM test_gscargo`;
 
 export function stationText(value: unknown): string | null {
   if (value instanceof Uint8Array) {

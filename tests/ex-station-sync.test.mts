@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type {Pool} from "mysql2/promise";
-import {synchronizeExStations} from "../lib/ex-station-sync.ts";
+import {synchronizeExStations, type ExStationSyncDependencies} from "../lib/ex-station-sync.ts";
 import type {ExStationStatus} from "../lib/ex-station-status.ts";
 
 const station = (sourceKey: string, location: string | null = "서울시 도로 1"): ExStationStatus => ({
@@ -36,15 +35,27 @@ function fakePool({
       events.push("begin");
     },
     async query(sql: string, values?: unknown[]) {
+      if (sql === "BEGIN") {
+        events.push("begin");
+        return {rows: [], rowCount: null};
+      }
+      if (sql === "COMMIT") {
+        events.push("commit");
+        return {rows: [], rowCount: null};
+      }
+      if (sql === "ROLLBACK") {
+        events.push("rollback");
+        return {rows: [], rowCount: null};
+      }
       if (sql.startsWith("INSERT")) {
         events.push("upsert");
         if (failWrite) throw new Error("write failed");
         writes.push(values ?? []);
-        return [{affectedRows: 1}, []];
+        return {rows: [], rowCount: 1};
       }
       if (sql.startsWith("DELETE")) {
         events.push("delete");
-        return [{affectedRows: 1}, []];
+        return {rows: [], rowCount: 1};
       }
       throw new Error(`unexpected connection query: ${sql}`);
     },
@@ -63,14 +74,14 @@ function fakePool({
   };
   const pool = {
     async query(sql: string) {
-      if (sql.startsWith("SELECT source_key, source_location")) return [cached, []];
-      if (sql.startsWith("SELECT source_key, search_address")) return [overrides, []];
+      if (sql.startsWith("SELECT source_key, source_location")) return {rows: cached};
+      if (sql.startsWith("SELECT source_key, search_address")) return {rows: overrides};
       throw new Error(`unexpected pool query: ${sql}`);
     },
-    async getConnection() {
+    async connect() {
       return connection;
     },
-  } as unknown as Pick<Pool, "query" | "getConnection">;
+  } as unknown as ExStationSyncDependencies["pool"];
   return {pool, events, writes};
 }
 

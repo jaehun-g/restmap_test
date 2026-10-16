@@ -1,4 +1,4 @@
-import type {Pool, PoolConnection, ResultSetHeader, RowDataPacket} from "mysql2/promise";
+import type {Pool, PoolClient, QueryResultRow} from "pg";
 import {databaseError} from "./db-config.ts";
 import {
   exStationAddressCandidates,
@@ -49,7 +49,7 @@ export type ExStationSyncSummary = {
 };
 
 export type ExStationSyncDependencies = {
-  pool: Pick<Pool, "query" | "getConnection">;
+  pool: Pick<Pool, "query" | "connect">;
   fetchStations?: () => Promise<Result<ExStationStatus[]>>;
   geocodeAddress?: typeof geocodeKakaoAddress;
   searchKeywordPlaces?: typeof searchKakaoKeywordPlaces;
@@ -81,7 +81,7 @@ function databaseTime(value: unknown): number | null {
   return Number.isFinite(time) ? time : null;
 }
 
-function cachedStation(row: RowDataPacket): CachedStation | null {
+function cachedStation(row: QueryResultRow): CachedStation | null {
   const sourceKey = databaseText(row.source_key);
   if (!sourceKey) return null;
   return {
@@ -230,7 +230,7 @@ function stationValues(station: ExStationStatus, resolved: ResolvedStation) {
     station.oilCompany,
     station.location,
     station.phone,
-    station.lpgAvailable === null ? null : Number(station.lpgAvailable),
+    station.lpgAvailable,
     station.gasolinePrice,
     station.dieselPrice,
     station.lpgPrice,
@@ -252,17 +252,17 @@ const upsertSql = `INSERT INTO test_ex_station_geocodes (
   latitude, longitude, kakao_address_name, kakao_address_type,
   kakao_parcel_address_name, kakao_road_address_name, geocode_status, geocode_error_code,
   source_fetched_at, geocoded_at
-) VALUES (${Array.from({length: 21}, () => "?").join(", ")}, NOW(3), ?)
-ON DUPLICATE KEY UPDATE
-  route_code = VALUES(route_code), service_area_code = VALUES(service_area_code), route_name = VALUES(route_name),
-  direction = VALUES(direction), service_area_name = VALUES(service_area_name), oil_company = VALUES(oil_company),
-  source_location = VALUES(source_location), tel_no = VALUES(tel_no), lpg_available = VALUES(lpg_available),
-  gasoline_price = VALUES(gasoline_price), diesel_price = VALUES(diesel_price), lpg_price = VALUES(lpg_price),
-  latitude = VALUES(latitude), longitude = VALUES(longitude), kakao_address_name = VALUES(kakao_address_name),
-  kakao_address_type = VALUES(kakao_address_type), kakao_parcel_address_name = VALUES(kakao_parcel_address_name),
-  kakao_road_address_name = VALUES(kakao_road_address_name), geocode_status = VALUES(geocode_status),
-  geocode_error_code = VALUES(geocode_error_code), source_fetched_at = VALUES(source_fetched_at),
-  geocoded_at = VALUES(geocoded_at)`;
+) VALUES (${Array.from({length: 21}, (_, index) => `$${index + 1}`).join(", ")}, CURRENT_TIMESTAMP(3), $22)
+ON CONFLICT (source_key) DO UPDATE SET
+  route_code = EXCLUDED.route_code, service_area_code = EXCLUDED.service_area_code, route_name = EXCLUDED.route_name,
+  direction = EXCLUDED.direction, service_area_name = EXCLUDED.service_area_name, oil_company = EXCLUDED.oil_company,
+  source_location = EXCLUDED.source_location, tel_no = EXCLUDED.tel_no, lpg_available = EXCLUDED.lpg_available,
+  gasoline_price = EXCLUDED.gasoline_price, diesel_price = EXCLUDED.diesel_price, lpg_price = EXCLUDED.lpg_price,
+  latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, kakao_address_name = EXCLUDED.kakao_address_name,
+  kakao_address_type = EXCLUDED.kakao_address_type, kakao_parcel_address_name = EXCLUDED.kakao_parcel_address_name,
+  kakao_road_address_name = EXCLUDED.kakao_road_address_name, geocode_status = EXCLUDED.geocode_status,
+  geocode_error_code = EXCLUDED.geocode_error_code, source_fetched_at = EXCLUDED.source_fetched_at,
+  geocoded_at = EXCLUDED.geocoded_at, updated_at = CURRENT_TIMESTAMP`;
 
 /** Synchronizes the EX station table only after the complete source snapshot is validated. */
 export async function synchronizeExStations(
@@ -276,7 +276,7 @@ export async function synchronizeExStations(
   const fetched = await fetchStations();
   if (!fetched.ok) return fetched;
   try {
-    const [cachedRows] = await dependencies.pool.query<RowDataPacket[]>(
+    const {rows: cachedRows} = await dependencies.pool.query<QueryResultRow>(
       "SELECT source_key, source_location, latitude, longitude, kakao_address_name, kakao_address_type, kakao_parcel_address_name, kakao_road_address_name, geocode_status, geocode_error_code, geocoded_at FROM test_ex_station_geocodes",
     );
     const cached = new Map(
@@ -285,8 +285,8 @@ export async function synchronizeExStations(
         return item ? [[item.sourceKey, item] as const] : [];
       }),
     );
-    const [overrideRows] = await dependencies.pool.query<RowDataPacket[]>(
-      "SELECT source_key, search_address, updated_at FROM test_ex_station_geocode_overrides WHERE enabled = 1",
+    const {rows: overrideRows} = await dependencies.pool.query<QueryResultRow>(
+      "SELECT source_key, search_address, updated_at FROM test_ex_station_geocode_overrides WHERE enabled IS TRUE",
     );
     const overrides = new Map(
       overrideRows.flatMap(row => {
@@ -313,18 +313,19 @@ export async function synchronizeExStations(
           now,
         })),
       });
-    const connection: PoolConnection = await dependencies.pool.getConnection();
+    const connection: PoolClient = await dependencies.pool.connect();
+    let released = false;
     try {
-      await connection.beginTransaction();
+      await connection.query("BEGIN");
       for (const item of resolved) await connection.query(upsertSql, stationValues(item.station, item.resolved));
       const sourceKeys = fetched.value.map(station => station.sourceKey);
-      const [deleted] = sourceKeys.length
-        ? await connection.query<ResultSetHeader>(
-            `DELETE FROM test_ex_station_geocodes WHERE source_key NOT IN (${sourceKeys.map(() => "?").join(", ")})`,
-            sourceKeys,
+      const deleted = sourceKeys.length
+        ? await connection.query(
+            "DELETE FROM test_ex_station_geocodes WHERE source_key <> ALL($1::text[])",
+            [sourceKeys],
           )
-        : await connection.query<ResultSetHeader>("DELETE FROM test_ex_station_geocodes");
-      await connection.commit();
+        : await connection.query("DELETE FROM test_ex_station_geocodes");
+      await connection.query("COMMIT");
       return {
         ok: true,
         value: {
@@ -333,18 +334,19 @@ export async function synchronizeExStations(
           geocoded: resolved.filter(item => item.geocoded).length,
           reused: resolved.filter(item => item.reused).length,
           unresolved: resolved.filter(item => item.unresolved).length,
-          deleted: deleted.affectedRows,
+          deleted: deleted.rowCount ?? 0,
         },
       };
     } catch (reason) {
       try {
-        await connection.rollback();
+        await connection.query("ROLLBACK");
       } catch {
-        connection.destroy();
+        connection.release(new Error("transaction rollback failed"));
+        released = true;
       }
       return {ok: false, error: databaseError(reason, "write")};
     } finally {
-      connection.release();
+      if (!released) connection.release();
     }
   } catch (reason) {
     return {ok: false, error: databaseError(reason, "write")};

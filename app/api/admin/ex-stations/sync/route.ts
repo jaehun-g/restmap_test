@@ -4,8 +4,6 @@ import {adminSessions, sameOrigin, sessionCookie} from "@/lib/admin-auth";
 import {syncExStationStatuses} from "@/lib/db";
 import {exStationSyncLock} from "@/lib/ex-station-sync-lock";
 
-export const runtime = "nodejs";
-
 const headers = {"Cache-Control": "no-store"};
 
 function responseError(code: string, message: string, status = errorStatus(code)) {

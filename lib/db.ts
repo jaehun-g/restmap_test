@@ -1,5 +1,5 @@
 import "server-only";
-import mysql, {type Pool, type RowDataPacket} from "mysql2/promise";
+import {Pool, type QueryResultRow} from "pg";
 import {databaseError, readDatabaseConfig} from "./db-config";
 import {
   hasCoordinates,
@@ -16,6 +16,7 @@ import {normalizeHighwayRoute, type HighwayRoute} from "./highway-routes";
 import {hasCoordinates as positioned} from "./rest-areas";
 import {
   selectStationColumns,
+  selectStationColumn,
   stationColumns,
   stationReadOnlyColumns,
   type GasStationRecord,
@@ -39,18 +40,12 @@ function getPool(): Result<Pool> {
   const config = readDatabaseConfig(process.env);
   if (!config.ok) return config;
   if (!databaseGlobal.restAreaPool) {
-    const {tls, ...connection} = config.value;
-    databaseGlobal.restAreaPool = mysql.createPool({
-      ...connection,
-      charset: "utf8mb4",
-      connectionLimit: 3,
-      maxIdle: 1,
-      idleTimeout: 30_000,
-      waitForConnections: true,
-      queueLimit: 10,
-      connectTimeout: 8_000,
-      enableKeepAlive: true,
-      ...(tls ? {ssl: {rejectUnauthorized: true}} : {}),
+    databaseGlobal.restAreaPool = new Pool({
+      connectionString: config.value.connectionString,
+      max: 1,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 8_000,
+      ssl: {rejectUnauthorized: false},
     });
   }
   return {ok: true, value: databaseGlobal.restAreaPool};
@@ -60,10 +55,7 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const [rows] = await pool.value.query<RowDataPacket[]>({
-      sql: `${selectRestAreaColumns} ORDER BY name, id`,
-      timeout: 10_000,
-    });
+    const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} ORDER BY name, id`);
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
     return {
@@ -86,13 +78,10 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const [rows] = await pool.value.query<RowDataPacket[]>(
-      {
-        sql: `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
-                   path_coordinates
-            FROM test_highway_routes WHERE route_name = ? LIMIT 1`,
-        timeout: 10_000,
-      },
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
+              path_coordinates
+       FROM test_highway_routes WHERE route_name = $1 LIMIT 1`,
       [routeName],
     );
     if (!rows.length)
@@ -129,12 +118,12 @@ export async function queryGasStations(
     let where = "";
     if (bounds) {
       const longitude =
-        bounds.west <= bounds.east ? "longi BETWEEN ? AND ?" : "(longi >= ? OR longi <= ?)";
-      where = ` WHERE lat BETWEEN ? AND ? AND ${longitude}`;
+        bounds.west <= bounds.east ? "longi BETWEEN $3 AND $4" : "(longi >= $3 OR longi <= $4)";
+      where = ` WHERE lat BETWEEN $1 AND $2 AND ${longitude}`;
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
-    const [rows] = await pool.value.query<RowDataPacket[]>(
-      {sql: `${selectStationColumns}${where} ORDER BY siteNm, id`, timeout: 10_000},
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `${selectStationColumns}${where} ORDER BY "siteNm", id`,
       values,
     );
     const records: GasStationRecord[] = [];
@@ -144,8 +133,8 @@ export async function queryGasStations(
       records.push(parsed.value);
     }
     const exWhere = where.replace(/\blat\b/g, "latitude").replace(/\blongi\b/g, "longitude");
-    const [exRows] = await pool.value.query<RowDataPacket[]>(
-      {sql: `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`, timeout: 10_000},
+    const {rows: exRows} = await pool.value.query<QueryResultRow>(
+      `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,
       values,
     );
     const exStations = normalizeExGasStations(exRows);
@@ -182,10 +171,10 @@ export async function queryGasStation(id: number): Promise<Result<GasStationReco
     const pool = getPool();
     if (!pool.ok) return pool;
     const columns = [...stationColumns, ...stationReadOnlyColumns]
-      .map(column => `\`${column}\``)
+      .map(selectStationColumn)
       .join(", ");
-    const [rows] = await pool.value.query<RowDataPacket[]>(
-      {sql: `SELECT ${columns} FROM test_gscargo WHERE id = ? LIMIT 1`, timeout: 10_000},
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `SELECT ${columns} FROM test_gscargo WHERE id = $1 LIMIT 1`,
       [id],
     );
     if (!rows.length)
@@ -203,15 +192,15 @@ export async function updateGasStation(
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const connection = await pool.value.getConnection();
+    const connection = await pool.value.connect();
     return await saveGasStation(
       {
-        beginTransaction: () => connection.beginTransaction(),
-        query: (sql, values) => connection.query({sql, timeout: 10_000}, values),
-        commit: () => connection.commit(),
-        rollback: () => connection.rollback(),
+        beginTransaction: () => connection.query("BEGIN").then(() => undefined),
+        query: (sql, values) => connection.query(sql, values),
+        commit: () => connection.query("COMMIT").then(() => undefined),
+        rollback: () => connection.query("ROLLBACK").then(() => undefined),
         release: () => connection.release(),
-        destroy: () => connection.destroy(),
+        destroy: () => connection.release(new Error("transaction rollback failed")),
       },
       id,
       request,
@@ -228,15 +217,15 @@ export async function updateRestArea(
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const connection = await pool.value.getConnection();
+    const connection = await pool.value.connect();
     return await saveRestArea(
       {
-        beginTransaction: () => connection.beginTransaction(),
-        query: (sql, values) => connection.query({sql, timeout: 10_000}, values),
-        commit: () => connection.commit(),
-        rollback: () => connection.rollback(),
+        beginTransaction: () => connection.query("BEGIN").then(() => undefined),
+        query: (sql, values) => connection.query(sql, values),
+        commit: () => connection.query("COMMIT").then(() => undefined),
+        rollback: () => connection.query("ROLLBACK").then(() => undefined),
         release: () => connection.release(),
-        destroy: () => connection.destroy(),
+        destroy: () => connection.release(new Error("transaction rollback failed")),
       },
       id,
       request,

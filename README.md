@@ -1,6 +1,6 @@
-# Cafe24 휴게소 지도 테스트
+# Supabase 휴게소 지도
 
-로컬 Next.js 서버가 Cafe24 MariaDB의 휴게소 정보를 조회하고 카카오맵에 표시합니다.
+Next.js 서버가 Supabase PostgreSQL의 휴게소 정보를 조회하고 카카오맵에 표시합니다.
 PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같은 조회 API를 사용합니다.
 
 ## 화면
@@ -86,29 +86,20 @@ PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같�
 | `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` | 카카오 JavaScript 키. REST API 키 또는 Admin 키가 아닙니다.                                  |
 | `KAKAO_REST_API_KEY`             | EX 주유소의 신규·변경 주소를 좌표로 변환하는 서버 전용 카카오 REST API 키                    |
 | `EX_OPEN_API_KEY`                | 한국도로공사 `curStateStation` 호출에 쓰는 서버 전용 Open API 키                             |
-| `DB_HOST`                       | Cafe24 DB 외부 접속 호스트                                                                   |
-| `DB_PORT`                       | DB 포트. 기본값 3306                                                                         |
-| `DB_USER`                       | DB 사용자                                                                                    |
-| `DB_PASSWORD`                   | DB 비밀번호                                                                                  |
-| `DB_NAME`                       | `test_lounge`가 있는 데이터베이스 이름                                                       |
-| `DB_SSL`                        | 신뢰 가능한 인증서로 TLS 접속을 지원할 때 `true`. 기본값 `false`                             |
+| `DATABASE_URL`                  | Supabase Transaction Pooler PostgreSQL 연결 문자열. Vercel에서는 `:6543`와 `sslmode=require` 사용 |
 | `ADMIN_PASSWORD`                | 이 페이지의 관리자 편집 잠금 해제 암호. DB 접속 암호와 별개이며 미설정 시 조회만 가능합니다. |
 
 카카오디벨로퍼스에서 카카오맵을 활성화하고 해당 JavaScript 키의 SDK 도메인에
 `http://localhost:3000`을 등록하세요. `127.0.0.1`이나 다른 포트로 접속하면 해당 주소도 별도로 등록해야 합니다.
-DB 외부 접속을 위해 Cafe24 MySQL 외부 IP 허용 목록에 현재 PC의 공인 IP를 등록해야 합니다.
+Vercel과 로컬 모두 `DATABASE_URL`만 사용하며, 기존 MariaDB 환경 변수는 설정하지 않습니다.
 환경변수를 변경하면 개발 서버를 재시작하세요.
 
-EX 주유소 동기화 전에 한 번만 다음 테이블을 준비하세요.
-
-```powershell
-npm.cmd run db:setup-ex-station-geocodes
-npm.cmd run db:setup-ex-station-geocode-overrides
-```
+EX 주유소 동기화에 필요한 테이블은 Supabase SQL Editor에서 준비합니다. 현재 Supabase 스키마가 준비되어 있으므로 MariaDB용 테이블 생성 스크립트는 실행하지 않습니다. 확인 방법은 [Supabase 및 Vercel 설정](docs/supabase-vercel.md)을 참고하세요.
 
 - [카카오 Web SDK 가이드](https://apis.map.kakao.com/web/guide/)
 - [카카오맵 활성화 안내](https://developers.kakao.com/docs/ko/kakaomap/common)
-- [Cafe24 MySQL 외부 접속 안내](https://help.cafe24.com/faq/web-hosting/introduce/setup-management/webhosting_mysql_external_ip_access/)
+- [Supabase 및 Vercel 설정](docs/supabase-vercel.md)
+- [MariaDB 비상 복구 지침](docs/mariadb-fallback.md)
 
 ## 실행
 

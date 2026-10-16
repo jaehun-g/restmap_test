@@ -44,7 +44,14 @@ export function normalizeExGasStations(
       const amount = stationNumber(value);
       return amount !== null && amount > 0 ? amount : null;
     };
-    const lpg = stationNumber(row.lpg_available);
+    const lpg =
+      typeof row.lpg_available === "boolean"
+        ? row.lpg_available
+        : stationNumber(row.lpg_available) === 1
+          ? true
+          : stationNumber(row.lpg_available) === 0
+            ? false
+            : null;
     items.push({
       id,
       siteCode,
@@ -64,7 +71,7 @@ export function normalizeExGasStations(
         cargo: null,
         convenience: null,
         self: null,
-        lpg: lpg === 1 ? true : lpg === 0 ? false : null,
+        lpg,
         carWash: null,
         ev: null,
       },

@@ -6,6 +6,8 @@ import {readDatabaseConfig} from "../lib/db-config.ts";
 const {loadEnvConfig} = nextEnv;
 loadEnvConfig(process.cwd());
 
+throw new Error("Supabase 테이블은 SQL Editor에서 준비되었습니다. MariaDB용 생성 스크립트는 이 브랜치에서 실행하지 않습니다.");
+
 const config = readDatabaseConfig(process.env);
 if (!config.ok) throw new Error(config.error.message);
 const sql = await fs.readFile(

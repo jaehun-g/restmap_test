@@ -7,6 +7,8 @@ const { loadEnvConfig } = nextEnv;
 // Next.js의 .env.local 환경변수 불러오기
 loadEnvConfig(process.cwd());
 
+throw new Error("MariaDB GS importer is disabled in the Supabase branch. See docs/mariadb-fallback.md.");
+
 // 1. 다운로드한 GS칼텍스 JSON 읽기
 const file = await fs.readFile("./public/data/gs_stations.json", "utf8");
 
