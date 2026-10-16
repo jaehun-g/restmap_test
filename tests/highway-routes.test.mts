@@ -24,6 +24,12 @@ test("DB UTF-8 buffers and decimal strings become numeric, separate latitude-lon
   assert.deepEqual(result.value, route());
 });
 
+test("PostgreSQL jsonb path coordinates are accepted after pg decodes them", () => {
+  const result = normalizeHighwayRoute({...row(), path_coordinates: route().paths});
+  assert.ok(result.ok);
+  assert.deepEqual(result.value, route());
+});
+
 test("corrupt JSON, numeric line breaks and malformed UTF-8 are rejected without repair", () => {
   for (const path_coordinates of [
     Buffer.from("[[[37.\n1,127],[37.2,127.2]]]"),
@@ -43,15 +49,23 @@ test("empty and flattened paths, invalid coordinates and short segments fail val
   ]) assert.equal(parseHighwayRoute({ ...route(), paths }).ok, false);
 });
 
-test("bounds must be finite, ordered and contain all coordinates", () => {
+test("stored bounds must be finite and ordered", () => {
   for (const bounds of [
     { south: 37, west: 127, north: 36, east: 128 },
     { south: 36, west: 128, north: 37, east: 127 },
     { south: null, west: 127, north: 37, east: 128 },
-    { south: 36, west: 127, north: 36.9, east: 128 },
     { south: 36, west: 127, north: Infinity, east: 128 },
   ]) assert.equal(parseHighwayRoute({ ...route(), bounds }).ok, false);
   assert.equal(normalizeHighwayRoute({ ...row(), sw_lat: null }).ok, false);
+});
+
+test("paths derive display bounds when stored bounds exclude route coordinates", () => {
+  const result = parseHighwayRoute({
+    ...route(),
+    bounds: { south: 36.01, west: 127.01, north: 36.99, east: 127.99 },
+  });
+  assert.ok(result.ok);
+  assert.deepEqual(result.value.bounds, { south: 36, west: 127, north: 37, east: 128 });
 });
 
 test("route identity is required while route numbers may be missing or shared", () => {

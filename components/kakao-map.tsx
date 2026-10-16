@@ -135,6 +135,13 @@ export default function KakaoMap({
           ),
     [audience, onSelect, onDetails, onStationSelect, onStationDetails],
   );
+  const runProgrammaticMapAction = useCallback(
+    (action: () => void) => {
+      if (mobileEnabled) locationLayer.current?.runProgrammaticMapAction(action) ?? action();
+      else action();
+    },
+    [mobileEnabled],
+  );
   useEffect(() => {
     if (!appKey) {
       return;
@@ -188,13 +195,23 @@ export default function KakaoMap({
       },
       clearSelection,
       audience === "mobile" ? "above" : "below",
+      runProgrammaticMapAction,
     );
     layer.current = current;
     return () => {
       current.dispose();
       layer.current = null;
     };
-  }, [map, places, selectPlace, card, cardViewport, clearSelection, audience]);
+  }, [
+    map,
+    places,
+    selectPlace,
+    card,
+    cardViewport,
+    clearSelection,
+    audience,
+    runProgrammaticMapAction,
+  ]);
   useEffect(() => {
     if (!map || !container.current) return;
     const adjust = () => layer.current?.adjustCard();

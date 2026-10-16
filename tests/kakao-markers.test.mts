@@ -392,6 +392,7 @@ test("cluster list returns with count, scroll and focus intact; close resets the
     })),
   );
   if (!normalized.ok) assert.fail(normalized.error.message);
+  let programmaticMapActions = 0;
   const layer = createPlaceMarkers(
     sdk,
     map,
@@ -406,6 +407,11 @@ test("cluster list returns with count, scroll and focus intact; close resets the
       ),
     () => ({left: 0, right: 320, top: 50, bottom: 700, width: 320, height: 650}) as DOMRect,
     () => layer.select(null),
+    "below",
+    action => {
+      programmaticMapActions++;
+      action();
+    },
   );
   const currentCard = () =>
     [...state.content].reverse().find(content => content instanceof CardElement) as CardElement;
@@ -418,6 +424,7 @@ test("cluster list returns with count, scroll and focus intact; close resets the
   list.dispatch("scroll");
   const key = list.children[7].children[0].getAttribute("data-place-key");
   list.children[7].children[0].dispatch("click");
+  assert.equal(programmaticMapActions, 1);
   const single = currentCard();
   const heading = single.querySelector(".map-card-heading")!;
   assert.equal(heading.firstChild?.getAttribute("aria-label"), "목록으로 돌아가기");

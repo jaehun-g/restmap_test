@@ -55,7 +55,7 @@ export function validateHighwayRouteName(value: unknown): Result<string> {
   };
 }
 
-/** Both the DB boundary and browser cache accept only complete, bounded paths. */
+/** Accept complete paths and derive their display bounds from the coordinates themselves. */
 export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
   if (!record(value)) return invalidRoute();
   const name = validateHighwayRouteName(value.routeName);
@@ -72,24 +72,27 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
   )
     return invalidRoute();
 
-  const {south, west, north, east} = value.bounds;
+  const {south: declaredSouth, west: declaredWest, north: declaredNorth, east: declaredEast} = value.bounds;
   if (
-    typeof south !== "number" ||
-    typeof west !== "number" ||
-    typeof north !== "number" ||
-    typeof east !== "number" ||
-    ![south, west, north, east].every(Number.isFinite) ||
-    Math.abs(south) > 90 ||
-    Math.abs(north) > 90 ||
-    Math.abs(west) > 180 ||
-    Math.abs(east) > 180 ||
-    south > north ||
-    west > east
+    typeof declaredSouth !== "number" ||
+    typeof declaredWest !== "number" ||
+    typeof declaredNorth !== "number" ||
+    typeof declaredEast !== "number" ||
+    ![declaredSouth, declaredWest, declaredNorth, declaredEast].every(Number.isFinite) ||
+    Math.abs(declaredSouth) > 90 ||
+    Math.abs(declaredNorth) > 90 ||
+    Math.abs(declaredWest) > 180 ||
+    Math.abs(declaredEast) > 180 ||
+    declaredSouth > declaredNorth ||
+    declaredWest > declaredEast
   )
     return invalidRoute();
 
   const paths: HighwayCoordinate[][] = [];
-  const tolerance = 1e-7;
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
   for (const path of value.paths) {
     if (!Array.isArray(path) || path.length < 2) return invalidRoute();
     const coordinates: HighwayCoordinate[] = [];
@@ -103,13 +106,13 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
       const [latitude, longitude] = point as HighwayCoordinate;
       if (
         Math.abs(latitude) > 90 ||
-        Math.abs(longitude) > 180 ||
-        latitude < south - tolerance ||
-        latitude > north + tolerance ||
-        longitude < west - tolerance ||
-        longitude > east + tolerance
+        Math.abs(longitude) > 180
       )
         return invalidRoute();
+      south = Math.min(south, latitude);
+      west = Math.min(west, longitude);
+      north = Math.max(north, latitude);
+      east = Math.max(east, longitude);
       coordinates.push([latitude, longitude]);
     }
     paths.push(coordinates);
@@ -127,12 +130,18 @@ export function parseHighwayRoute(value: unknown): Result<HighwayRoute> {
 }
 
 export function normalizeHighwayRoute(row: Record<string, unknown>): Result<HighwayRoute> {
-  const serialized = text(row.path_coordinates);
-  if (serialized === null) return invalidRoute();
   let paths: unknown;
-  try {
-    paths = JSON.parse(serialized);
-  } catch {
+  const serialized = text(row.path_coordinates);
+  if (serialized !== null) {
+    try {
+      paths = JSON.parse(serialized);
+    } catch {
+      return invalidRoute();
+    }
+  } else if (row.path_coordinates !== null && typeof row.path_coordinates === "object") {
+    // PostgreSQL jsonb is decoded by pg before it reaches this boundary.
+    paths = row.path_coordinates;
+  } else {
     return invalidRoute();
   }
   return parseHighwayRoute({

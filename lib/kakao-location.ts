@@ -201,6 +201,9 @@ export function createLocationMapLayer(
   );
 
   return {
+    runProgrammaticMapAction(action: () => void) {
+      programmatic(action);
+    },
     setRouteMode(enabled: boolean) {
       routeMode = enabled;
       if (enabled) {

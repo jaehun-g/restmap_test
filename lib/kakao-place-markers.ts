@@ -43,6 +43,7 @@ export function createPlaceMarkers(
   onClear?: () => void,
   /** 카드가 마커 아래("below", 기본) 또는 위("above")에 표시되는 방향. */
   placement: "above" | "below" = "below",
+  runProgrammaticMapAction: (action: () => void) => void = action => action(),
 ) {
   const above = placement === "above";
   const placeCard = (target: HTMLElement) => {
@@ -201,8 +202,10 @@ export function createPlaceMarkers(
       items,
       {
         onPick: place => {
-          zoomToPlace(place);
-          select(place.key, true, true);
+          runProgrammaticMapAction(() => {
+            zoomToPlace(place);
+            select(place.key, true, true);
+          });
           onSelect(place);
         },
         onClose: closeList,

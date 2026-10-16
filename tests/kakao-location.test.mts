@@ -223,6 +223,22 @@ test("user zoom commits at idle, changes radius and results, and never fits or r
   assert.equal(getZoomStarts(), 2);
 });
 
+test("programmatic marker focus keeps the mobile search radius and results", async () => {
+  const {map, controller, locate, emit, layer, getZoomStarts} = connected();
+  await locate();
+  const before = controller.getSnapshot();
+
+  layer.runProgrammaticMapAction(() => {
+    map.setLevel(4);
+  });
+  emit("idle");
+
+  assert.equal(controller.getSnapshot().scope, before.scope);
+  assert.equal(controller.getSnapshot().locationRadius, before.locationRadius);
+  assert.equal(controller.getSnapshot().researchAvailable, false);
+  assert.equal(getZoomStarts(), 0);
+});
+
 test("drag immediately clears selection while keeping circle center, query radius and results", async () => {
   const current = connected();
   await current.locate();
