@@ -1,6 +1,5 @@
 "use client";
 import {Button, IconButton} from "@/components/ui/button";
-import {sharedClasses} from "@/lib/shared-classes";
 import {buttonClasses} from "@/lib/design-system";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "next/link";
@@ -26,7 +25,7 @@ import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {filterStations, filterStationView, showsRestAreas, type PlaceView} from "@/lib/map-places";
+import {filterStations, filterStationView, type PlaceView} from "@/lib/map-places";
 import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
@@ -44,7 +43,7 @@ export default function AdminExplorer() {
   const search = useSearchQuery(view.requestFit);
   const auth = useAdminSession();
   const [filters, setFilters] = useState(initialFilters);
-  const [placeView, setPlaceView] = useState<PlaceView>("all");
+  const [placeView, setPlaceView] = useState<PlaceView>("rest");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
     placeView === "rest"
@@ -94,7 +93,7 @@ export default function AdminExplorer() {
     () => filterStations(filterStationView(gas.stations, placeView), search.query, stationFilters),
     [gas.stations, placeView, search.query, stationFilters],
   );
-  const visibleAreas = showsRestAreas(placeView) ? results : noAreas;
+  const visibleAreas = placeView === "rest" ? results : noAreas;
   const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
   const mayLeave = useCallback(
     () =>
@@ -233,8 +232,6 @@ export default function AdminExplorer() {
   }, [dirty]);
   const mapped =
     visibleAreas.filter(hasCoordinates).length + stationResults.filter(hasCoordinates).length;
-  const missingRoute = areas.filter(area => area.routeName === null).length;
-  const unknownLounge = areas.filter(area => area.facilities.has_truck_lounge === null).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
     setDirection(next);
@@ -252,7 +249,7 @@ export default function AdminExplorer() {
     search.clear(false);
     setFilters(initialFilters());
     setStationFilters([]);
-    setPlaceView("all");
+    setPlaceView("rest");
     setSelectedStationId(null);
     view.preserveView();
   };
@@ -348,54 +345,6 @@ export default function AdminExplorer() {
           </Button>
         </div>
       </header>
-      <section className="admin-intro flex justify-between items-center gap-[24px] p-[14px_0] shrink-0">
-        <div>
-          <span className={sharedClasses.eyebrow}>휴게소·주유소 데이터</span>
-          <h2>조회하고, 필요한 정보를 보완하세요.</h2>
-          <p>표의 이름 또는 지도 마커를 선택해 상세정보를 확인하세요.</p>
-        </div>
-        <div className="admin-stat-cards grid grid-cols-[repeat(4,_minmax(95px,_1fr))] gap-[10px]">
-          <div>
-            <span>전체 휴게소</span>
-            <strong>{loading ? "—" : areas.length}</strong>
-          </div>
-          <div>
-            <span>검색 결과</span>
-            <strong>{visibleAreas.length + stationResults.length}</strong>
-          </div>
-          <button
-            disabled={anyEditing}
-            className={filters.missingRoute ? "active" : ""}
-            onClick={() => {
-              setFilters(current => ({
-                ...current,
-                routeName: null,
-                missingRoute: !current.missingRoute,
-              }));
-              view.requestFit();
-            }}
-          >
-            <span>노선 미등록</span>
-            <strong>{missingRoute}</strong>
-            <small>전체 데이터 기준</small>
-          </button>
-          <button
-            disabled={anyEditing}
-            className={filters.lounge === "unknown" ? "active" : ""}
-            onClick={() => {
-              setFilters(current => ({
-                ...current,
-                lounge: current.lounge === "unknown" ? "all" : "unknown",
-              }));
-              view.preserveView();
-            }}
-          >
-            <span>라운지 미확인</span>
-            <strong>{unknownLounge}</strong>
-            <small>전체 데이터 기준</small>
-          </button>
-        </div>
-      </section>
       <PlaceControls
         view={placeView}
         onView={next => {
@@ -417,8 +366,8 @@ export default function AdminExplorer() {
         search={search}
         onReset={reset}
         disabled={anyEditing}
-        includeStations={placeView !== "rest"}
-        hideRestFilters={!showsRestAreas(placeView)}
+        includeStations={placeView === "ex"}
+        hideRestFilters={placeView === "ex"}
         stationFilters={stationFilters}
         stationServiceOptions={placeView === "ex" ? ["lpg"] : undefined}
         onStationFilters={next => {
@@ -426,11 +375,6 @@ export default function AdminExplorer() {
           view.preserveView();
         }}
       />
-      {filters.routeName && (placeView === "all" || placeView === "gs") && (
-        <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
-          GS 주유소는 선택 노선 주변 2km · 직선거리 기준이며 고속도로 소속을 뜻하지 않습니다.
-        </p>
-      )}
       {notice && (
         <div
           className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#eef8f4] text-[#3a836e] [border:1px_solid_#d9ede5] rounded-[8px] text-[11px]"
@@ -456,7 +400,7 @@ export default function AdminExplorer() {
       )}
       <div className="admin-workspace grid grid-cols-[minmax(340px,_30%)_minmax(640px,_1fr)] gap-[16px] flex-1 min-h-0">
         <section className="admin-table-panel" aria-labelledby="table-heading">
-          {showsRestAreas(placeView) && (
+          {placeView === "rest" && (
             <AdminRestAreaTable
               rows={sorted}
               selectedId={selectedId}
@@ -471,7 +415,7 @@ export default function AdminExplorer() {
               onReset={reset}
             />
           )}
-          {placeView !== "rest" && (
+          {placeView === "ex" && (
             <GasStationTable
               rows={stationResults}
               selectedId={selectedStationId}

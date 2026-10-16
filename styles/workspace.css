@@ -8,12 +8,6 @@
 .read-only-badge {
   @apply ml-[6px] p-[4px_8px] [border:1px_solid_#dbe6f7] rounded-[5px] text-[#6b87af] bg-[#f7faff] text-[10px];
 }
-.admin-intro h2 {
-  @apply mt-[5px] text-[23px] tracking-[-0.05em] font-[700];
-}
-.admin-intro p {
-  @apply mt-[8px] text-muted text-[12px];
-}
 .admin-stats div {
   @apply min-w-[100px];
 }
@@ -37,6 +31,12 @@
   isolation: isolate;
 }
 .admin-map-panel:fullscreen {
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
   width: 100vw;
   height: 100dvh;
   border: 0;
@@ -47,6 +47,7 @@
   display: none;
 }
 .admin-map-panel:fullscreen .admin-map {
+  flex: 1 1 auto;
   height: 100%;
 }
 .panel-heading h3 {
@@ -297,22 +298,6 @@ input[type="checkbox"] {
 .map-card-secondary:hover,
 .map-card-secondary:focus-visible {
   @apply bg-[#eaf3ff];
-}
-.admin-stat-cards > div,
-.admin-stat-cards > button {
-  @apply min-h-[85px] min-w-[95px] flex flex-col items-start p-[12px_14px] bg-white [border:1px_solid_#e5ebf3] rounded-[10px] text-left;
-}
-.admin-stat-cards span {
-  @apply text-[#8190a5] text-[10px];
-}
-.admin-stat-cards strong {
-  @apply mt-[5px] text-[#335788] text-[23px] font-[650];
-}
-.admin-stat-cards small {
-  @apply text-[#acb6c4] text-[8px] mt-[3px];
-}
-.admin-stat-cards > button.active {
-  @apply border-[#9cc1ff] bg-[#f2f7ff];
 }
 .admin-filter-controls > .search-box {
   @apply flex-1 min-w-[210px] max-w-[320px];

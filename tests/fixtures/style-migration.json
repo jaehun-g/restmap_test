@@ -589,17 +589,6 @@
     }
   },
   {
-    "name": "admin-intro",
-    "properties": {
-      "display": "flex",
-      "justify-content": "space-between",
-      "align-items": "center",
-      "gap": "24px",
-      "padding": "14px 0",
-      "flex-shrink": "0"
-    }
-  },
-  {
     "name": "admin-workspace",
     "properties": {
       "display": "grid",
@@ -850,14 +839,6 @@
       "font-size": "9px",
       "color": "#6c7c90",
       "pointer-events": "none"
-    }
-  },
-  {
-    "name": "admin-stat-cards",
-    "properties": {
-      "display": "grid",
-      "grid-template-columns": "repeat(4, minmax(95px, 1fr))",
-      "gap": "10px"
     }
   },
   {

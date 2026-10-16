@@ -9,7 +9,7 @@ import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/lib/gas-stations";
-import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
+import {filterStations, filterStationView, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
 import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
@@ -29,7 +29,7 @@ export default function MobileExplorer() {
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
-  const [placeView, setPlaceView] = useState<PlaceView>("all");
+  const [placeView, setPlaceView] = useState<PlaceView>("rest");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
     placeView === "rest" ? null : stationQueryString(filters.routeName, location.scope),
@@ -108,13 +108,13 @@ export default function MobileExplorer() {
   const stationResults = useMemo(
     () =>
       filterByGeoScope(
-        filterStations(gas.stations, search.query, stationFilters),
+        filterStations(filterStationView(gas.stations, placeView), search.query, stationFilters),
         {kind: "all"},
         location.position,
       ),
-    [gas.stations, search.query, stationFilters, location.position],
+    [gas.stations, placeView, search.query, stationFilters, location.position],
   );
-  const visibleAreas = placeView === "station" ? noAreas : results;
+  const visibleAreas = placeView === "ex" ? noAreas : results;
   const listPlaces = useMemo(() => {
     const places = [...visibleAreas.map(restPlace), ...stationResults.map(stationPlace)];
     if (location.position)
@@ -213,7 +213,7 @@ export default function MobileExplorer() {
     setSelectedId(null);
     setSelectedStationId(null);
     setStationFilters([]);
-    setPlaceView("all");
+    setPlaceView("rest");
   };
   const clearRoute = useCallback(() => {
     setFilters(current => ({...current, routeName: null}));
@@ -252,7 +252,7 @@ export default function MobileExplorer() {
             <span>{filters.routeName || "전체 노선"}</span>
             <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
           </FilterChip>
-          {placeView !== "station" && (
+          {placeView !== "ex" && (
             <FilterChip
               active={filters.facilities.length > 0}
               onClick={event => open("facilities", event.currentTarget)}
@@ -274,7 +274,7 @@ export default function MobileExplorer() {
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </FilterChip>
           )}
-          {placeView !== "station" && (
+          {placeView !== "ex" && (
             <FilterChip
               variant="lounge"
               active={filters.lounge === "present"}
@@ -296,7 +296,7 @@ export default function MobileExplorer() {
             </FilterChip>
           )}
         </div>
-        {filters.routeName && placeView !== "rest" && (
+        {filters.routeName && placeView === "ex" && (
           <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
             주유소는 선택 노선 주변 2km · 직선거리 기준
           </p>
@@ -363,7 +363,7 @@ export default function MobileExplorer() {
                     ? "휴게소를 찾고 있어요"
                     : error
                       ? "휴게소 조회 확인"
-                      : `${placeView === "rest" ? "휴게소" : placeView === "station" ? "주유소" : "장소"} ${resultCount}개`}
+                      : `${placeView === "rest" ? "휴게소" : "고속도로 주유소"} ${resultCount}개`}
                 </strong>
                 <small>
                   {error

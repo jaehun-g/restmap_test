@@ -89,18 +89,19 @@ test("detail views omit the fuel price section if every price is missing", () =>
   assert.doesNotMatch(html, /원\/L/);
 });
 
-test("administrator controls split GS and highway stations while mobile retains the combined station option", () => {
+test("administrator and mobile controls expose only rest areas and highway stations", () => {
   const admin = renderToStaticMarkup(
     createElement(Controls, {view: "ex", audience: "admin", onView() {}}),
   );
-  assert.match(admin, /GS 주유소/);
+  assert.doesNotMatch(admin, /통합|GS 주유소/);
   assert.match(admin, /aria-pressed="true"[^>]*>고속도로 주유소/);
-  assert.equal((admin.match(/<button/g) ?? []).length, 4);
+  assert.equal((admin.match(/<button/g) ?? []).length, 2);
   const mobile = renderToStaticMarkup(
-    createElement(Controls, {view: "station", audience: "mobile", onView() {}}),
+    createElement(Controls, {view: "ex", audience: "mobile", onView() {}}),
   );
-  assert.match(mobile, /aria-pressed="true"[^>]*>주유소/);
-  assert.equal((mobile.match(/<button/g) ?? []).length, 3);
+  assert.doesNotMatch(mobile, /통합|GS 주유소/);
+  assert.match(mobile, /aria-pressed="true"[^>]*>고속도로 주유소/);
+  assert.equal((mobile.match(/<button/g) ?? []).length, 2);
 });
 
 test("administrator detail modal exposes an accessible dialog container", () => {
