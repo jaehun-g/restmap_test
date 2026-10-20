@@ -22,6 +22,10 @@ test("text respects schema lengths, required name and legacy utf8 character limi
   const result=request({routeName:" 경부선 ",phone:" "}); if(!result.ok)assert.fail(result.error.message);
   assert.equal(result.value.changes.routeName,"경부선"); assert.equal(result.value.changes.phone,null);
 });
+test("saving a legacy Miryang-Ulsan route name stores the Hamyang-Ulsan canonical name",()=>{
+  const result=request({routeName:"밀양울산선"}); if(!result.ok)assert.fail(result.error.message);
+  assert.equal(result.value.changes.routeName,"함양울산선");
+});
 test("coordinate bounds, seven decimal places and whole nonnegative parking counts are enforced",()=>{
   for(const changes of [{latitude:91},{longitude:-181},{latitude:37.12345678},{latitude:NaN},{latitude:"37"},{parkingCount:-1},{parkingCount:1.5},{parkingCount:2147483648}]) assert.equal(request(changes).ok,false);
   for(const changes of [{latitude:37.1234567},{longitude:-180},{parkingCount:0},{parkingCount:null}]) assert.equal(request(changes).ok,true);

@@ -13,6 +13,7 @@ import {saveRestArea} from "./rest-area-save";
 import type {UpdateRequest} from "./rest-area-validation";
 import type {RestAreaRecord} from "./rest-areas";
 import {normalizeHighwayRoute, type HighwayRoute} from "./highway-routes";
+import {canonicalHighwayRouteName} from "./highway-route-name";
 import {hasCoordinates as positioned} from "./rest-areas";
 import {
   selectStationColumns,
@@ -76,6 +77,7 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
 
 export async function queryHighwayRoute(routeName: string): Promise<Result<HighwayRoute>> {
   try {
+    routeName = canonicalHighwayRouteName(routeName);
     const pool = getPool();
     if (!pool.ok) return pool;
     const {rows} = await pool.value.query<QueryResultRow>(

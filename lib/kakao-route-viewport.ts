@@ -2,6 +2,7 @@ import type {HighwayRoute} from "./highway-routes.ts";
 import type {KakaoMap, KakaoMaps} from "./kakao-sdk.ts";
 import {hasCoordinates} from "./rest-areas.ts";
 import type {LocatedItem} from "./geo-search.ts";
+import {sameHighwayRouteName} from "./highway-route-name.ts";
 
 /** 조회 중에는 휴게소, 조회 성공 후에는 노선 전체로 맞추고 이후 필터 변경에서는 시점을 유지합니다. */
 export function createHighwayRouteViewport(sdk: KakaoMaps, map: KakaoMap) {
@@ -23,7 +24,7 @@ export function createHighwayRouteViewport(sdk: KakaoMaps, map: KakaoMap) {
         fittedRoute = false;
       }
       if (!routeName) return;
-      const selectedRoute = route?.routeName === routeName ? route : null;
+      const selectedRoute = route && sameHighwayRouteName(route.routeName, routeName) ? route : null;
       if (!force && (fittedRoute || (!selectedRoute && fittedResults))) return;
       const positioned = areas.filter(hasCoordinates);
       if (!selectedRoute && !positioned.length) return;

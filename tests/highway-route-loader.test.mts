@@ -123,6 +123,19 @@ test("wrong-route or malformed success responses never enter the cache", async (
   }
 });
 
+test("legacy selection accepts a canonical Hamyang-Ulsan route response", async () => {
+  const loader = new HighwayRouteLoader(
+    async () => Response.json({route: route("함양울산선")}),
+    Date.now,
+    new Map(),
+  );
+  loader.select("밀양울산선");
+  await settle();
+  assert.equal(loader.getSnapshot().error, null);
+  assert.equal(loader.getSnapshot().routeName, "함양울산선");
+  assert.equal(loader.getSnapshot().route?.routeName, "함양울산선");
+});
+
 test("effect cleanup and restart with the same name can complete without using the cancelled request", async () => {
   const { loader, requests } = pendingRequests();
   loader.select("중부선");

@@ -80,6 +80,12 @@ test("route and phone values survive mapping and blanks become null", () => {
   assert.equal(result.value[0].directionLabel, "서울 방향");
 });
 
+test("legacy Miryang-Ulsan rest areas display under the Hamyang-Ulsan canonical route", () => {
+  const result = normalizeRestAreas([{...row, route_name: "밀양울산선"}]);
+  assert.ok(result.ok);
+  assert.equal(result.value[0].routeName, "함양울산선");
+});
+
 test("duplicate IDs, empty names and invalid primary keys report bad data", () => {
   assert.equal(normalizeRestAreas([row, row]).ok, false);
   assert.equal(normalizeRestAreas([{ ...row, name: " " }]).ok, false);

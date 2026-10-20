@@ -1,5 +1,6 @@
 import {facilityDefinitions, type Result, type RestArea} from "./rest-areas.ts";
 import {scalarFields, type RestAreaChanges} from "./rest-area-fields.ts";
+import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 
 export type UpdateRequest = {
   changes: RestAreaChanges;
@@ -45,7 +46,8 @@ export function validateUpdateRequest(input: unknown): Result<UpdateRequest> {
         return invalid(
           `${field.label}은 ${field.maxLength}자 이하의 DB UTF-8 문자여야 합니다. 이모지는 저장할 수 없습니다.`,
         );
-      changes[field.key] = text || null;
+      changes[field.key] =
+        field.key === "routeName" && text ? canonicalHighwayRouteName(text) : text || null;
     } else {
       if (
         value !== null &&

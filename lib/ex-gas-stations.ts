@@ -1,5 +1,6 @@
 import {stationNumber, stationText, type GasStationRecord} from "./gas-stations.ts";
 import type {Result} from "./rest-areas.ts";
+import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 
 export const selectExStationColumns = `SELECT id, source_key, service_area_name, route_name,
   direction, oil_company, source_location, tel_no, lpg_available, gasoline_price, diesel_price,
@@ -75,7 +76,10 @@ export function normalizeExGasStations(
         carWash: null,
         ev: null,
       },
-      routeName: stationText(row.route_name),
+      routeName: (() => {
+        const routeName = stationText(row.route_name);
+        return routeName === null ? null : canonicalHighwayRouteName(routeName);
+      })(),
       direction: stationText(row.direction),
       oilCompany: stationText(row.oil_company),
       prices: {

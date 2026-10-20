@@ -57,6 +57,12 @@ test("EX rows decode UTF-8, decimal prices, coordinates and source collection ti
   assert.equal(item.services.cargo, null);
 });
 
+test("EX source route aliases are presented as the canonical Hamyang-Ulsan route", () => {
+  const result = normalizeExGasStations([{...row(), route_name: "밀양울산선"}]);
+  assert.ok(result.ok);
+  assert.equal(result.value[0].routeName, "함양울산선");
+});
+
 test("EX and GS stay separate even with the same numeric ID, phone and coordinates", () => {
   const ex = station();
   const gs = normalizeGasStations([

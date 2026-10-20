@@ -81,3 +81,10 @@ test("query names are trimmed and invalid names are rejected", () => {
   for (const value of [null, "", "   ", "가".repeat(101), "경부\n선", 1])
     assert.equal(validateHighwayRouteName(value).ok, false);
 });
+
+test("legacy Miryang-Ulsan route name resolves to the Hamyang-Ulsan canonical name", () => {
+  assert.deepEqual(validateHighwayRouteName("밀양울산선"), {ok: true, value: "함양울산선"});
+  const parsed = parseHighwayRoute({...route(), routeName: "밀양울산선"});
+  assert.ok(parsed.ok);
+  assert.equal(parsed.value.routeName, "함양울산선");
+});

@@ -1,5 +1,6 @@
 import type {GeoBounds} from "./geo-search.ts";
 import type {Result} from "./rest-areas.ts";
+import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 
 export type HighwayCoordinate = [latitude: number, longitude: number];
 export type HighwayRoute = {
@@ -47,7 +48,7 @@ export function validateHighwayRouteName(value: unknown): Result<string> {
   if (typeof value === "string") {
     const name = value.trim();
     if (name && name.length <= 100 && !/[\u0000-\u001f\u007f]/.test(name))
-      return {ok: true, value: name};
+      return {ok: true, value: canonicalHighwayRouteName(name)};
   }
   return {
     ok: false,

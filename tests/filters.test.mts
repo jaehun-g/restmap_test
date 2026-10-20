@@ -33,6 +33,19 @@ test("route, facilities, lounge and search all combine with AND", () => {
   assert.deepEqual(filterRestAreas(areas,{...initialFilters(),routeName:"경부선",facilities:["has_shower"],lounge:"present"},"10").map(a=>a.id),[3]);
   assert.equal(filterRestAreas(areas,{...initialFilters(),routeName:"영동선"},"").length,0);
 });
+
+test("route filtering and route options merge the Miryang-Ulsan alias", () => {
+  const mixed = normalizeRestAreas([
+    {id: 10, name: "울주", route_name: "밀양울산선"},
+    {id: 11, name: "밀양영남루", route_name: "함양울산선"},
+  ]);
+  assert.ok(mixed.ok);
+  assert.deepEqual(
+    filterRestAreas(mixed.value, {...initialFilters(), routeName: "밀양울산선"}, "").map(area => area.id),
+    [10, 11],
+  );
+  assert.deepEqual(routeOptions(mixed.value), [{name: "함양울산선", count: 2}]);
+});
 test("missing routes are visible to mobile but only administrator offers a missing route filter", () => {
   assert.equal(filterRestAreas(areas, initialFilters(), "").length,3);
   assert.deepEqual(filterRestAreas(areas,{...initialFilters(),missingRoute:true},"").map(a=>a.id),[2]);

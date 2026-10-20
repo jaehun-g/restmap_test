@@ -1,4 +1,5 @@
 import {parseHighwayRoute, type HighwayRoute} from "./highway-routes.ts";
+import {canonicalHighwayRouteName, sameHighwayRouteName} from "./highway-route-name.ts";
 
 export type HighwayRouteState = {
   routeName: string | null;
@@ -59,6 +60,7 @@ export class HighwayRouteLoader {
       this.publish(initialState);
       return;
     }
+    routeName = canonicalHighwayRouteName(routeName);
     const cached = this.cache.get(routeName);
     if (!force && cached && cached.expiresAt > this.now()) {
       this.publish({routeName, route: cached.route, loading: false, error: null});
@@ -92,7 +94,7 @@ export class HighwayRouteLoader {
       }
       const parsed = parseHighwayRoute(body?.route);
       if (!parsed.ok) throw new Error(parsed.error.message);
-      if (parsed.value.routeName !== routeName)
+      if (!sameHighwayRouteName(parsed.value.routeName, routeName))
         throw new Error("선택한 노선과 경로 데이터가 일치하지 않습니다.");
       this.cache.set(routeName, {route: parsed.value, expiresAt: this.now() + cacheLifetime});
       this.publish({routeName, route: parsed.value, loading: false, error: null});

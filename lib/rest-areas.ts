@@ -1,3 +1,5 @@
+import {canonicalHighwayRouteName} from "./highway-route-name.ts";
+
 export type Result<T> = {ok: true; value: T} | {ok: false; error: {code: string; message: string}};
 
 export const facilityDefinitions = [
@@ -123,7 +125,10 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
       latitude,
       longitude,
       phone: nullableText(row.phone),
-      routeName: nullableText(row.route_name),
+      routeName: (() => {
+        const routeName = nullableText(row.route_name);
+        return routeName === null ? null : canonicalHighwayRouteName(routeName);
+      })(),
       routeNumber: nullableText(row.route_number),
       routeDirection: nullableText(row.route_direction),
       directionLabel: nullableText(row.direction_label),
