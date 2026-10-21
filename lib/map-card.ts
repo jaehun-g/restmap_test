@@ -1,6 +1,7 @@
 import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import {stationPriceItems, type GasStation} from "./gas-stations.ts";
+import {foodPrice} from "./food-menus.ts";
 
 export function createMapCard(
   area: RestArea,
@@ -64,6 +65,18 @@ export function createMapCard(
       facilities.append(more);
     }
     body.append(facilities);
+  }
+  const menuSummary = area.foodMenuSummary;
+  if (menuSummary && menuSummary.count > 0) {
+    const menu = document.createElement("p");
+    menu.className = "map-card-route";
+    const featured = menuSummary.featured.slice(0, 2).map(item => {
+      const marks = [item.best ? "인기" : null, item.recommended ? "추천" : null].filter(Boolean).join("·");
+      const price = item.price === null ? "" : ` · ${foodPrice(item.price)}`;
+      return `${item.name}${marks ? ` (${marks})` : ""}${price}`;
+    });
+    menu.textContent = featured.length ? `메뉴 ${menuSummary.count}개 · ${featured.join(", ")}` : `메뉴 ${menuSummary.count}개`;
+    body.append(menu);
   }
   const exStation = stations.find(station => station.brand === "EX");
   if (exStation) {

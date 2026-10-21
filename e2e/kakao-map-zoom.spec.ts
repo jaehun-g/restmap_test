@@ -1,10 +1,13 @@
 import {expect, test, type Page} from "@playwright/test";
+import type {FoodMenuSummary} from "../lib/food-menus.ts";
 
 type KakaoMapMockMetrics = {
   map: {getLevel(): number; setLevel(level: number): void} | null;
   mapCreates: number;
   markerCreates: number;
   clusterers: number;
+  markers: Array<{click(): void}>;
+  overlayContents: string[];
   addCalls: boolean[];
   redraws: number;
 };
@@ -64,13 +67,14 @@ const installKakaoMapsMock = `
       relayout() {}
     }
     class Marker {
-      constructor(options) { this.options = options; window.__kakaoMapMock.markerCreates++; }
+      constructor(options) { this.options = options; this.__listeners = new Map(); window.__kakaoMapMock.markers.push(this); window.__kakaoMapMock.markerCreates++; }
       setMap() {}
       setImage() {}
       setZIndex() {}
+      click() { for (const listener of this.__listeners.get("click") ?? []) listener(); }
     }
     class Overlay {
-      setContent() {}
+      setContent(content) { window.__kakaoMapMock.overlayContents.push(typeof content === "string" ? content : content?.textContent ?? ""); }
       setPosition() {}
       setMap() {}
     }
@@ -89,7 +93,7 @@ const installKakaoMapsMock = `
       setMinLevel() {}
       clear() {}
     }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, markerCreates: 0, clusterers: 0, addCalls: [], redraws: 0};
+    window.__kakaoMapMock = {map: null, mapCreates: 0, markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0};
     window.kakao = {maps: {
       Map: MapView,
       LatLng,
@@ -254,4 +258,61 @@ test("지도 레벨 변경 중 EX 재조회는 기존 마커를 유지하고 클
   await page.waitForTimeout(300);
 
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before);
+});
+
+test("mobile rest-area details show the linked food menu and its source date", async ({page, context}) => {
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas", async route => {
+    const areas = structuredClone(restAreaResponse);
+    const area = structuredClone(areas.items[0]) as typeof areas.items[number] & {foodMenuSummary?: FoodMenuSummary};
+    areas.items[0] = area;
+    area.foodMenuSummary = {
+      count: 1,
+      collectedAt: "2026-10-21T00:00:00.000Z",
+      featured: [{key: "000001|272", name: "E2E signature udon", price: 9500, recommended: true, best: true}],
+    };
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(areas)});
+  });
+  await page.route("**/api/gas-stations**", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({items: [], unmappedCount: 0, fetchedAt: "2026-10-21T00:00:00.000Z"}),
+  }));
+  await page.route("**/api/rest-areas/1/food-menus", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({items: [{
+      key: "000001|272", name: "E2E signature udon", price: 9500,
+      recommended: true, best: true, sourceUpdatedAt: "2026-10-21", collectedAt: "2026-10-21T00:00:00.000Z",
+    }], collectedAt: "2026-10-21T00:00:00.000Z"}),
+  }));
+  await page.route("**/api/rest-areas/2/food-menus", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({items: [], collectedAt: null}),
+  }));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.49, longitude: 127});
+  await page.setViewportSize({width: 390, height: 844});
+  const areasResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/rest-areas");
+  await page.goto("/mobile");
+  expect((await (await areasResponse).json()).items).toHaveLength(2);
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markers.length)).toBeGreaterThan(0);
+  await page.evaluate(() => window.__kakaoMapMock.markers[0].click());
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.some(content => content.includes("E2E signature udon")))).toBe(true);
+  const mapCardText = await page.evaluate(() => window.__kakaoMapMock.overlayContents.find(content => content.includes("E2E signature udon")) ?? "");
+  expect(mapCardText).toContain("9,500");
+  expect(mapCardText).toContain("\uCD94\uCC9C");
+  expect(mapCardText).toContain("\uC778\uAE30");
+  await page.locator(".sheet-summary").click();
+  const restArea = page.locator(".mobile-area-card").filter({hasText: "E2E"}).first();
+  await expect(restArea).toBeVisible();
+  await restArea.click();
+  const foodSection = page.locator(".food-menu-section");
+  await expect(foodSection).toBeVisible();
+  await expect(foodSection).toContainText("E2E signature udon");
+  await expect(foodSection).toContainText("9,500");
+  await expect(foodSection).toContainText("\uCD94\uCC9C");
+  await expect(foodSection).toContainText("\uC778\uAE30");
+  await expect(foodSection).toContainText("2026-10-21");
+  await page.locator(".back-to-list").click();
+  await page.locator(".mobile-area-card").filter({hasText: "B"}).first().click();
+  await expect(page.locator(".food-menu-section")).toContainText("\uB4F1\uB85D\uB41C \uBA54\uB274 \uC815\uBCF4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
 });

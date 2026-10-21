@@ -3,6 +3,7 @@ import {IconButton} from "@/components/ui/button";
 import {hasCoordinates, type RestArea, visibleFacilities, routeDescription} from "@/lib/rest-areas";
 import Icon from "./icon";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
+import FoodMenuSection from "@/components/food-menu-section";
 export default function RestAreaDetails({
   area,
   onClose,
@@ -91,6 +92,7 @@ export default function RestAreaDetails({
             );
           })}
         </ul>
+        <FoodMenuSection key={area.id} restAreaId={area.id} />
         {stations.filter(station => station.brand === "EX").map(station => {
           const prices = stationPriceItems(station);
           return (

@@ -6,7 +6,9 @@ export function markerLayerSignature(places: readonly MapPlace[]): string {
     places.map(place => {
       const {record} = place;
       const lounge = place.kind === "rest" && place.record.facilities.has_truck_lounge === true ? "l" : "";
-      return [place.key, record.name, record.latitude, record.longitude, lounge];
+      const food = place.kind === "rest" ? place.record.foodMenuSummary : undefined;
+      return [place.key, record.name, record.latitude, record.longitude, lounge,
+        food?.count ?? 0, food?.featured.map(item => [item.key, item.name, item.price, item.recommended, item.best]) ?? []];
     }),
   );
 }

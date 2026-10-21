@@ -51,7 +51,9 @@ export function useRestAreas() {
   const replaceItem = useCallback((item: RestAreaRecord) => {
     setData(current => {
       if (!current) return current;
-      const items = current.items.map(area => (area.id === item.id ? item : area));
+      const items = current.items.map(area => (area.id === item.id
+        ? {...item, ...(item.foodMenuSummary ? {} : area.foodMenuSummary ? {foodMenuSummary: area.foodMenuSummary} : {})}
+        : area));
       return {
         ...current,
         items,

@@ -31,6 +31,9 @@ import {saveGasStation} from "./gas-station-save";
 import type {StationUpdateRequest} from "./gas-station-validation";
 import {normalizeExGasStations, selectExStationColumns} from "./ex-gas-stations";
 import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-sync";
+import {fetchFoodMenus} from "./food-menu-source";
+import {synchronizeFoodMenus, type FoodMenuSyncSummary} from "./food-menu-sync";
+import type {FoodMenuSummary, FoodMenusResponse} from "./food-menus";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -59,11 +62,31 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
     const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} ORDER BY name, id`);
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
+    const {rows: foodRows} = await pool.value.query<QueryResultRow>(
+      `SELECT m.rest_area_id, count(f.source_key)::integer AS menu_count,
+        max(f.collected_at) AS collected_at,
+        COALESCE(jsonb_agg(jsonb_build_object('key',f.source_key,'name',f.food_nm,'price',f.food_cost,
+          'recommended',f.recommendyn,'best',f.bestfoodyn) ORDER BY f.bestfoodyn DESC NULLS LAST,
+          f.recommendyn DESC NULLS LAST, f.food_nm) FILTER (WHERE f.source_key IS NOT NULL), '[]'::jsonb) AS featured
+       FROM public.test_food_area_mappings m
+       LEFT JOIN public.test_food_menus f ON f.std_rest_cd=m.std_rest_cd
+         AND f.source_present=true AND f.app_visible=true
+       WHERE m.match_status='matched' AND m.rest_area_id IS NOT NULL
+       GROUP BY m.rest_area_id`,
+    );
+    const summaries = new Map<number, FoodMenuSummary>(
+      foodRows.map(row => [Number(row.rest_area_id), {
+        count: Number(row.menu_count),
+        collectedAt: row.collected_at instanceof Date ? row.collected_at.toISOString() : null,
+        featured: (Array.isArray(row.featured) ? row.featured.slice(0, 2) : []) as FoodMenuSummary["featured"],
+      }]),
+    );
     return {
       ok: true,
       value: {
         items: parsed.value.map((area, index) => ({
           ...area,
+          ...(summaries.has(area.id) ? {foodMenuSummary: summaries.get(area.id)!} : {}),
           revision: rowRevision(rows[index]),
         })),
         unmappedCount: parsed.value.filter(area => !hasCoordinates(area)).length,
@@ -168,6 +191,46 @@ export async function syncExStationStatuses(): Promise<Result<ExStationSyncSumma
   const pool = getPool();
   if (!pool.ok) return pool;
   return synchronizeExStations({pool: pool.value});
+}
+
+export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMenusResponse>> {
+  try {
+    const pool = getPool();
+    if (!pool.ok) return pool;
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `SELECT f.source_key, f.food_nm, f.food_cost, f.recommendyn, f.bestfoodyn,
+        to_char(f.source_updated_at,'YYYY-MM-DD') AS source_updated_at, f.collected_at
+       FROM public.test_food_menus f
+       JOIN public.test_food_area_mappings m ON m.std_rest_cd=f.std_rest_cd
+       WHERE m.rest_area_id=$1 AND m.match_status='matched' AND f.source_present=true AND f.app_visible=true
+       ORDER BY f.bestfoodyn DESC NULLS LAST, f.recommendyn DESC NULLS LAST, f.food_nm`,
+      [restAreaId],
+    );
+    const items = rows.map(row => ({
+      key: String(row.source_key), name: String(row.food_nm),
+      price: row.food_cost === null ? null : Number(row.food_cost),
+      recommended: typeof row.recommendyn === "boolean" ? row.recommendyn : null,
+      best: typeof row.bestfoodyn === "boolean" ? row.bestfoodyn : null,
+      sourceUpdatedAt: typeof row.source_updated_at === "string" ? row.source_updated_at : null,
+      collectedAt: row.collected_at instanceof Date ? row.collected_at.toISOString() : String(row.collected_at),
+    }));
+    return {ok: true, value: {items, collectedAt: items[0]?.collectedAt ?? null}};
+  } catch (reason) {
+    return {ok: false, error: databaseError(reason)};
+  }
+}
+
+export async function syncFoodMenuSnapshot(): Promise<Result<FoodMenuSyncSummary>> {
+  const pool = getPool();
+  if (!pool.ok) return pool;
+  return synchronizeFoodMenus({
+    pool: pool.value,
+    fetchMenus: fetchFoodMenus,
+    loadAreas: async () => {
+      const result = await queryRestAreas();
+      return result.ok ? {ok: true, value: result.value.items} : result;
+    },
+  });
 }
 
 export async function queryGasStation(id: number): Promise<Result<GasStationRecord>> {

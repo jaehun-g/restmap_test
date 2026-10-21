@@ -9,6 +9,7 @@ DATABASE_URL=postgresql://...pooler.supabase.com:6543/postgres?sslmode=require
 NEXT_PUBLIC_KAKAO_MAP_APP_KEY=
 KAKAO_REST_API_KEY=
 EX_OPEN_API_KEY=
+CRON_SECRET=
 ADMIN_PASSWORD=
 ```
 

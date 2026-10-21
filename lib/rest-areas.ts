@@ -1,4 +1,5 @@
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
+import type {FoodMenuSummary} from "./food-menus.ts";
 
 export type Result<T> = {ok: true; value: T} | {ok: false; error: {code: string; message: string}};
 
@@ -31,6 +32,7 @@ export type RestArea = {
   restAreaType: string | null;
   parkingCount: number | null;
   facilities: Record<FacilityKey, boolean | null>;
+  foodMenuSummary?: FoodMenuSummary;
 };
 
 export type RestAreasResponse = {

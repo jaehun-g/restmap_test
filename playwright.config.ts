@@ -1,6 +1,6 @@
 import {defineConfig} from "@playwright/test";
 
-const port = process.env.E2E_PORT ?? "3006";
+const port = process.env.E2E_PORT ?? "3318";
 const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
 
 export default defineConfig({
@@ -18,7 +18,7 @@ export default defineConfig({
     : {
         command: `node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port ${port}`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: false,
         timeout: 120_000,
       },
 });

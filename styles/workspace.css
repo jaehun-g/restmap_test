@@ -256,6 +256,18 @@ input[type="checkbox"] {
 .station-price-section {
   margin: 18px 0;
 }
+
+.food-menu-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e7ebf0;
+}
+.food-menu-section h3 { margin: 0 0 10px; font-size: 14px; }
+.food-menu-section ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.food-menu-section li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 10px; border-radius: 9px; background: #f6f8fb; font-size: 12px; }
+.food-menu-section li > div { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.food-menu-badge { padding: 2px 5px; border-radius: 5px; color: #3469b4; background: #e5efff; font-size: 10px; }
+.food-menu-updated { margin: 8px 0 0; color: #78879a; font-size: 10px; }
 .station-price-section h3 {
   font-size: 13px;
 }
