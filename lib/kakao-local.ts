@@ -16,6 +16,7 @@ type KakaoAddressDocument = {
 type KakaoAddressResponse = {documents?: unknown};
 type KakaoKeywordDocument = {
   place_name?: unknown;
+  category_name?: unknown;
   category_group_code?: unknown;
   address_name?: unknown;
   road_address_name?: unknown;
@@ -37,6 +38,7 @@ export type KakaoGeocodedAddress = {
 
 export type KakaoKeywordPlace = {
   name: string;
+  categoryName?: string | null;
   categoryGroupCode: string | null;
   addressName: string | null;
   roadAddressName: string | null;
@@ -52,6 +54,8 @@ export type KakaoGeocodeOptions = {
   fetch?: KakaoLocalFetch | undefined;
   analyzeType?: "similar" | "exact" | undefined;
   signal?: AbortSignal | undefined;
+  requireUnique?: boolean;
+  categoryGroupCode?: string | null;
 };
 
 function fail(code: string, message: string): Result<never> {
@@ -89,11 +93,12 @@ export function normalizeKakaoAddressQuery(value: unknown): Result<string> {
   return {ok: true, value: address};
 }
 
-export function parseKakaoAddressResponse(payload: unknown): Result<KakaoGeocodedAddress> {
+export function parseKakaoAddressResponse(payload: unknown, requireUnique = false): Result<KakaoGeocodedAddress> {
   const documents = (payload as KakaoAddressResponse | null)?.documents;
   if (!Array.isArray(documents))
     return fail("GEOCODE_DATA_INVALID", "카카오 주소 검색 응답 형식이 올바르지 않습니다.");
   if (!documents.length) return fail("GEOCODE_NOT_FOUND", "입력한 주소의 좌표를 찾지 못했습니다.");
+  if (requireUnique && documents.length !== 1) return fail("GEOCODE_AMBIGUOUS", "주소 검색 결과가 여러 개입니다.");
   const document = documents[0] as KakaoAddressDocument;
   const latitude = coordinate(document.y, -90, 90);
   const longitude = coordinate(document.x, -180, 180);
@@ -141,6 +146,7 @@ export function parseKakaoKeywordResponse(payload: unknown): Result<KakaoKeyword
     if (latitude === null || longitude === null || !name) continue;
     places.push({
       name,
+      categoryName: text(document.category_name),
       categoryGroupCode: text(document.category_group_code),
       addressName: text(document.address_name),
       roadAddressName: text(document.road_address_name),
@@ -237,7 +243,7 @@ export async function geocodeKakaoAddress(
     } catch {
       return fail("GEOCODE_DATA_INVALID", "카카오 주소 검색 응답을 읽을 수 없습니다.");
     }
-    return parseKakaoAddressResponse(payload);
+    return parseKakaoAddressResponse(payload, options.requireUnique);
   } catch {
     return fail("KAKAO_GEOCODE_REQUEST_FAILED", "카카오 주소 검색 요청에 실패했습니다.");
   } finally {
@@ -258,7 +264,8 @@ export async function searchKakaoKeywordPlaces(
   if (!apiKey.ok) return apiKey;
   const url = new URL(keywordSearchUrl);
   url.searchParams.set("query", query.value);
-  url.searchParams.set("category_group_code", "OL7");
+  const categoryGroupCode = options.categoryGroupCode === undefined ? "OL7" : options.categoryGroupCode;
+  if (categoryGroupCode) url.searchParams.set("category_group_code", categoryGroupCode);
   url.searchParams.set("size", "15");
   const request = requestSignal(options.signal);
   try {

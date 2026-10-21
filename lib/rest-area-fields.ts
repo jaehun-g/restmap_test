@@ -87,6 +87,8 @@ export const sortFields: {key: SortField; label: string}[] = [
 
 export const databaseColumns = [
   "id",
+  "std_rest_cd",
+  "service_area_code",
   ...scalarFields.map(field => field.column),
   ...facilityDefinitions.map(([key]) => key),
 ];

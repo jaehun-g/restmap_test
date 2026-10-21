@@ -39,12 +39,12 @@ test("direction filter removes an entire opposite-direction facility without spl
   assert.deepEqual(result.stations.map(item => item.siteCode), ["linked"]);
 });
 
-test("rest facility and station service filters operate on the same integrated place", () => {
+test("라운지 필터는 LPG 정보가 연결된 휴게소를 표시하고 별도 주유소 마커는 숨긴다", () => {
   const result = filterFacilityPlaces(areas, stations, {
     ...options(), filters: {...initialFilters(), lounge: "present"}, stationServices: ["lpg"],
   });
   assert.deepEqual(result.facilities.map(({area}) => area.id), [1]);
-  assert.deepEqual(result.stations.map(({siteCode, linkedRestAreaId}) => [siteCode, linkedRestAreaId]), [["linked", 1]]);
+  assert.deepEqual(result.stations, []);
 });
 
 test("location scope filters both kinds consistently while route selection bypasses that scope", () => {

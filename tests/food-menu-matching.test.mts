@@ -46,3 +46,14 @@ test("different source codes targeting one DB rest area are withheld as ambiguou
   assert.deepEqual(reviewed.map(match => match.status), ["ambiguous", "ambiguous"]);
   assert.deepEqual(reviewed.map(match => match.restAreaId), [null, null]);
 });
+
+test("표준 코드가 일치하면 이름 변경과 API 노선 누락에도 메뉴를 정확히 연결한다", () => {
+  const result = matchFoodAreas([item({routeName: null, restName: "새 이름 휴게소"})], [area({stdRestCd: "001"})]);
+  assert.equal(result[0].status, "matched");
+  assert.equal(result[0].restAreaId, 1);
+});
+
+test("이름이 같아도 다른 표준 코드가 지정된 휴게소에 메뉴를 붙이지 않는다", () => {
+  const result = matchFoodAreas([item()], [area({stdRestCd: "999"})]);
+  assert.equal(result[0].status, "unmatched");
+});

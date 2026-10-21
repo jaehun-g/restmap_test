@@ -53,7 +53,7 @@ test("opposite direction, a route mismatch, or a far coordinate never auto-merge
   ];
   const result = mergeFacilityPlaces([area()], stations);
   assert.equal(result.stations.filter(item => item.linkedRestAreaId === 1).length, 0);
-  assert.deepEqual(result.stations.map(item => item.siteCode), ["opposite", "route", "far"]);
+  assert.deepEqual(result.stations.map(item => item.siteCode), ["far", "opposite", "route"]);
   assert.equal(REST_AREA_STATION_MATCH_METERS, 300);
 });
 

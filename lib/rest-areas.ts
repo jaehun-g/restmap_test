@@ -21,6 +21,8 @@ export const facilityDefinitions = [
 export type FacilityKey = (typeof facilityDefinitions)[number][0];
 export type RestArea = {
   id: number;
+  stdRestCd?: string | null;
+  serviceAreaCode?: string | null;
   name: string;
   latitude: number | null;
   longitude: number | null;
@@ -123,6 +125,8 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
     const parking = nullableNumber(row.parking_count);
     items.push({
       id,
+      stdRestCd: nullableText(row.std_rest_cd),
+      serviceAreaCode: nullableText(row.service_area_code),
       name,
       latitude,
       longitude,

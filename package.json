@@ -19,6 +19,7 @@
     "db:setup-ex-station-geocode-overrides": "node scripts/create-ex-station-geocode-overrides-table.mjs",
     "db:setup-food-menus": "node scripts/setup-food-menu-tables.mjs",
     "sync:food-menus": "node scripts/sync-food-menus.mjs",
+    "sync:rest-areas": "node scripts/sync-rest-areas.mjs",
     "sync:ex-station-prices": "node scripts/sync-ex-station-prices.mjs --apply",
     "db:upsert-ex-station-geocode-overrides": "node scripts/upsert-ex-station-geocode-overrides.mjs",
     "sync:ex-station-geocodes": "node scripts/sync-ex-station-geocodes.mjs",

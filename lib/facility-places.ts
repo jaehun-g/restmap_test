@@ -29,13 +29,14 @@ export function normalizedFacilityName(value: string): string {
 }
 
 export function normalizedDirection(value: string | null | undefined): string | null {
+  if (isBidirectionalDirection(value)) return "양방";
   const direction = value?.replace(/방향/g, "").replace(/\s+/g, "").trim();
   return direction ? direction.toLocaleLowerCase("ko-KR") : null;
 }
 
 export function isBidirectionalDirection(value: string | null | undefined): boolean {
   const direction = value?.replace(/\s+/g, "").toLocaleLowerCase("ko-KR") ?? "";
-  return direction.includes("양방향") || direction.includes("통합");
+  return /^(?:양방향|양방|통합)(?:방향)?$/.test(direction);
 }
 
 function areaDirection(area: RestArea) {

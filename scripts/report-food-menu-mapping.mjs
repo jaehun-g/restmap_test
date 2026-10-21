@@ -2,9 +2,13 @@ import nextEnv from "@next/env";
 import {Client} from "pg";
 import {fetchFoodMenus} from "../lib/food-menu-source.ts";
 import {matchFoodAreas} from "../lib/food-menu-matching.ts";
+import {reviewDuplicateFoodAreaTargets} from "../lib/food-menu-sync.ts";
 import {normalizedFacilityName, normalizedDirection} from "../lib/facility-places.ts";
 import {canonicalHighwayRouteName} from "../lib/highway-route-name.ts";
 import {normalizeRestAreas} from "../lib/rest-areas.ts";
+
+const routeNamesMatch = (sourceRoute, areaRoute) => Boolean(areaRoute && sourceRoute?.split(/[,，]/)
+  .some(route => canonicalHighwayRouteName(route) === canonicalHighwayRouteName(areaRoute)));
 
 nextEnv.loadEnvConfig(process.cwd());
 const fetched = await fetchFoodMenus();
@@ -18,7 +22,7 @@ try {
   const parsed = normalizeRestAreas(rows);
   if (!parsed.ok) throw new Error(parsed.error.message);
   const areas = parsed.value;
-  const matches = matchFoodAreas(fetched.value, areas);
+  const matches = reviewDuplicateFoodAreaTargets(matchFoodAreas(fetched.value, areas));
   const unmatched = matches.filter(match => match.status !== "matched");
   const matchedIds = new Set(matches.flatMap(match => match.restAreaId === null ? [] : [match.restAreaId]));
   const dbUnmapped = areas.filter(area => !matchedIds.has(area.id));
@@ -34,14 +38,16 @@ try {
     if (!match.routeName) problems.push("API 노선 누락");
     if (!match.direction) problems.push("API 방향 누락");
     if (!exact.length) problems.push(partial.length ? "부분 명칭만 유사" : "동명 DB 후보 없음");
-    if (exact.length && match.routeName && !exact.some(area => area.routeName && canonicalHighwayRouteName(area.routeName) === canonicalHighwayRouteName(match.routeName)))
+    if (exact.length && match.routeName && !exact.some(area => routeNamesMatch(match.routeName, area.routeName)))
       problems.push("노선명 불일치");
     if (exact.length && match.direction && !exact.some(area => normalizedDirection(area.directionLabel ?? area.routeDirection) === match.direction))
       problems.push("방향 불일치");
     if (match.status === "ambiguous") problems.push("중복 또는 원본 속성 충돌");
+    if (exact.some(area => area.stdRestCd && area.stdRestCd !== match.stdRestCd)) problems.push("같은 시설에 다른 표준 코드가 지정됨: 중복 코드 검토");
     for (const problem of problems) reasons.set(problem, (reasons.get(problem) ?? 0) + 1);
     const sameDirection = exact.filter(area => normalizedDirection(area.directionLabel ?? area.routeDirection) === match.direction);
-    return {match, candidates: sameDirection.length ? sameDirection : exact.length ? exact : partial, problems, partial: !exact.length && partial.length > 0};
+    const sameRoute = exact.filter(area => routeNamesMatch(match.routeName, area.routeName));
+    return {match, candidates: sameDirection.length ? sameDirection : sameRoute.length ? sameRoute : exact.length ? exact : partial, problems, partial: !exact.length && partial.length > 0};
   });
   const cell = value => String(value ?? "미제공").replace(/\|/g, "\\|").replace(/[\r\n]+/g, " ");
   const date = new Intl.DateTimeFormat("sv-SE", {timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "medium"}).format(new Date());
@@ -54,18 +60,19 @@ try {
     `| API 메뉴 | ${fetched.value.length} |`,
     `| API 휴게소 코드(stdRestCd) | ${matches.length} |`,
     `| 기존 DB 휴게소 | ${areas.length} |`,
-    `| 이름·노선·방향 일치 API 휴게소 | ${matches.length - unmatched.length} |`,
+    `| 정규화 규칙으로 연결된 API 휴게소 | ${matches.length - unmatched.length} |`,
     `| 검토가 필요한 API 휴게소 | ${unmatched.length} |`,
     `| 연결된 기존 DB 휴게소 | ${matchedIds.size} |`,
     `| 아직 연결되지 않은 기존 DB 휴게소 | ${dbUnmapped.length} |`, "",
     "메뉴 식별자는 `stdRestCd + seq`로 비교합니다. 이번 응답에서는 `seq` 단독으로도 중복이 없었지만, 휴게소별 코드와 함께 저장해 다른 휴게소의 음식이 섞이지 않게 합니다.", "",
     "## 판단 기준", "",
+    "- `test_lounge.std_rest_cd`가 원본 `stdRestCd`와 일치하면 코드로 우선 연결합니다. 원본 코드 그룹 속성이 충돌하거나 같은 코드의 DB 후보가 여러 개면 보류합니다.",
     "- 이름: 괄호와 `휴게소`·`주유소`·`충전소`·공백을 제거한 이름이 같아야 합니다.",
-    "- 방향: API 휴게소명의 괄호에서 방향을 추출하고 DB `direction_label`(없으면 `route_direction`)과 비교합니다. `방향`이라는 접미어와 공백만 제거합니다.",
-    "- 노선: 앱의 기존 노선 표준화 함수를 적용한 노선명이 같아야 합니다. 이 보고서를 위해 새로운 노선 별칭을 추가하지 않았습니다.",
-    "- 세 항목이 모두 일치하고 DB 후보가 정확히 하나인 경우에만 자동 연결 대상으로 분류합니다.",
+    "- 방향: API 휴게소명의 괄호에서 방향을 추출하고 DB `direction_label`(없으면 `route_direction`)과 비교합니다. 공백과 `방향` 접미어를 제거하며 `통합`·`양방향`은 같은 방향으로 정규화합니다.",
+    "- 노선: 쉼표로 병기된 노선명을 각각 확인하고 앱의 노선 별칭을 적용합니다. 괄호의 구간 설명은 알려진 별칭만 처리하며, 새만금포항선 전체를 대구포항 구간과 동일시하지 않습니다.",
+    "- 표준 코드가 없는 DB 행에만 이름·노선·방향으로 보조 매칭합니다. 방향이 있으면 세 항목의 후보가 정확히 하나일 때, 방향이 없으면 이름·노선 후보가 정확히 하나일 때 연결합니다.",
     "- 아래의 비교 후보는 확정 매핑이 아닙니다. 특히 부분 명칭 포함 후보는 다른 노선의 다른 휴게소일 수 있습니다.",
-    "- 방향이 없다는 이유만으로 양방향·통합 휴게소라고 단정하지 않습니다. `통합 방향` 또는 DB의 빈 방향 표기는 별도 검토 대상입니다.", "",
+    "- 방향이 비어 있는 API 자료를 양방향으로 간주하지 않습니다. 이름·노선으로 유일한 DB 후보가 있을 때만 방향 없이 연결합니다.", "",
     "## 불일치 사유 집계", "",
     "한 휴게소에 여러 사유가 있을 수 있으므로 아래 건수는 중복 집계입니다.", "",
     "| 사유 | API 휴게소 수 |", "|---|---:|",
@@ -76,11 +83,11 @@ try {
     "|---|---|---|---|---|---|",
     ...comparisons.map(({match, candidates, problems, partial}) => `| \`${cell(match.stdRestCd)}\` | ${cell(match.restName)} | ${cell(match.routeName)} | ${cell(match.direction)} | ${candidates.length ? `${partial ? '(부분 명칭 포함) ' : ''}${candidates.map(area => `${area.id}: ${cell(area.name)} / ${cell(area.routeName)} / ${cell(area.directionLabel ?? area.routeDirection)}`).join('<br>')}` : '후보 없음'} | ${problems.join(' · ')} |`), "",
     "## 우선 검토할 사례", "",
-    "- **익산미륵사지 `000119`**: API는 순천 방향이고 동명 DB 후보 id 37은 천안 방향입니다. 반대 방향으로 연결하면 안 됩니다.",
+    "- **익산미륵사지 `000119`**: 이전 여산(순천) id 38과 전화번호·좌표·방향이 일치해 명칭을 보정하고 코드로 연결했습니다. 천안 방향 id 37과 구분합니다.",
     "- **함양 코드 중복 가능성**: `000161`·`000551`은 대전, `000162`·`000552`는 통영 방향의 같은 이름으로 제공됩니다. 코드·주소·운영 이력을 검토한 뒤 연결해야 하며, 이름만으로 합치면 메뉴가 중복될 수 있습니다.",
-    "- **노선 명칭 차이**: `통영대전선 ↔ 대전통영선`, `호남선의 지선 ↔ 호남지선`, `서산영덕선 ↔ 당진영덕선` 등의 명칭 차이가 있습니다. 실제 동일 구간인지 검증한 뒤 별칭이나 수동 매핑을 등록해야 합니다.",
-    "- **부분 이름 유사**: 기흥복합·낙동강의성·군위영천·삼국유사군위는 부분 문자열이 겹치는 DB 행이 있지만 같은 휴게소라는 증거는 아닙니다.",
-    "- **김제 `000613`·`000614`**: 이름과 방향에 맞는 DB 후보는 있으나 API 노선명이 비어 있어 자동 연결에서 제외했습니다.", "",
+    "- **남은 노선·이름 차이**: 별칭 적용 후에도 노선이 다르거나 같은 이름 후보가 없는 항목은 DB에 누락된 시설인지, 원본 표기 차이인지 확인해야 합니다.",
+    "- **기흥복합**: 기존 기흥(부산)과 기준정보 좌표가 겹치므로 동일 시설인지 확인한 뒤 연결해야 합니다.",
+    "- **김제 `000613`·`000614`**: API 노선명이 비어 있어도 저장된 표준 코드로 연결합니다.", "",
     "## 기존 DB에서 아직 연결되지 않은 휴게소", "",
     "아래에는 위 불일치로 보류된 항목과 API에 대응하는 휴게소가 없는 항목이 함께 포함됩니다. 이 목록만으로 음식정보가 없거나 영업을 중단했다고 판단하면 안 됩니다.", "",
     "| DB id | 휴게소명 | DB 노선 | DB 방향 |", "|---:|---|---|---|",
