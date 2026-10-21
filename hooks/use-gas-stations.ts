@@ -38,7 +38,7 @@ export function useGasStations(query: string | null) {
         setState(prev => ({
           ...prev,
           query,
-          data: prev.query === query ? prev.data : null,
+          data: prev.query === query || canKeepPreviousStations(prev.query, query) ? prev.data : null,
           loading: false,
           error: reason instanceof Error ? reason.message : "주유소를 조회하지 못했습니다.",
         }));

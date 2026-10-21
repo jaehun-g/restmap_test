@@ -17,6 +17,7 @@ function mockKakao() {
     clicks: [] as (() => void)[],
     mapClicks: [] as (() => void)[],
     idle: [] as (() => void)[],
+    zoom: [] as (() => void)[],
     offsets: [] as number[][],
     removed: 0,
     detached: 0,
@@ -118,6 +119,7 @@ function mockKakao() {
           else state.mapClicks.push(callback);
         }
         if (name === "idle") state.idle.push(callback);
+        if (name === "zoom_changed") state.zoom.push(callback);
       },
       removeListener() {
         state.removed++;
@@ -317,7 +319,7 @@ test("disposal removes marker listeners, the map idle listener, card contents an
   const markers = createRestAreaMarkers(sdk, map, areas(), () => {}, label);
   markers.dispose();
   assert.equal(state.detached, 2);
-  assert.equal(state.removed, 5);
+  assert.equal(state.removed, 6);
   assert.equal(state.content.at(-1), "");
 });
 
@@ -508,4 +510,20 @@ test("redrawing filtered markers restores their selected card without moving cen
   assert.equal(state.panned, 0);
   assert.equal(state.fitted, 0);
   assert.equal(state.centered, 0);
+});
+
+test("zoom completion restores an offscreen selected anchor once, without moving an unselected map", () => {
+  const {sdk, map, state} = mockKakao();
+  const markers = createRestAreaMarkers(sdk, map, areas(), () => {}, label);
+  state.zoom[0]();
+  state.idle[0]();
+  assert.equal(state.panned, 0);
+  markers.select(1);
+  markers.suspendCardAdjustment();
+  state.zoom[0]();
+  state.idle[0]();
+  assert.equal(state.panned, 2);
+  state.idle[0]();
+  assert.equal(state.panned, 2, "pan idle must not start a recentering loop");
+  markers.dispose();
 });

@@ -43,8 +43,15 @@ export function createPlaceMarkers(
   placement: "above" | "below" = "below",
   runProgrammaticMapAction: (action: () => void, expectZoomChange?: boolean) => void = action => action(),
   clusterEnabled = true,
+  canvasViewport?: () => DOMRect,
 ) {
   const above = placement === "above";
+  const cardArea = (view: DOMRect) => {
+    // placement-above의 translateY(-43px) 아래에 있는 마커도 패널에 가려지지 않아야 한다.
+    const bottom = above ? Math.max(view.top, view.bottom - 43) : view.bottom;
+    return {left: view.left, right: view.right, width: view.width,
+      top: view.top, bottom, height: bottom - view.top};
+  };
   const placeCard = (target: HTMLElement) => {
     if (above) target.classList.add("placement-above");
   };
@@ -127,6 +134,7 @@ export function createPlaceMarkers(
     frame: number | null = null,
     activeKey: string | null = null;
   let allowAdjustment = true;
+  let zoomPending = false;
   // Kakao Maps can emit its map click immediately after a marker/overlay click.
   // Keep that follow-up event from dismissing the card that was just opened.
   let suppressMapClickUntil = 0;
@@ -279,11 +287,36 @@ export function createPlaceMarkers(
           (parseFloat(style?.marginBottom ?? "0") || 0)
         );
       }, 0);
-    const limit = cardSizeLimit(view, fixedHeight);
+    const limit = cardSizeLimit(cardArea(view), fixedHeight);
     target.style.maxWidth = `${limit.width}px`;
     target.style.maxHeight = `${limit.height}px`;
     target.style.visibility = limit.hidden ? "hidden" : "";
     target.style.pointerEvents = limit.hidden ? "none" : "";
+  }
+  function mapIdle() {
+    if (zoomPending) {
+      zoomPending = false;
+      const selected = activeKey === null ? undefined : placeByKey.get(activeKey);
+      if (!disposed && selected && hasCoordinates(selected.record)) {
+        // 정보창을 피하려고 이동한 중심에서 확대하면 선택 장소 자체가 화면 밖으로 나갈 수 있다.
+        // 선택 장소를 다시 화면 안으로 이동한 뒤 카드 여백을 다시 맞춘다.
+        allowAdjustment = true;
+        const position = new sdk.LatLng(selected.record.latitude, selected.record.longitude);
+        const canvas = canvasViewport?.();
+        const view = viewport?.();
+        if (canvas && view && view.width > 0 && view.height > 0) {
+          // 상세 패널 때문에 유효 지도 영역이 줄어든 경우 그 영역의 중심에 마커를 둔다.
+          map.setCenter(position);
+          map.panBy(
+            canvas.left + canvas.width / 2 - (view.left + view.width / 2),
+            canvas.top + canvas.height / 2 - (view.top + view.height / 2),
+          );
+        } else map.panTo(position);
+        scheduleAdjustment();
+        return;
+      }
+    }
+    keepVisible();
   }
   function keepVisible() {
     const target = listCard ?? card;
@@ -293,7 +326,7 @@ export function createPlaceMarkers(
     if (!allowAdjustment || target.style.visibility === "hidden") return;
     const box = target.getBoundingClientRect();
     if (!box.width || !box.height || !view.width || !view.height) return;
-    const {x, y} = cardPanOffset(box, view);
+    const {x, y} = cardPanOffset(box, cardArea(view));
     if (Math.abs(x) > 1 || Math.abs(y) > 1) map.panBy(x, y);
   }
   function clearCard() {
@@ -314,7 +347,9 @@ export function createPlaceMarkers(
       keepVisible();
     });
   }
-  sdk.event.addListener(map, "idle", keepVisible);
+  const zoomChanged = () => { zoomPending = true; };
+  sdk.event.addListener(map, "zoom_changed", zoomChanged);
+  sdk.event.addListener(map, "idle", mapIdle);
   sdk.event.addListener(map, "click", handleMapClick);
   sdk.event.addListener(map, "dragstart", closeList);
   const escape = (event: KeyboardEvent) => {
@@ -546,7 +581,8 @@ export function createPlaceMarkers(
       clearCard();
       closeList();
       resizeObserver?.disconnect();
-      sdk.event.removeListener(map, "idle", keepVisible);
+      sdk.event.removeListener(map, "zoom_changed", zoomChanged);
+      sdk.event.removeListener(map, "idle", mapIdle);
       sdk.event.removeListener(map, "click", handleMapClick);
       sdk.event.removeListener(map, "dragstart", closeList);
       if (typeof window !== "undefined") window.removeEventListener("keydown", escape);

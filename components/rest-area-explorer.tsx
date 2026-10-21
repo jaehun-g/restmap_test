@@ -9,10 +9,10 @@ import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/lib/gas-stations";
-import {filterStations, restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
-import {directionOptions, filterMobileRestAreas, initialFilters} from "@/lib/rest-area-filters";
-import {mergeFacilityPlaces} from "@/lib/facility-places";
-import {areaDistance, filterByGeoScope, formatDistance, scopeLabel} from "@/lib/geo-search";
+import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
+import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
+import {filterFacilityPlaces} from "@/lib/facility-filters";
+import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
@@ -101,22 +101,12 @@ export default function MobileExplorer() {
     );
     return new DOMRect(area.left, area.top, area.width, area.height);
   }, []);
-  const results = useMemo(
-    () => filterMobileRestAreas(areas, filters, search.query, location.scope, location.position),
-    [areas, filters, search.query, location.scope, location.position],
-  );
-  const stationResults = useMemo(
-    () =>
-      filterByGeoScope(
-        filterStations(gas.stations, search.query, stationFilters),
-        {kind: "all"},
-        location.position,
-      ),
-    [gas.stations, search.query, stationFilters, location.position],
-  );
   const mergedFacilities = useMemo(
-    () => mergeFacilityPlaces(results, stationResults),
-    [results, stationResults],
+    () => filterFacilityPlaces(areas, gas.stations, {
+      filters, query: search.query, stationServices: stationFilters,
+      scope: location.scope, position: location.position,
+    }),
+    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position],
   );
   const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
   const unmatchedStations = mergedFacilities.unmatchedStations;

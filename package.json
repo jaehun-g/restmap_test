@@ -10,6 +10,7 @@
     "test": "node --test tests/*.test.mts",
     "e2e:facility-map": "node scripts/run-facility-map-e2e.mjs",
     "e2e:food-menu": "node node_modules/next/dist/bin/next build && node scripts/run-playwright-e2e.mjs e2e/kakao-map-zoom.spec.ts --grep \"mobile rest-area details\"",
+    "e2e:marker-visibility": "node scripts/run-marker-visibility-e2e.mjs",
     "e2e:visual": "node node_modules/next/dist/bin/next build && node scripts/run-playwright-e2e.mjs",
     "format": "prettier --write \"**/*.{js,ts,jsx,tsx,json,css,html}\"",
     "db:import-highway-route": "node scripts/import-highway-route.mjs",

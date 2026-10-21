@@ -6,13 +6,13 @@ import {hasCoordinates, type RestArea} from "./rest-areas.ts";
 /** EX 주유소를 휴게소 정보에 자동 연결할 수 있는 최대 거리입니다. */
 export const REST_AREA_STATION_MATCH_METERS = 300;
 
-export type FacilityPlace<T extends GasStation = GasStation> = {
-  area: RestArea;
+export type FacilityPlace<T extends GasStation = GasStation, A extends RestArea = RestArea> = {
+  area: A;
   stations: T[];
 };
 
-export type FacilityPlaces<T extends GasStation = GasStation> = {
-  facilities: FacilityPlace<T>[];
+export type FacilityPlaces<T extends GasStation = GasStation, A extends RestArea = RestArea> = {
+  facilities: FacilityPlace<T, A>[];
   unmatchedStations: T[];
 };
 
@@ -48,10 +48,10 @@ function canMatch(area: RestArea, station: GasStation): boolean {
  * 물리적으로 같은 휴게소의 EX 주유소만 결합한다. 이름·노선·방향과 좌표를 모두 확인해
  * 상행/하행 또는 인근 동명 시설이 한 마커로 합쳐지는 일을 막는다.
  */
-export function mergeFacilityPlaces<T extends GasStation>(
-  areas: RestArea[],
+export function mergeFacilityPlaces<T extends GasStation, A extends RestArea>(
+  areas: A[],
   stations: T[],
-): FacilityPlaces<T> {
+): FacilityPlaces<T, A> {
   const candidates = stations.filter(station => station.brand === "EX");
   const facilities = areas.map(area => ({area, stations: [] as T[]}));
   const linked = new Set<string>();

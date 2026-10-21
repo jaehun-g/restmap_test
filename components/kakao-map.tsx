@@ -219,6 +219,7 @@ export default function KakaoMap({
       audience === "mobile" ? "above" : "below",
       runProgrammaticMapAction,
       !selectedRouteName,
+      () => container.current!.getBoundingClientRect(),
     );
     layer.current = current;
     return () => {

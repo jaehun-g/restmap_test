@@ -26,7 +26,7 @@ import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {filterStations, type PlaceView} from "@/lib/map-places";
+import type {PlaceView} from "@/lib/map-places";
 import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
@@ -34,8 +34,7 @@ import GasStationTable from "./gas-station-table";
 import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
-import {filterByGeoScope} from "@/lib/geo-search";
-import {mergeFacilityPlaces} from "@/lib/facility-places";
+import {filterFacilityPlaces} from "@/lib/facility-filters";
 import AdminDetailModal from "./admin-detail-modal";
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
@@ -74,29 +73,20 @@ export default function AdminExplorer() {
   useEffect(() => {
     editState.current = {dirty, saving};
   }, [dirty, saving]);
-  const results = useMemo(
-    () =>
-      filterByGeoScope(
-        filterRestAreas(areas, filters, search.query),
-        filters.routeName ? {kind: "all"} : location.scope,
-        location.position,
-      ),
-    [areas, filters, search.query, location.scope, location.position],
+  const mergedFacilities = useMemo(
+    () => filterFacilityPlaces(areas, gas.stations, {
+      filters, query: search.query, stationServices: stationFilters,
+      scope: location.scope, position: location.position,
+    }),
+    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position],
   );
+  const results = useMemo(() => mergedFacilities.facilities.map(({area}) => area), [mergedFacilities]);
   const sorted = useMemo(
     () => sortRestAreas(results, sortField, direction),
     [results, sortField, direction],
   );
   const selected = results.find(area => area.id === selectedId);
-  const exStationResults = useMemo(
-    () => filterStations(gas.stations, search.query, stationFilters),
-    [gas.stations, search.query, stationFilters],
-  );
-  const mergedFacilities = useMemo(
-    () => mergeFacilityPlaces(results, exStationResults),
-    [results, exStationResults],
-  );
-  const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
+  const visibleAreas = results;
   const stationResults = mergedFacilities.unmatchedStations;
   const linkedStationsByRestId = useMemo(
     () => new Map(mergedFacilities.facilities.map(({area, stations}) => [area.id, stations])),
