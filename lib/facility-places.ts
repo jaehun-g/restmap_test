@@ -33,6 +33,11 @@ export function normalizedDirection(value: string | null | undefined): string | 
   return direction ? direction.toLocaleLowerCase("ko-KR") : null;
 }
 
+export function isBidirectionalDirection(value: string | null | undefined): boolean {
+  const direction = value?.replace(/\s+/g, "").toLocaleLowerCase("ko-KR") ?? "";
+  return direction.includes("양방향") || direction.includes("통합");
+}
+
 function areaDirection(area: RestArea) {
   return normalizedDirection(area.directionLabel ?? area.routeDirection);
 }

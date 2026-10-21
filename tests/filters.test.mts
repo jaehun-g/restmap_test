@@ -39,6 +39,20 @@ test("direction filtering is enabled only with a selected route and uses the dis
   assert.deepEqual(directionOptions(areas, "경부선"), [{key: "부산", label: "부산 방향"}]);
   assert.deepEqual(directionOptions(areas, null), []);
 });
+test("bidirectional rest areas remain visible for either selected route direction", () => {
+  const bidirectional = normalizeRestAreas([
+    {id: 30, name: "양방향 휴게소", route_name: "경부선", route_direction: "양방향", direction_label: "양방향"},
+  ]);
+  assert.ok(bidirectional.ok);
+  for (const direction of ["상행", "하행"])
+    assert.deepEqual(
+      filterRestAreas(bidirectional.value, {...initialFilters(), routeName: "경부선", direction}, "").map(area => area.id),
+      [30],
+    );
+  assert.deepEqual(directionOptions([...areas, ...bidirectional.value], "경부선"), [
+    {key: "부산", label: "부산 방향"},
+  ]);
+});
 
 test("route filtering and route options merge the Miryang-Ulsan alias", () => {
   const mixed = normalizeRestAreas([

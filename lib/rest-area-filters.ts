@@ -2,7 +2,7 @@ import {facilityDefinitions, type FacilityKey, type RestArea} from "./rest-areas
 import type {SortField} from "./rest-area-fields.ts";
 import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
-import {normalizedDirection} from "./facility-places.ts";
+import {isBidirectionalDirection, normalizedDirection} from "./facility-places.ts";
 
 export type LoungeFilter = "all" | "present" | "absent" | "unknown";
 export type RestAreaFilters = {
@@ -48,6 +48,8 @@ export function filterRestAreas<T extends RestArea>(
     if (!filters.facilities.every(key => area.facilities[key] === true)) return false;
     if (
       filters.direction !== null &&
+      !isBidirectionalDirection(area.directionLabel) &&
+      !isBidirectionalDirection(area.routeDirection) &&
       normalizedDirection(area.directionLabel ?? area.routeDirection) !== filters.direction
     )
       return false;
@@ -69,6 +71,8 @@ export function directionOptions(areas: RestArea[], routeName: string | null) {
       !area.routeName ||
       canonicalHighwayRouteName(area.routeName) !== canonicalHighwayRouteName(routeName)
     )
+      continue;
+    if (isBidirectionalDirection(area.directionLabel) || isBidirectionalDirection(area.routeDirection))
       continue;
     const value = area.directionLabel ?? area.routeDirection;
     const key = normalizedDirection(value);

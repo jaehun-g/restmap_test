@@ -1,4 +1,4 @@
-import {mergeFacilityPlaces, normalizedDirection, type FacilityPlaces} from "./facility-places.ts";
+import {isBidirectionalDirection, mergeFacilityPlaces, normalizedDirection, type FacilityPlaces} from "./facility-places.ts";
 import {filterRestAreas, type RestAreaFilters} from "./rest-area-filters.ts";
 import {filterStations} from "./map-places.ts";
 import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
@@ -42,7 +42,7 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     filterStations(merged.stations, "", stationServices).filter(station =>
       (!filters.routeName || (station.routeName !== null && station.routeName !== undefined &&
         canonicalHighwayRouteName(station.routeName) === canonicalHighwayRouteName(filters.routeName))) &&
-      (!filters.direction || normalizedDirection(station.direction) === filters.direction) &&
+      (!filters.direction || isBidirectionalDirection(station.direction) || normalizedDirection(station.direction) === filters.direction) &&
       matches(stationText(station)),
     ), searchScope, position,
   );
