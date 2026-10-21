@@ -4,6 +4,7 @@ import {Button} from "@/components/ui/button";
 import {facilityDefinitions, type RestArea} from "@/lib/rest-areas";
 import {
   routeOptions,
+  directionOptions,
   selectableFacilities,
   type LoungeFilter,
   type RestAreaFilters,
@@ -62,6 +63,7 @@ export default function AdminFilterBar({
                   ? event.target.value.slice(6)
                   : null,
                 missingRoute: event.target.value === "missing",
+                direction: null,
               })
             }
           >
@@ -71,6 +73,22 @@ export default function AdminFilterBar({
               <option key={name} value={`route:${name}`}>
                 {name}
               </option>
+            ))}
+          </Select>
+        </label>
+        <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
+          방향
+          <Select
+            aria-label="방향 필터"
+            value={filters.direction ?? "all"}
+            disabled={disabled || !filters.routeName}
+            onChange={event =>
+              onChange({...filters, direction: event.target.value === "all" ? null : event.target.value})
+            }
+          >
+            <option value="all">전체 방향</option>
+            {directionOptions(areas, filters.routeName).map(option => (
+              <option key={option.key} value={option.key}>{option.label}</option>
             ))}
           </Select>
         </label>
@@ -178,9 +196,15 @@ export default function AdminFilterBar({
         {(filters.routeName || filters.missingRoute) && (
           <button
             disabled={disabled}
-            onClick={() => onChange({...filters, routeName: null, missingRoute: false})}
+            onClick={() => onChange({...filters, routeName: null, missingRoute: false, direction: null})}
           >
             {filters.routeName || "노선 미등록"}
+            <Icon name="close" size={12} />
+          </button>
+        )}
+        {filters.direction && (
+          <button disabled={disabled} onClick={() => onChange({...filters, direction: null})}>
+            {filters.direction}
             <Icon name="close" size={12} />
           </button>
         )}
@@ -224,6 +248,7 @@ export default function AdminFilterBar({
         {!search.query &&
           !filters.routeName &&
           !filters.missingRoute &&
+          !filters.direction &&
           !filters.facilities.length &&
           filters.lounge === "all" &&
           !(includeStations && stationFilters.length) && (

@@ -25,8 +25,7 @@ export default function PlaceControls({
         aria-label="표시할 정보 종류"
       >
         {([
-          ["rest", "휴게소"],
-          ["ex", "고속도로 주유소"],
+          ["rest", "휴게소 · EX 주유소"],
         ] as const).map(([key, label]) => (
           <button
             type="button"

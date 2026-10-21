@@ -2,14 +2,17 @@ import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton} from "@/components/ui/button";
 import {hasCoordinates, type RestArea, visibleFacilities, routeDescription} from "@/lib/rest-areas";
 import Icon from "./icon";
+import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
 export default function RestAreaDetails({
   area,
   onClose,
   audience = "admin",
+  stations = [],
 }: {
   area: RestArea;
   onClose: () => void;
   audience?: "admin" | "mobile";
+  stations?: GasStation[];
 }) {
   const number = area.phone?.replace(/[^\d+]/g, "");
   return (
@@ -88,6 +91,23 @@ export default function RestAreaDetails({
             );
           })}
         </ul>
+        {stations.filter(station => station.brand === "EX").map(station => {
+          const prices = stationPriceItems(station);
+          return (
+            <section key={station.siteCode} aria-label="휴게소 내 EX 주유소 정보" className="station-price-section">
+              <h3>EX 주유소</h3>
+              <p>{station.name}</p>
+              {prices.length > 0 ? (
+                <dl className="station-fuel-prices">
+                  {prices.map(price => (
+                    <div key={price.key}><dt>{price.label}</dt><dd>{price.text}</dd></div>
+                  ))}
+                </dl>
+              ) : <p>가격 정보가 없습니다.</p>}
+              {station.priceUpdatedAt && <p>수집 {new Date(station.priceUpdatedAt).toLocaleString("ko-KR", {timeZone: "Asia/Seoul"})}</p>}
+            </section>
+          );
+        })}
         <p className={sharedClasses.coordinateNote}>
           {hasCoordinates(area)
             ? `위도 ${area.latitude.toFixed(7)} · 경도 ${area.longitude.toFixed(7)}`

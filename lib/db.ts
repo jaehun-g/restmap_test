@@ -124,16 +124,18 @@ export async function queryGasStations(
       where = ` WHERE lat BETWEEN $1 AND $2 AND ${longitude}`;
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
-    const {rows} = await pool.value.query<QueryResultRow>(
-      `${selectStationColumns}${where} ORDER BY "siteNm", id`,
-      values,
-    );
-    const records: GasStationRecord[] = [];
-    for (const row of rows) {
-      const parsed = stationRecordFromRow(row);
-      if (!parsed.ok) return parsed;
-      records.push(parsed.value);
-    }
+      const records: GasStationRecord[] = [];
+      if (query.source === "all") {
+        const {rows} = await pool.value.query<QueryResultRow>(
+          `${selectStationColumns}${where} ORDER BY "siteNm", id`,
+          values,
+        );
+        for (const row of rows) {
+          const parsed = stationRecordFromRow(row);
+          if (!parsed.ok) return parsed;
+          records.push(parsed.value);
+        }
+      }
     const exWhere = where.replace(/\blat\b/g, "latitude").replace(/\blongi\b/g, "longitude");
     const {rows: exRows} = await pool.value.query<QueryResultRow>(
       `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,

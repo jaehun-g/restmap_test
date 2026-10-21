@@ -121,11 +121,15 @@ export function createLocationMapLayer(
   options?: {
     container?: HTMLElement | null;
     viewport?: () => DOMRect;
+    preserveRadiusOnZoom?: () => boolean;
   },
 ) {
   let circle: KakaoCircle | null = null;
   let disposed = false;
   let programmaticDepth = 0;
+  let programmaticZoomObserved = false;
+  let programmaticIdleObserved = false;
+  let suppressProgrammaticZoomUntilIdle = false;
   let observedLevel = map.getLevel();
   let pendingZoom = false;
   let pendingMove = false;
@@ -151,7 +155,13 @@ export function createLocationMapLayer(
       level: map.getLevel(),
     };
   }
-  function programmatic(action: () => void) {
+  function programmatic(action: () => void, expectZoomChange = false) {
+    const outermost = programmaticDepth === 0;
+    const initialLevel = outermost ? map.getLevel() : null;
+    if (outermost) {
+      programmaticZoomObserved = false;
+      programmaticIdleObserved = false;
+    }
     programmaticDepth++;
     try {
       action();
@@ -160,12 +170,25 @@ export function createLocationMapLayer(
       observedLevel = map.getLevel();
       pendingZoom = false;
       pendingMove = false;
+      if (outermost)
+        suppressProgrammaticZoomUntilIdle =
+          (expectZoomChange || initialLevel !== map.getLevel()) &&
+          !(programmaticZoomObserved && programmaticIdleObserved);
       rememberView();
     }
   }
   const zoom = () => {
     const level = map.getLevel();
-    if (!programmaticDepth && level !== observedLevel) {
+    if (programmaticDepth) {
+      programmaticZoomObserved = true;
+      observedLevel = level;
+      return;
+    }
+    if (suppressProgrammaticZoomUntilIdle) {
+      observedLevel = level;
+      return;
+    }
+    if (level !== observedLevel) {
       pendingZoom = true;
       pendingMove = true;
       memory.userMoved = true;
@@ -181,13 +204,25 @@ export function createLocationMapLayer(
     pendingMove = true;
   };
   const idle = () => {
-    if (programmaticDepth || disposed) return;
+    if (disposed) return;
+    if (programmaticDepth) {
+      programmaticIdleObserved = true;
+      return;
+    }
+    if (suppressProgrammaticZoomUntilIdle) {
+      suppressProgrammaticZoomUntilIdle = false;
+      pendingZoom = false;
+      pendingMove = false;
+      rememberView();
+      return;
+    }
     const changedZoom = pendingZoom;
     const moved = pendingMove;
     pendingZoom = false;
     pendingMove = false;
     rememberView();
-    if (changedZoom && !routeMode) callbacks.zoomChanged(map.getLevel());
+    if (changedZoom && !routeMode && !options?.preserveRadiusOnZoom?.())
+      callbacks.zoomChanged(map.getLevel());
     if (moved && !routeMode) callbacks.mapMoved();
   };
   const listeners = {
@@ -201,8 +236,8 @@ export function createLocationMapLayer(
   );
 
   return {
-    runProgrammaticMapAction(action: () => void) {
-      programmatic(action);
+    runProgrammaticMapAction(action: () => void, expectZoomChange = false) {
+      programmatic(action, expectZoomChange);
     },
     setRouteMode(enabled: boolean) {
       routeMode = enabled;

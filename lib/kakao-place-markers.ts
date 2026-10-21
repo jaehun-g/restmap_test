@@ -11,8 +11,6 @@ import {cardPanOffset, cardSizeLimit} from "./map-card-layout.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import {
   CLUSTER_MIN_LEVEL,
-  clusterMinLevel,
-  countInBounds,
   groupByCoordinate,
 } from "./cluster-policy.ts";
 import {
@@ -43,7 +41,8 @@ export function createPlaceMarkers(
   onClear?: () => void,
   /** 카드가 마커 아래("below", 기본) 또는 위("above")에 표시되는 방향. */
   placement: "above" | "below" = "below",
-  runProgrammaticMapAction: (action: () => void) => void = action => action(),
+  runProgrammaticMapAction: (action: () => void, expectZoomChange?: boolean) => void = action => action(),
+  clusterEnabled = true,
 ) {
   const above = placement === "above";
   const placeCard = (target: HTMLElement) => {
@@ -93,13 +92,13 @@ export function createPlaceMarkers(
   let disposed = false;
   const resizeObserver =
     typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => scheduleAdjustment());
-  const clusterer = sdk.MarkerClusterer
+  const clusterer = clusterEnabled && sdk.MarkerClusterer
     ? new sdk.MarkerClusterer({
         map,
-        gridSize: 88,
-        minLevel: CLUSTER_MIN_LEVEL,
-        minClusterSize: 2,
-        averageCenter: true,
+        gridSize: 48,
+        minLevel: 7,
+        minClusterSize: 3,
+        averageCenter: false,
         disableClickZoom: true,
         clickable: true,
         styles: [
@@ -112,7 +111,6 @@ export function createPlaceMarkers(
         ],
       })
     : null;
-  let currentMinLevel = CLUSTER_MIN_LEVEL;
   /** 지도에 하나의 마커로 그려지는 표시 단위: 단일 장소 또는 같은 좌표의 장소 그룹. */
   type Unit = {
     marker: KakaoMarker;
@@ -175,11 +173,12 @@ export function createPlaceMarkers(
   }
   /** 목록에서 장소를 고르면 그 장소를 중심으로 개별 마커 레벨까지 확대합니다. 이미 더 확대돼 있으면 유지합니다. */
   function zoomToPlace(place: MapPlace) {
-    if (!hasCoordinates(place.record)) return;
+    if (!hasCoordinates(place.record)) return false;
     const target = CLUSTER_MIN_LEVEL - 1;
-    if (map.getLevel() <= target) return;
+    if (map.getLevel() <= target) return false;
     map.setCenter(new sdk.LatLng(place.record.latitude, place.record.longitude));
     map.setLevel(target);
+    return true;
   }
   function canZoom(bounds: KakaoBounds) {
     const sw = bounds.getSouthWest(),
@@ -202,10 +201,12 @@ export function createPlaceMarkers(
       items,
       {
         onPick: place => {
+          const expectZoomChange =
+            hasCoordinates(place.record) && map.getLevel() > CLUSTER_MIN_LEVEL - 1;
           runProgrammaticMapAction(() => {
             zoomToPlace(place);
             select(place.key, true, true);
-          });
+          }, expectZoomChange);
           onSelect(place);
         },
         onClose: closeList,
@@ -316,7 +317,6 @@ export function createPlaceMarkers(
   sdk.event.addListener(map, "idle", keepVisible);
   sdk.event.addListener(map, "click", handleMapClick);
   sdk.event.addListener(map, "dragstart", closeList);
-  if (clusterer) sdk.event.addListener(map, "idle", applyClusterMode);
   const escape = (event: KeyboardEvent) => {
     if (event.key === "Escape" && listOpen) {
       event.preventDefault();
@@ -455,24 +455,6 @@ export function createPlaceMarkers(
     }
     placesByMarker.set(marker, grouped);
   }
-  /** 줌 레벨과 화면 안 표시 단위 수에 맞춰 클러스터링 시작 레벨을 조정합니다. */
-  function applyClusterMode() {
-    if (!clusterer) return;
-    const view = map.getBounds();
-    const sw = view.getSouthWest(),
-      ne = view.getNorthEast();
-    const visible = countInBounds([...units.values()], {
-      south: sw.getLat(),
-      west: sw.getLng(),
-      north: ne.getLat(),
-      east: ne.getLng(),
-    });
-    const next = clusterMinLevel(visible);
-    if (next === currentMinLevel) return;
-    currentMinLevel = next;
-    clusterer.setMinLevel(next);
-    clusterer.redraw();
-  }
   const members = (cluster: KakaoCluster) =>
     cluster.getMarkers().flatMap(marker => placesByMarker.get(marker) ?? []);
   let lastCluster: KakaoCluster | null = null;
@@ -531,8 +513,9 @@ export function createPlaceMarkers(
   if (clusterer) {
     sdk.event.addListener<KakaoCluster>(clusterer, "clusterclick", clusterClick);
     sdk.event.addListener(clusterer, "clustered", clustered);
-    clusterer.addMarkers([...units.values()].map(({marker}) => marker));
-    applyClusterMode();
+    // 개별 핀을 먼저 표시하지 않고 전체 집합을 한 번에 클러스터링한다.
+    clusterer.addMarkers([...units.values()].map(({marker}) => marker), true);
+    clusterer.redraw();
   }
   return {
     suspendCardAdjustment() {
@@ -570,7 +553,6 @@ export function createPlaceMarkers(
       if (clusterer) {
         sdk.event.removeListener(clusterer, "clusterclick", clusterClick);
         sdk.event.removeListener(clusterer, "clustered", clustered);
-        sdk.event.removeListener(map, "idle", applyClusterMode);
         clusterer.clear();
       }
       units.forEach(({marker, click}) => {

@@ -14,6 +14,7 @@ import {createHighwayRouteLayer} from "@/lib/kakao-highway-route";
 import {createHighwayRouteViewport} from "@/lib/kakao-route-viewport";
 import {useHighwayRoute} from "@/hooks/use-highway-route";
 import {createMapCard} from "@/lib/map-card";
+import {markerLayerSignature} from "@/lib/marker-layer";
 import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
 import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
 import {
@@ -49,6 +50,8 @@ export default function KakaoMap({
   locationDisabled = false,
   onFullscreen,
   fullscreen = false,
+  linkedStationsByRestId,
+  selectedDirection = null,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -74,22 +77,34 @@ export default function KakaoMap({
   locationDisabled?: boolean;
   onFullscreen?: () => void;
   fullscreen?: boolean;
+  linkedStationsByRestId?: ReadonlyMap<number, GasStation[]>;
+  selectedDirection?: string | null;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const topbar = useRef<HTMLDivElement>(null);
   const legend = useRef<HTMLDivElement>(null);
   const layer = useRef<ReturnType<typeof createPlaceMarkers> | null>(null);
+  const placeSelected = useRef(selectedId !== null || selectedStationId !== null);
   const places = useMemo(
     () => [...areas.map(restPlace), ...stations.map(stationPlace)],
     [areas, stations],
   );
+  const markerSignature = useMemo(() => markerLayerSignature(places), [places]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 표시 단위가 같으면 기존 레이어의 배열 참조를 유지한다.
+  const markerPlaces = useMemo(() => places, [markerSignature]);
   const positionedItems = useMemo(() => places.map(place => place.record), [places]);
+  const linkedStationsRef = useRef<ReadonlyMap<number, GasStation[]> | undefined>(linkedStationsByRestId);
+  useEffect(() => {
+    linkedStationsRef.current = linkedStationsByRestId;
+  }, [linkedStationsByRestId]);
   const clearSelection = useCallback(() => {
+    placeSelected.current = false;
     onSelect(null);
     onStationSelect?.(null);
   }, [onSelect, onStationSelect]);
   const selectPlace = useCallback(
     (place: MapPlace) => {
+      placeSelected.current = true;
       if (place.kind === "station") onStationSelect?.(stationKey(place.record));
       else onSelect(place.record.id);
     },
@@ -118,6 +133,9 @@ export default function KakaoMap({
   const [map, setMap] = useState<MapInstance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    placeSelected.current = selectedId !== null || selectedStationId !== null;
+  }, [selectedId, selectedStationId]);
   const highway = useHighwayRoute(selectedRouteName, !!map && !error);
   const card = useCallback(
     (place: MapPlace) =>
@@ -132,15 +150,19 @@ export default function KakaoMap({
             audience,
             () => onSelect(null),
             () => onDetails(place.record.id),
+            linkedStationsRef.current?.get(place.record.id),
           ),
     [audience, onSelect, onDetails, onStationSelect, onStationDetails],
   );
   const runProgrammaticMapAction = useCallback(
-    (action: () => void) => {
-      if (mobileEnabled) locationLayer.current?.runProgrammaticMapAction(action) ?? action();
-      else action();
+    (action: () => void, expectZoomChange = false) => {
+      if (locationEnabled && locationLayer.current) {
+        locationLayer.current.runProgrammaticMapAction(action, expectZoomChange);
+        return;
+      }
+      action();
     },
-    [mobileEnabled],
+    [locationEnabled],
   );
   useEffect(() => {
     if (!appKey) {
@@ -180,7 +202,7 @@ export default function KakaoMap({
     const current = createPlaceMarkers(
       sdk,
       map,
-      places,
+      markerPlaces,
       selectPlace,
       card,
       () => {
@@ -196,6 +218,7 @@ export default function KakaoMap({
       clearSelection,
       audience === "mobile" ? "above" : "below",
       runProgrammaticMapAction,
+      !selectedRouteName,
     );
     layer.current = current;
     return () => {
@@ -204,13 +227,14 @@ export default function KakaoMap({
     };
   }, [
     map,
-    places,
+    markerPlaces,
     selectPlace,
     card,
     cardViewport,
     clearSelection,
     audience,
     runProgrammaticMapAction,
+    selectedRouteName,
   ]);
   useEffect(() => {
     if (!map || !container.current) return;
@@ -262,6 +286,7 @@ export default function KakaoMap({
           const bounds = container.current?.getBoundingClientRect() ?? new DOMRect();
           return cardViewport ? cardViewport(bounds) : bounds;
         },
+        preserveRadiusOnZoom: () => placeSelected.current,
       },
     );
     locationLayer.current = current;
@@ -453,7 +478,7 @@ export default function KakaoMap({
                     className="map-scope-label p-[8px_10px] rounded-[20px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-[11px]"
                     role="status"
                   >
-                    {selectedRouteName} 전체 구간
+                    {[selectedRouteName, selectedDirection].filter(Boolean).join(" · ")} 전체 구간
                   </span>
                 </div>
               )}

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeRestAreas, visibleFacilities, routeDescription, type RestArea, type FacilityKey } from "../lib/rest-areas.ts";
-import { filterRestAreas, initialFilters, routeOptions, sortRestAreas } from "../lib/rest-area-filters.ts";
+import { directionOptions, filterRestAreas, initialFilters, routeOptions, sortRestAreas } from "../lib/rest-area-filters.ts";
 import { scalarFields, sortFields } from "../lib/rest-area-fields.ts";
 
 const parsed = normalizeRestAreas([
@@ -32,6 +32,12 @@ test("facilities combine with AND and neither false nor unknown counts as presen
 test("route, facilities, lounge and search all combine with AND", () => {
   assert.deepEqual(filterRestAreas(areas,{...initialFilters(),routeName:"경부선",facilities:["has_shower"],lounge:"present"},"10").map(a=>a.id),[3]);
   assert.equal(filterRestAreas(areas,{...initialFilters(),routeName:"영동선"},"").length,0);
+});
+test("direction filtering is enabled only with a selected route and uses the display direction", () => {
+  const filters = {...initialFilters(), routeName: "경부선", direction: "부산"};
+  assert.deepEqual(filterRestAreas(areas, filters, "").map(area => area.id), [3]);
+  assert.deepEqual(directionOptions(areas, "경부선"), [{key: "부산", label: "부산 방향"}]);
+  assert.deepEqual(directionOptions(areas, null), []);
 });
 
 test("route filtering and route options merge the Miryang-Ulsan alias", () => {

@@ -9,6 +9,7 @@ import {useAdminSession} from "@/hooks/use-admin-session";
 import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {
   filterRestAreas,
+  directionOptions,
   initialFilters,
   sortRestAreas,
   type RestAreaFilters,
@@ -25,7 +26,7 @@ import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {filterStations, filterStationView, type PlaceView} from "@/lib/map-places";
+import {filterStations, type PlaceView} from "@/lib/map-places";
 import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
@@ -34,8 +35,8 @@ import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {filterByGeoScope} from "@/lib/geo-search";
+import {mergeFacilityPlaces} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
-const noAreas: RestAreaRecord[] = [];
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
   const {data, areas, loading, error, reload, replaceItem} = useRestAreas();
@@ -46,9 +47,7 @@ export default function AdminExplorer() {
   const [placeView, setPlaceView] = useState<PlaceView>("rest");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
-    placeView === "rest"
-      ? null
-      : stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope),
+    stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"),
   );
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
@@ -89,11 +88,26 @@ export default function AdminExplorer() {
     [results, sortField, direction],
   );
   const selected = results.find(area => area.id === selectedId);
-  const stationResults = useMemo(
-    () => filterStations(filterStationView(gas.stations, placeView), search.query, stationFilters),
-    [gas.stations, placeView, search.query, stationFilters],
+  const exStationResults = useMemo(
+    () => filterStations(gas.stations, search.query, stationFilters),
+    [gas.stations, search.query, stationFilters],
   );
-  const visibleAreas = placeView === "rest" ? results : noAreas;
+  const mergedFacilities = useMemo(
+    () => mergeFacilityPlaces(results, exStationResults),
+    [results, exStationResults],
+  );
+  const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
+  const stationResults = mergedFacilities.unmatchedStations;
+  const linkedStationsByRestId = useMemo(
+    () => new Map(mergedFacilities.facilities.map(({area, stations}) => [area.id, stations])),
+    [mergedFacilities],
+  );
+  const selectedDirectionLabel = useMemo(
+    () =>
+      directionOptions(areas, filters.routeName).find(option => option.key === filters.direction)
+        ?.label ?? filters.direction,
+    [areas, filters.routeName, filters.direction],
+  );
   const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
   const mayLeave = useCallback(
     () =>
@@ -143,7 +157,7 @@ export default function AdminExplorer() {
     [mayLeave],
   );
   const clearRoute = useCallback(() => {
-    setFilters(current => ({...current, routeName: null, missingRoute: false}));
+    setFilters(current => ({...current, routeName: null, missingRoute: false, direction: null}));
     setSelectedId(null);
     setSelectedStationId(null);
   }, []);
@@ -455,6 +469,8 @@ export default function AdminExplorer() {
             <KakaoMap
               areas={visibleAreas}
               stations={stationResults}
+              linkedStationsByRestId={linkedStationsByRestId}
+              selectedDirection={selectedDirectionLabel}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
               onStationSelect={selectStation}
               onStationDetails={openStationDetails}
@@ -591,7 +607,7 @@ export default function AdminExplorer() {
                   </Button>
                 </div>
                 <div className="admin-detail-body min-h-0 flex-1">
-                  <RestAreaDetails area={selected} onClose={close} />
+                  <RestAreaDetails area={selected} onClose={close} stations={linkedStationsByRestId.get(selected.id)} />
                 </div>
               </>
             ) : (

@@ -2,8 +2,10 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import type {GasStationsResponse, GasStationRecord} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
+import {canKeepPreviousStations} from "@/lib/gas-station-query";
 
 const empty: GasStationRecord[] = [];
+
 export function useGasStations(query: string | null) {
   const [state, setState] = useState<{
     query: string | null;
@@ -69,9 +71,12 @@ export function useGasStations(query: string | null) {
     [],
   );
   const current = query !== null && state.query === query;
+  const keepPrevious =
+    !current && canKeepPreviousStations(state.query, query) && state.data !== null;
+  const displayedData = current || keepPrevious ? state.data : null;
   return {
-    data: current ? state.data : null,
-    stations: current ? (state.data?.items ?? empty) : empty,
+    data: displayedData,
+    stations: displayedData?.items ?? empty,
     loading: query !== null && (!current || state.loading),
     error: current ? state.error : null,
     reload,

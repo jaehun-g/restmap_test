@@ -3,7 +3,7 @@ import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton, Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/field";
 import {useMemo, useState} from "react";
-import {routeOptions, selectableFacilities, type RestAreaFilters} from "@/lib/rest-area-filters";
+import {directionOptions, routeOptions, selectableFacilities, type RestAreaFilters} from "@/lib/rest-area-filters";
 import type {RestArea} from "@/lib/rest-areas";
 import {
   stationServices as stationServiceDefinitions,
@@ -19,7 +19,7 @@ export default function MobileFilterSheet({
   onStationServices,
   onClose,
 }: {
-  kind: "routes" | "facilities" | "stationServices";
+  kind: "routes" | "directions" | "facilities" | "stationServices";
   areas: RestArea[];
   filters: RestAreaFilters;
   stationServices: StationServiceKey[];
@@ -41,14 +41,18 @@ export default function MobileFilterSheet({
               ? "노선 선택"
               : kind === "facilities"
                 ? "편의시설 선택"
-                : "주유소 조건"}
+                : kind === "directions"
+                  ? "방향 선택"
+                  : "주유소 조건"}
           </h2>
           <p>
             {kind === "routes"
               ? "원하는 노선을 검색하거나 선택하세요."
               : kind === "facilities"
                 ? "선택한 시설을 모두 갖춘 휴게소를 보여드려요."
-                : "선택한 조건이 모두 확인된 주유소를 보여드려요."}
+                : kind === "directions"
+                  ? "선택한 노선에서 진행 방향을 골라 보세요."
+                  : "선택한 조건이 모두 확인된 주유소를 보여드려요."}
           </p>
         </div>
         <IconButton aria-label="필터 선택창 닫기" onClick={onClose}>
@@ -81,6 +85,7 @@ export default function MobileFilterSheet({
                       ...filters,
                       routeName: null,
                       missingRoute: false,
+                      direction: null,
                     });
                     onClose();
                   }}
@@ -99,6 +104,7 @@ export default function MobileFilterSheet({
                         ...filters,
                         routeName: name,
                         missingRoute: false,
+                      direction: null,
                       });
                       onClose();
                     }}
@@ -119,6 +125,31 @@ export default function MobileFilterSheet({
             )}
           </div>
         </>
+      ) : kind === "directions" ? (
+        <div className={sharedClasses.filterSheetScroll}>
+          <ul className="route-options">
+            <li>
+              <button
+                className={filters.direction === null ? "selected" : ""}
+                onClick={() => { onChange({...filters, direction: null}); onClose(); }}
+              >
+                <span>전체 방향</span>
+                {filters.direction === null && <Icon name="check" size={18} />}
+              </button>
+            </li>
+            {directionOptions(areas, filters.routeName).map(option => (
+              <li key={option.key}>
+                <button
+                  className={filters.direction === option.key ? "selected" : ""}
+                  onClick={() => { onChange({...filters, direction: option.key}); onClose(); }}
+                >
+                  <span>{option.label}</span>
+                  {filters.direction === option.key && <Icon name="check" size={18} />}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : kind === "facilities" ? (
         <>
           <div className={sharedClasses.facilitySheetTop}>

@@ -1,11 +1,13 @@
 import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
+import {stationPriceItems, type GasStation} from "./gas-stations.ts";
 
 export function createMapCard(
   area: RestArea,
   audience: "admin" | "mobile",
   onClose: () => void,
   onDetails: () => void,
+  stations: GasStation[] = [],
 ): HTMLElement {
   const card = document.createElement("section");
   card.className = "map-info-card";
@@ -62,6 +64,16 @@ export function createMapCard(
       facilities.append(more);
     }
     body.append(facilities);
+  }
+  const exStation = stations.find(station => station.brand === "EX");
+  if (exStation) {
+    const station = document.createElement("p");
+    station.className = "map-card-route";
+    const prices = stationPriceItems(exStation);
+    station.textContent = prices.length
+      ? `EX 주유소 · ${prices.map(price => `${price.label} ${price.text}`).join(" / ")}`
+      : "EX 주유소 정보 제공";
+    body.append(station);
   }
   const details = document.createElement("button");
   details.className = "map-card-details";

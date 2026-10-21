@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {normalizeGasStations, stationHours} from "../lib/gas-stations.ts";
-import {parseStationQuery, stationQueryString} from "../lib/gas-station-query.ts";
+import {canKeepPreviousStations, parseStationQuery, stationQueryString} from "../lib/gas-station-query.ts";
 import {
   validateStationUpdate,
   validateStationCoordinatePair,
@@ -88,6 +88,10 @@ test("query parsing supports all, radius and dateline bounds while route selecti
   assert.equal(parsed.value.routeName, "경부선");
   assert.equal(parsed.value.scope.kind, "all");
   assert.equal(parseStationQuery(new URLSearchParams(stationQueryString(null, scope))).ok, true);
+  assert.deepEqual(parseStationQuery(new URLSearchParams(stationQueryString(null, {kind: "all"}, "ex"))), {
+    ok: true,
+    value: {routeName: null, scope: {kind: "all"}, source: "ex"},
+  });
   assert.equal(
     parseStationQuery(new URLSearchParams("south=-10&north=10&west=170&east=-170")).ok,
     true,
@@ -106,6 +110,14 @@ test("partial, duplicate, mixed and invalid query parameters fail before DB acce
     "table=test_lounge",
   ])
     assert.equal(parseStationQuery(new URLSearchParams(query)).ok, false, query);
+});
+test("map scope changes retain the previous EX station result but route changes do not", () => {
+  const near = "source=ex&latitude=37&longitude=127&radiusMeters=15000";
+  const zoomed = "source=ex&latitude=37&longitude=127&radiusMeters=30000";
+  assert.equal(canKeepPreviousStations(near, zoomed), true);
+  assert.equal(canKeepPreviousStations(near, "source=ex&routeName=%EA%B2%BD%EB%B6%80%EC%84%A0"), false);
+  assert.equal(canKeepPreviousStations("source=ex&routeName=%EA%B2%BD%EB%B6%80%EC%84%A0", near), false);
+  assert.equal(canKeepPreviousStations(near, "source=all&latitude=37&longitude=127&radiusMeters=30000"), false);
 });
 test("editor preserves invalid numbers and submits only changed whitelisted fields", () => {
   const original = station(),

@@ -2,6 +2,7 @@ import {facilityDefinitions, type FacilityKey, type RestArea} from "./rest-areas
 import type {SortField} from "./rest-area-fields.ts";
 import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
+import {normalizedDirection} from "./facility-places.ts";
 
 export type LoungeFilter = "all" | "present" | "absent" | "unknown";
 export type RestAreaFilters = {
@@ -9,6 +10,7 @@ export type RestAreaFilters = {
   missingRoute: boolean;
   facilities: FacilityKey[];
   lounge: LoungeFilter;
+  direction: string | null;
 };
 export const selectableFacilities = facilityDefinitions.filter(
   ([key]) => key !== "has_truck_lounge",
@@ -19,6 +21,7 @@ export function initialFilters(): RestAreaFilters {
     missingRoute: false,
     facilities: [],
     lounge: "all",
+    direction: null,
   };
 }
 
@@ -43,6 +46,11 @@ export function filterRestAreas<T extends RestArea>(
     )
       return false;
     if (!filters.facilities.every(key => area.facilities[key] === true)) return false;
+    if (
+      filters.direction !== null &&
+      normalizedDirection(area.directionLabel ?? area.routeDirection) !== filters.direction
+    )
+      return false;
     const lounge = area.facilities.has_truck_lounge;
     return (
       filters.lounge === "all" ||
@@ -51,6 +59,22 @@ export function filterRestAreas<T extends RestArea>(
       (filters.lounge === "unknown" && lounge === null)
     );
   });
+}
+
+export function directionOptions(areas: RestArea[], routeName: string | null) {
+  if (!routeName) return [];
+  const directions = new Map<string, string>();
+  for (const area of areas) {
+    if (
+      !area.routeName ||
+      canonicalHighwayRouteName(area.routeName) !== canonicalHighwayRouteName(routeName)
+    )
+      continue;
+    const value = area.directionLabel ?? area.routeDirection;
+    const key = normalizedDirection(value);
+    if (key && value) directions.set(key, value);
+  }
+  return [...directions].sort(([, left], [, right]) => collator.compare(left, right)).map(([key, label]) => ({key, label}));
 }
 
 /** 노선 선택 시 위치 조건만 건너뛰고 거리순 정렬과 나머지 조건은 유지합니다. */

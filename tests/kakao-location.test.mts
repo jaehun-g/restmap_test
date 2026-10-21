@@ -95,6 +95,7 @@ function mockKakao() {
     }
   }
   let level = 13;
+  let delayedLevel: number | null = null;
   let center = new LatLng(36.4, 127.8);
   const map = {
     getCenter: () => center,
@@ -107,6 +108,9 @@ function mockKakao() {
     setLevel(value: number) {
       level = value;
       emit("zoom_changed");
+    },
+    setLevelDelayed(value: number) {
+      delayedLevel = value;
     },
     setBounds() {
       state.fitted++;
@@ -133,6 +137,12 @@ function mockKakao() {
     map: map as unknown as KakaoMap,
     state,
     emit,
+    finishDelayedZoom() {
+      if (delayedLevel === null) return;
+      level = delayedLevel;
+      delayedLevel = null;
+      emit("zoom_changed");
+    },
     listeners,
   };
 }
@@ -141,6 +151,7 @@ function connected(memory: MobileMapMemory = {}) {
   const controller = new MobileLocationController();
   let cleared = 0;
   let zoomStarts = 0;
+  let placeSelected = false;
   const layer = createLocationMapLayer(
     mock.sdk,
     mock.map,
@@ -158,6 +169,7 @@ function connected(memory: MobileMapMemory = {}) {
       },
     },
     memory,
+    {preserveRadiusOnZoom: () => placeSelected},
   );
   const update = () => {
     const { position, scope, cameraRequest, locationRadius } = controller.getSnapshot();
@@ -175,6 +187,9 @@ function connected(memory: MobileMapMemory = {}) {
     unsubscribe,
     getCleared: () => cleared,
     getZoomStarts: () => zoomStarts,
+    setPlaceSelected: (selected: boolean) => {
+      placeSelected = selected;
+    },
     memory,
   };
 }
@@ -223,10 +238,16 @@ test("user zoom commits at idle, changes radius and results, and never fits or r
   assert.equal(getZoomStarts(), 2);
 });
 
-test("programmatic marker focus keeps the mobile search radius and results", async () => {
+test("programmatic marker focus keeps the location radius and visible results", async () => {
   const {map, controller, locate, emit, layer, getZoomStarts} = connected();
   await locate();
   const before = controller.getSnapshot();
+  const places = normalizeRestAreas([
+    {id: 1, name: "selected stop", latitude: 37.01, longitude: 127},
+    {id: 2, name: "outside stop", latitude: 37.2, longitude: 127},
+  ]);
+  assert.ok(places.ok);
+  const visibleBefore = filterByGeoScope(places.value, before.scope, origin).length;
 
   layer.runProgrammaticMapAction(() => {
     map.setLevel(4);
@@ -237,6 +258,59 @@ test("programmatic marker focus keeps the mobile search radius and results", asy
   assert.equal(controller.getSnapshot().locationRadius, before.locationRadius);
   assert.equal(controller.getSnapshot().researchAvailable, false);
   assert.equal(getZoomStarts(), 0);
+  assert.equal(filterByGeoScope(places.value, controller.getSnapshot().scope, origin).length, visibleBefore);
+});
+
+test("programmatic marker focus ignores a delayed zoom event until map idle", async () => {
+  const {map, controller, locate, emit, layer, getZoomStarts, finishDelayedZoom} = connected();
+  await locate();
+  const before = controller.getSnapshot();
+  const places = normalizeRestAreas([
+    {id: 1, name: "selected stop", latitude: 37.01, longitude: 127},
+    {id: 2, name: "outside stop", latitude: 37.2, longitude: 127},
+  ]);
+  assert.ok(places.ok);
+  const visibleBefore = filterByGeoScope(places.value, before.scope, origin).length;
+
+  layer.runProgrammaticMapAction(() => {
+    (map as KakaoMap & {setLevelDelayed(level: number): void}).setLevelDelayed(4);
+  }, true);
+  finishDelayedZoom();
+  emit("idle");
+
+  assert.equal(controller.getSnapshot().scope, before.scope);
+  assert.equal(controller.getSnapshot().locationRadius, before.locationRadius);
+  assert.equal(controller.getSnapshot().researchAvailable, false);
+  assert.equal(getZoomStarts(), 0);
+  assert.equal(filterByGeoScope(places.value, controller.getSnapshot().scope, origin).length, visibleBefore);
+});
+
+test("manual zoom keeps the selected place in the active location results", async () => {
+  const {map, controller, locate, emit, state, setPlaceSelected} = connected();
+  await locate();
+  const places = normalizeRestAreas([
+    {id: 1, name: "selected stop", latitude: 37.01, longitude: 127},
+    {id: 2, name: "outside stop", latitude: 37.2, longitude: 127},
+  ]);
+  assert.ok(places.ok);
+  const before = controller.getSnapshot();
+  const visibleBefore = filterByGeoScope(places.value, before.scope, origin).length;
+  assert.equal(visibleBefore, 1);
+
+  setPlaceSelected(true);
+  map.setLevel(4);
+  emit("idle");
+
+  assert.equal(controller.getSnapshot().scope, before.scope);
+  assert.equal(state.circles[0].radius, before.locationRadius?.radiusMeters);
+  assert.equal(controller.getSnapshot().researchAvailable, true);
+  assert.equal(filterByGeoScope(places.value, controller.getSnapshot().scope, origin).length, visibleBefore);
+
+  setPlaceSelected(false);
+  map.setLevel(3);
+  emit("idle");
+  assert.notEqual(controller.getSnapshot().scope, before.scope);
+  assert.equal(filterByGeoScope(places.value, controller.getSnapshot().scope, origin).length, 0);
 });
 
 test("drag immediately clears selection while keeping circle center, query radius and results", async () => {
