@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mergeFacilityPlaces, REST_AREA_STATION_MATCH_METERS} from "../lib/facility-places.ts";
+import {linkedStationsByArea, mergeFacilityPlaces, REST_AREA_STATION_MATCH_METERS} from "../lib/facility-places.ts";
 import type {GasStationRecord} from "../lib/gas-stations.ts";
 import type {RestArea} from "../lib/rest-areas.ts";
 
@@ -40,8 +40,9 @@ const station = (overrides: Partial<GasStationRecord> = {}): GasStationRecord =>
 
 test("same route, service area, direction, and a 300m coordinate match become one facility", () => {
   const result = mergeFacilityPlaces([area()], [station()]);
-  assert.deepEqual(result.facilities[0].stations.map(item => item.siteCode), ["ex-10"]);
-  assert.deepEqual(result.unmatchedStations, []);
+  assert.deepEqual(result.facilities, [{area: area()}]);
+  assert.deepEqual(result.stations.map(({siteCode, linkedRestAreaId}) => [siteCode, linkedRestAreaId]), [["ex-10", 1]]);
+  assert.deepEqual(linkedStationsByArea(result.facilities, result.stations).get(1), result.stations);
 });
 
 test("opposite direction, a route mismatch, or a far coordinate never auto-merges", () => {
@@ -51,8 +52,8 @@ test("opposite direction, a route mismatch, or a far coordinate never auto-merge
     station({siteCode: "far", latitude: 37.34}),
   ];
   const result = mergeFacilityPlaces([area()], stations);
-  assert.equal(result.facilities[0].stations.length, 0);
-  assert.deepEqual(result.unmatchedStations.map(item => item.siteCode), ["opposite", "route", "far"]);
+  assert.equal(result.stations.filter(item => item.linkedRestAreaId === 1).length, 0);
+  assert.deepEqual(result.stations.map(item => item.siteCode), ["opposite", "route", "far"]);
   assert.equal(REST_AREA_STATION_MATCH_METERS, 300);
 });
 
@@ -61,5 +62,5 @@ test("one EX station is assigned to only the nearest duplicate rest-area record"
     [area({id: 1, latitude: 37.33}), area({id: 2, latitude: 37.3308})],
     [station({latitude: 37.3307})],
   );
-  assert.deepEqual(result.facilities.map(facility => facility.stations.length), [0, 1]);
+  assert.deepEqual(result.stations.map(station => station.linkedRestAreaId), [2]);
 });

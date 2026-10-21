@@ -22,14 +22,13 @@ const options = () => ({filters: initialFilters(), query: "", stationServices: [
 test("station-name and mixed rest/station search retain the original facility identity and anchor", () => {
   const result = filterFacilityPlaces(areas, stations, {...options(), query: "연결 부산 주유소"});
   assert.deepEqual(result.facilities.map(({area}) => [area.id, area.latitude, area.longitude]), [[1, 37, 127]]);
-  assert.equal(result.facilities[0].stations[0].siteCode, "linked");
-  assert.deepEqual(result.unmatchedStations, []);
+  assert.deepEqual(result.stations.map(({siteCode, linkedRestAreaId}) => [siteCode, linkedRestAreaId]), [["linked", 1]]);
 });
 
 test("route-name search includes standalone stations rather than omitting their markers", () => {
   const result = filterFacilityPlaces(areas, stations, {...options(), query: "경부선"});
   assert.equal(result.facilities.length, 2);
-  assert.deepEqual(result.unmatchedStations.map(item => item.siteCode), ["standalone"]);
+  assert.deepEqual(result.stations.map(item => item.siteCode), ["linked", "opposite", "standalone"]);
 });
 
 test("direction filter removes an entire opposite-direction facility without splitting its station", () => {
@@ -37,7 +36,7 @@ test("direction filter removes an entire opposite-direction facility without spl
     ...options(), filters: {...initialFilters(), routeName: "경부선", direction: "부산"},
   });
   assert.deepEqual(result.facilities.map(({area}) => area.id), [1]);
-  assert.deepEqual(result.unmatchedStations, []);
+  assert.deepEqual(result.stations.map(item => item.siteCode), ["linked"]);
 });
 
 test("rest facility and station service filters operate on the same integrated place", () => {
@@ -45,21 +44,20 @@ test("rest facility and station service filters operate on the same integrated p
     ...options(), filters: {...initialFilters(), lounge: "present"}, stationServices: ["lpg"],
   });
   assert.deepEqual(result.facilities.map(({area}) => area.id), [1]);
-  assert.equal(result.facilities[0].stations.length, 1);
-  assert.deepEqual(result.unmatchedStations, []);
+  assert.deepEqual(result.stations.map(({siteCode, linkedRestAreaId}) => [siteCode, linkedRestAreaId]), [["linked", 1]]);
 });
 
 test("location scope filters both kinds consistently while route selection bypasses that scope", () => {
   const scoped = {...options(), scope: {kind: "radius" as const, center: {latitude: 36, longitude: 126}, radiusMeters: 100, referenceLevel: 5}};
-  assert.deepEqual(filterFacilityPlaces(areas, stations, scoped), {facilities: [], unmatchedStations: []});
+  assert.deepEqual(filterFacilityPlaces(areas, stations, scoped), {facilities: [], stations: []});
   const result = filterFacilityPlaces(areas, stations, {...scoped, filters: {...initialFilters(), routeName: "경부선"}});
   assert.equal(result.facilities.length, 2);
-  assert.equal(result.unmatchedStations.length, 1);
+  assert.equal(result.stations.length, 3);
 });
 
 test("no-result searches clear the layer and clearing the query restores every eligible facility", () => {
-  assert.deepEqual(filterFacilityPlaces(areas, stations, {...options(), query: "없는 장소"}), {facilities: [], unmatchedStations: []});
+  assert.deepEqual(filterFacilityPlaces(areas, stations, {...options(), query: "없는 장소"}), {facilities: [], stations: []});
   const result = filterFacilityPlaces(areas, stations, options());
   assert.equal(result.facilities.length, 2);
-  assert.equal(result.unmatchedStations.length, 1);
+  assert.equal(result.stations.length, 3);
 });

@@ -29,19 +29,22 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     const haystack = text.toLocaleLowerCase("ko-KR");
     return terms.every(term => haystack.includes(term));
   };
-  const facilities = merged.facilities.filter(({area, stations: linked}) =>
-    eligible.has(area.id) &&
-    (!stationServices.length || filterStations(linked, "", stationServices).length > 0) &&
-    matches(`${area.name} ${area.routeName ?? ""} ${area.directionLabel ?? area.routeDirection ?? ""} ${linked.map(stationText).join(" ")}`),
-  );
+  const facilities = merged.facilities.filter(({area}) => {
+    const linked = merged.stations.filter(station => station.linkedRestAreaId === area.id);
+    return (
+      eligible.has(area.id) &&
+      (!stationServices.length || filterStations(linked, "", stationServices).length > 0) &&
+      matches(`${area.name} ${area.routeName ?? ""} ${area.directionLabel ?? area.routeDirection ?? ""} ${linked.map(stationText).join(" ")}`)
+    );
+  });
   const restOnly = filters.missingRoute || filters.facilities.length > 0 || filters.lounge !== "all";
-  const unmatchedStations = restOnly ? [] : filterByGeoScope(
-    filterStations(merged.unmatchedStations, "", stationServices).filter(station =>
+  const visibleStations = restOnly ? [] : filterByGeoScope(
+    filterStations(merged.stations, "", stationServices).filter(station =>
       (!filters.routeName || (station.routeName !== null && station.routeName !== undefined &&
         canonicalHighwayRouteName(station.routeName) === canonicalHighwayRouteName(filters.routeName))) &&
       (!filters.direction || normalizedDirection(station.direction) === filters.direction) &&
       matches(stationText(station)),
     ), searchScope, position,
   );
-  return {facilities, unmatchedStations};
+  return {facilities, stations: visibleStations};
 }

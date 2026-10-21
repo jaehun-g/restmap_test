@@ -6,14 +6,17 @@ import {hasCoordinates, type RestArea} from "./rest-areas.ts";
 /** EX 주유소를 휴게소 정보에 자동 연결할 수 있는 최대 거리입니다. */
 export const REST_AREA_STATION_MATCH_METERS = 300;
 
-export type FacilityPlace<T extends GasStation = GasStation, A extends RestArea = RestArea> = {
+export type FacilityPlace<A extends RestArea = RestArea> = {
   area: A;
-  stations: T[];
+};
+
+export type FacilityStation<T extends GasStation = GasStation> = T & {
+  linkedRestAreaId: number | null;
 };
 
 export type FacilityPlaces<T extends GasStation = GasStation, A extends RestArea = RestArea> = {
-  facilities: FacilityPlace<T, A>[];
-  unmatchedStations: T[];
+  facilities: FacilityPlace<A>[];
+  stations: FacilityStation<T>[];
 };
 
 export function normalizedFacilityName(value: string): string {
@@ -53,8 +56,8 @@ export function mergeFacilityPlaces<T extends GasStation, A extends RestArea>(
   stations: T[],
 ): FacilityPlaces<T, A> {
   const candidates = stations.filter(station => station.brand === "EX");
-  const facilities = areas.map(area => ({area, stations: [] as T[]}));
-  const linked = new Set<string>();
+  const facilities = areas.map(area => ({area}));
+  const linkedRestAreaBySiteCode = new Map<string, number>();
   for (const station of candidates) {
     const match = facilities
       .flatMap((facility, index) => {
@@ -65,12 +68,26 @@ export function mergeFacilityPlaces<T extends GasStation, A extends RestArea>(
       })
       .sort((left, right) => left.distance - right.distance || left.index - right.index)[0];
     if (match) {
-      facilities[match.index].stations.push(station);
-      linked.add(station.siteCode);
+      linkedRestAreaBySiteCode.set(station.siteCode, facilities[match.index].area.id);
     }
   }
-  facilities.forEach(facility =>
-    facility.stations.sort((left, right) => left.siteCode.localeCompare(right.siteCode)),
+  const linkedStations = candidates
+    .map(station => ({
+      ...station,
+      linkedRestAreaId: linkedRestAreaBySiteCode.get(station.siteCode) ?? null,
+    }))
+    .sort((left, right) => left.siteCode.localeCompare(right.siteCode));
+  return {facilities, stations: linkedStations};
+}
+
+export function linkedStationsByArea<T extends GasStation, A extends RestArea>(
+  facilities: FacilityPlace<A>[],
+  stations: FacilityStation<T>[],
+): Map<number, T[]> {
+  return new Map(
+    facilities.map(({area}) => [
+      area.id,
+      stations.filter(station => station.linkedRestAreaId === area.id),
+    ]),
   );
-  return {facilities, unmatchedStations: candidates.filter(station => !linked.has(station.siteCode))};
 }

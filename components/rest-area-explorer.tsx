@@ -12,6 +12,7 @@ import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/
 import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
+import {linkedStationsByArea} from "@/lib/facility-places";
 import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
@@ -29,7 +30,7 @@ export default function MobileExplorer() {
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
-  const [placeView, setPlaceView] = useState<PlaceView>("rest");
+  const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
     stationQueryString(filters.routeName, location.scope, "ex"),
@@ -109,10 +110,10 @@ export default function MobileExplorer() {
     [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position],
   );
   const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
-  const unmatchedStations = mergedFacilities.unmatchedStations;
+  const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => new Map(mergedFacilities.facilities.map(({area, stations}) => [area.id, stations])),
-    [mergedFacilities],
+    () => linkedStationsByArea(mergedFacilities.facilities, mergedFacilities.stations),
+    [mergedFacilities.facilities, mergedFacilities.stations],
   );
   const selectedDirectionLabel = useMemo(
     () =>
@@ -121,7 +122,10 @@ export default function MobileExplorer() {
     [areas, filters.routeName, filters.direction],
   );
   const listPlaces = useMemo(() => {
-    const places = [...visibleAreas.map(restPlace), ...unmatchedStations.map(stationPlace)];
+    const places = [
+      ...(placeView === "ex" ? [] : visibleAreas.map(restPlace)),
+      ...(placeView === "rest" ? [] : stationResults.map(stationPlace)),
+    ];
     if (location.position)
       places.sort((left, right) => {
         const a = areaDistance(left.record, location.position) ?? Infinity,
@@ -129,9 +133,9 @@ export default function MobileExplorer() {
         return a === b ? left.key.localeCompare(right.key) : a - b;
       });
     return places;
-  }, [visibleAreas, unmatchedStations, location.position]);
+  }, [visibleAreas, stationResults, location.position, placeView]);
   const selected = visibleAreas.find(area => area.id === selectedId);
-  const selectedStation = unmatchedStations.find(station => stationKey(station) === selectedStationId);
+  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
@@ -218,7 +222,7 @@ export default function MobileExplorer() {
     setSelectedId(null);
     setSelectedStationId(null);
     setStationFilters([]);
-    setPlaceView("rest");
+    setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
     setFilters(current => ({...current, routeName: null, direction: null}));
@@ -320,8 +324,8 @@ export default function MobileExplorer() {
       <div className="mobile-content flex-1 min-h-0 flex flex-col relative">
         <div className="mobile-map absolute inset-[0]">
           <KakaoMap
-            areas={visibleAreas}
-            stations={unmatchedStations}
+            areas={placeView === "ex" ? [] : visibleAreas}
+            stations={placeView === "rest" ? [] : stationResults}
             linkedStationsByRestId={linkedStationsByRestId}
             selectedDirection={selectedDirectionLabel}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}

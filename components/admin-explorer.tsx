@@ -35,6 +35,7 @@ import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
+import {linkedStationsByArea} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
@@ -43,7 +44,7 @@ export default function AdminExplorer() {
   const search = useSearchQuery(view.requestFit);
   const auth = useAdminSession();
   const [filters, setFilters] = useState(initialFilters);
-  const [placeView, setPlaceView] = useState<PlaceView>("rest");
+  const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
     stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"),
@@ -87,10 +88,10 @@ export default function AdminExplorer() {
   );
   const selected = results.find(area => area.id === selectedId);
   const visibleAreas = results;
-  const stationResults = mergedFacilities.unmatchedStations;
+  const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => new Map(mergedFacilities.facilities.map(({area, stations}) => [area.id, stations])),
-    [mergedFacilities],
+    () => linkedStationsByArea(mergedFacilities.facilities, mergedFacilities.stations),
+    [mergedFacilities.facilities, mergedFacilities.stations],
   );
   const selectedDirectionLabel = useMemo(
     () =>
@@ -234,8 +235,9 @@ export default function AdminExplorer() {
     window.addEventListener("beforeunload", beforeLeave);
     return () => window.removeEventListener("beforeunload", beforeLeave);
   }, [dirty]);
-  const mapped =
-    visibleAreas.filter(hasCoordinates).length + stationResults.filter(hasCoordinates).length;
+  const mapAreas = placeView === "ex" ? [] : visibleAreas;
+  const mapStations = placeView === "rest" ? [] : stationResults;
+  const mapped = mapAreas.filter(hasCoordinates).length + mapStations.filter(hasCoordinates).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
     setDirection(next);
@@ -253,7 +255,7 @@ export default function AdminExplorer() {
     search.clear(false);
     setFilters(initialFilters());
     setStationFilters([]);
-    setPlaceView("rest");
+    setPlaceView("all");
     setSelectedStationId(null);
     view.preserveView();
   };
@@ -370,7 +372,7 @@ export default function AdminExplorer() {
         search={search}
         onReset={reset}
         disabled={anyEditing}
-        includeStations={placeView === "ex"}
+        includeStations={placeView !== "rest"}
         hideRestFilters={placeView === "ex"}
         stationFilters={stationFilters}
         stationServiceOptions={placeView === "ex" ? ["lpg"] : undefined}
@@ -404,7 +406,7 @@ export default function AdminExplorer() {
       )}
       <div className="admin-workspace grid grid-cols-[minmax(340px,_30%)_minmax(640px,_1fr)] gap-[16px] flex-1 min-h-0">
         <section className="admin-table-panel" aria-labelledby="table-heading">
-          {placeView === "rest" && (
+          {placeView !== "ex" && (
             <AdminRestAreaTable
               rows={sorted}
               selectedId={selectedId}
@@ -419,7 +421,7 @@ export default function AdminExplorer() {
               onReset={reset}
             />
           )}
-          {placeView === "ex" && (
+          {placeView !== "rest" && (
             <GasStationTable
               rows={stationResults}
               selectedId={selectedStationId}
@@ -457,8 +459,8 @@ export default function AdminExplorer() {
           </div>
           <div className="admin-map h-full min-h-0">
             <KakaoMap
-              areas={visibleAreas}
-              stations={stationResults}
+              areas={mapAreas}
+              stations={mapStations}
               linkedStationsByRestId={linkedStationsByRestId}
               selectedDirection={selectedDirectionLabel}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
