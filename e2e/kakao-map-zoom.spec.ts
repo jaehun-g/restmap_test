@@ -296,11 +296,10 @@ test("mobile rest-area details show the linked food menu and its source date", a
   expect((await (await areasResponse).json()).items).toHaveLength(2);
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markers.length)).toBeGreaterThan(0);
   await page.evaluate(() => window.__kakaoMapMock.markers[0].click());
-  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.some(content => content.includes("E2E signature udon")))).toBe(true);
-  const mapCardText = await page.evaluate(() => window.__kakaoMapMock.overlayContents.find(content => content.includes("E2E signature udon")) ?? "");
-  expect(mapCardText).toContain("9,500");
-  expect(mapCardText).toContain("\uCD94\uCC9C");
-  expect(mapCardText).toContain("\uC778\uAE30");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.length)).toBeGreaterThan(0);
+  const mapCardText = await page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1) ?? "");
+  expect(mapCardText).not.toContain("E2E signature udon");
+  expect(mapCardText).not.toContain("9,500");
   await page.locator(".sheet-summary").click();
   const restArea = page.locator(".mobile-area-card").filter({hasText: "E2E"}).first();
   await expect(restArea).toBeVisible();
