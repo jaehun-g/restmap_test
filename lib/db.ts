@@ -31,6 +31,7 @@ import {saveGasStation} from "./gas-station-save";
 import type {StationUpdateRequest} from "./gas-station-validation";
 import {normalizeExGasStations, selectExStationColumns} from "./ex-gas-stations";
 import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-sync";
+import {synchronizeExStationPrices, type ExStationPriceSyncSummary} from "./ex-station-price-sync";
 import {fetchFoodMenus} from "./food-menu-source";
 import {synchronizeFoodMenus, type FoodMenuSyncSummary} from "./food-menu-sync";
 import type {FoodMenuSummary, FoodMenusResponse} from "./food-menus";
@@ -191,6 +192,12 @@ export async function syncExStationStatuses(): Promise<Result<ExStationSyncSumma
   const pool = getPool();
   if (!pool.ok) return pool;
   return synchronizeExStations({pool: pool.value});
+}
+
+export async function syncExStationPrices(): Promise<Result<ExStationPriceSyncSummary>> {
+  const pool = getPool();
+  if (!pool.ok) return pool;
+  return synchronizeExStationPrices({pool: pool.value});
 }
 
 export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMenusResponse>> {

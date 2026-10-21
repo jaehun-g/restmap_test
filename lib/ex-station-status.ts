@@ -214,7 +214,9 @@ export async function fetchExStationStatuses({
     url.searchParams.set("numOfRows", "1000");
     url.searchParams.set("pageNo", String(pageNo));
     try {
-      const response = await fetcher(url.toString(), {method: "GET", cache: "no-store"});
+      const response = await fetcher(url.toString(), {
+        method: "GET", cache: "no-store", signal: AbortSignal.timeout(20_000),
+      });
       if (!response.ok)
         return fail("EX_STATION_REQUEST_FAILED", "한국도로공사 주유소 현황 요청에 실패했습니다.");
       let payload: unknown;
