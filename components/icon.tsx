@@ -61,6 +61,20 @@ const paths = {
       <path d="M12 11v6M12 7v.5" />
     </>
   ),
+  fuel: (
+    <>
+      <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M3 21h14M7 7h6v5H7z" />
+      <path d="M16 8h2l2 2v7a2 2 0 0 1-4 0v-4" />
+    </>
+  ),
+  bolt: <path d="m13 2-9 12h7l-1 8 10-13h-7z" />,
+  restroom: (
+    <>
+      <circle cx="8" cy="5" r="2" />
+      <circle cx="17" cy="5" r="2" />
+      <path d="M5 11h6l-1 4H8l-1 6M14 11h6l2 8h-4l-1-5-1 7" />
+    </>
+  ),
   layers: (
     <>
       <path d="m12 3 10 6-10 6L2 9l10-6ZM2 13l10 6 10-6M2 17l10 6 10-6" />
