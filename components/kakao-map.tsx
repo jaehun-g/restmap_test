@@ -92,9 +92,21 @@ export default function KakaoMap({
   const [prevPlaces, setPrevPlaces] = useState(places);
   const [committedPlaces, setCommittedPlaces] = useState(places);
 
-  if (!stationsLoading && places !== prevPlaces) {
-    setPrevPlaces(places);
-    setCommittedPlaces(places);
+  const radius = mobileLocation?.scope.kind === "radius" ? mobileLocation.scope.radiusMeters : null;
+  const [prevRadius, setPrevRadius] = useState(radius);
+
+  // 줌인(반경 축소) 시: 이미 이전 넓은 반경의 주유소 데이터가 메모리에 있으므로 서버 응답을 기다리지 않고 즉시 반영하여 반경 밖 마커가 남거나 쪼개지는 현상을 방지한다.
+  // 줌아웃(반경 확대) 시: 새 영역의 주유소가 서버에서 올 때까지 stationsLoading 동안 대기하여 단일 핀 중간 노출을 방지한다.
+  const isZoomingIn = radius !== null && prevRadius !== null && radius < prevRadius;
+
+  if (places !== prevPlaces) {
+    if (!stationsLoading || isZoomingIn) {
+      setPrevPlaces(places);
+      setCommittedPlaces(places);
+      setPrevRadius(radius);
+    }
+  } else if (radius !== prevRadius && (!stationsLoading || isZoomingIn)) {
+    setPrevRadius(radius);
   }
 
   const markerSignature = useMemo(() => markerLayerSignature(committedPlaces), [committedPlaces]);
