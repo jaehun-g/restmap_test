@@ -425,6 +425,16 @@ export default function KakaoMap({
     layer.current?.adjustCard();
   }, [map, viewportVersion]);
   useEffect(() => {
+    if (!map || !fullscreen) return;
+    const timer = window.setTimeout(() => {
+      map.relayout();
+      if (map.getLevel() >= 10 || selectedKey === null) {
+        layer.current?.fit();
+      }
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [map, fullscreen, selectedKey]);
+  useEffect(() => {
     if (selectedKey === null) return;
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
