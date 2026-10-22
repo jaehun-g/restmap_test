@@ -11,7 +11,7 @@ import {
   selectKakaoKeywordPlace,
 } from "./kakao-local.ts";
 import type {Result} from "./rest-areas.ts";
-import {verifiedStationLocations} from "./verified-rest-area-stations.ts";
+import {verifiedStationLocations, verifiedStationCoordinates} from "./verified-rest-area-stations.ts";
 
 type CachedStation = {
   sourceKey: string;
@@ -148,6 +148,23 @@ async function resolveStation(
       kakaoAddressType: "ROAD_ADDR",
       kakaoParcelAddressName: verified.parcelAddress,
       kakaoRoadAddressName: verified.roadAddress,
+      geocodeStatus: "SUCCESS",
+      geocodeErrorCode: null,
+      geocodedAt: dependencies.now(),
+    },
+    geocoded: false,
+    reused: true,
+    unresolved: false,
+  };
+  const coordinates = verifiedStationCoordinates.find(item => item.sourceKey === station.sourceKey);
+  if (coordinates) return {
+    resolved: {
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      kakaoAddressName: previous?.kakaoAddressName ?? station.location,
+      kakaoAddressType: previous?.kakaoAddressType ?? null,
+      kakaoParcelAddressName: previous?.kakaoParcelAddressName ?? null,
+      kakaoRoadAddressName: previous?.kakaoRoadAddressName ?? null,
       geocodeStatus: "SUCCESS",
       geocodeErrorCode: null,
       geocodedAt: dependencies.now(),

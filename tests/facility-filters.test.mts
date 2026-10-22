@@ -61,3 +61,18 @@ test("no-result searches clear the layer and clearing the query restores every e
   assert.equal(result.facilities.length, 2);
   assert.equal(result.stations.length, 3);
 });
+
+test("이름의 방향으로 연결한 주유소는 해당 휴게소 방향 필터에서도 유지한다", () => {
+  const fallback = stations.map(station => station.siteCode === "linked" ? {...station, direction: "통영"} : station);
+  const result = filterFacilityPlaces(areas, fallback, {
+    ...options(), filters: {...initialFilters(), routeName: "경부선", direction: "부산"},
+  });
+  assert.deepEqual(result.facilities.map(({area}) => area.id), [1]);
+  assert.deepEqual(result.stations.map(station => station.siteCode), ["linked"]);
+  assert.equal(result.stations[0].direction, "통영", "원천 방향 필드는 덮어쓰지 않는다");
+  const otherDirection = filterFacilityPlaces(areas, fallback, {
+    ...options(), filters: {...initialFilters(), routeName: "경부선", direction: "통영"},
+  });
+  assert.equal(otherDirection.facilities.length, 0);
+  assert.equal(otherDirection.stations.length, 0, "원천 방향으로 다른 방향에 재등장하지 않는다");
+});

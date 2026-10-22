@@ -21,6 +21,14 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
 ): FacilityPlaces<T, A> {
   const {filters, query, stationServices, scope, position} = options;
   const linkedByArea = linkedStationsByArea(merged.facilities, merged.stations);
+  const areaById = new Map(areas.map(area => [area.id, area]));
+  const matchesStationDirection = (station: FacilityPlaces<T, A>["stations"][number]) => {
+    if (!filters.direction) return true;
+    const area = station.linkedRestAreaId === null ? undefined : areaById.get(station.linkedRestAreaId);
+    const linkedDirection = area ? normalizedDirection(area.directionLabel ?? area.routeDirection) : null;
+    if (linkedDirection !== null && !isBidirectionalDirection(linkedDirection)) return linkedDirection === filters.direction;
+    return isBidirectionalDirection(station.direction) || normalizedDirection(station.direction) === filters.direction;
+  };
   const searchScope = filters.routeName ? {kind: "all" as const} : scope;
   const eligible = new Set(filterByGeoScope(filterRestAreas(areas, filters, ""), searchScope, position).map(area => area.id));
   const terms = query.trim().toLocaleLowerCase("ko-KR").split(/\s+/).filter(Boolean);
@@ -43,7 +51,7 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     filterStations(merged.stations, "", stationServices).filter(station =>
       (!filters.routeName || (station.routeName !== null && station.routeName !== undefined &&
         canonicalHighwayRouteName(station.routeName) === canonicalHighwayRouteName(filters.routeName))) &&
-      (!filters.direction || isBidirectionalDirection(station.direction) || normalizedDirection(station.direction) === filters.direction) &&
+      matchesStationDirection(station) &&
       matches(stationText(station)),
     ), searchScope, position,
   );

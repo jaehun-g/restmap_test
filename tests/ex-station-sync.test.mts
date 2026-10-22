@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {synchronizeExStations, type ExStationSyncDependencies} from "../lib/ex-station-sync.ts";
 import type {ExStationStatus} from "../lib/ex-station-status.ts";
-import {verifiedStationLocations} from "../lib/verified-rest-area-stations.ts";
+import {verifiedStationLocations, verifiedStationCoordinates} from "../lib/verified-rest-area-stations.ts";
 
 const station = (sourceKey: string, location: string | null = "서울시 도로 1"): ExStationStatus => ({
   sourceKey,
@@ -36,6 +36,26 @@ test("검증 좌표·주소는 원천 주소와 캐시가 바뀌어도 유지하
   verifiedStationLocations.forEach((item, index) => {
     assert.deepEqual(writes[index].slice(13, 19), [item.latitude, item.longitude, item.roadAddress, "ROAD_ADDR", item.parcelAddress, item.roadAddress]);
     assert.equal(writes[index][7], "잘못된 새 원천 주소");
+    assert.equal(writes[index][19], "SUCCESS");
+  });
+});
+
+test("거리 보정 좌표는 캐시·원천 주소 변경이나 캐시 누락에도 유지한다", async () => {
+  const {pool, writes} = fakePool({cached: verifiedStationCoordinates.slice(1).map(item => ({
+    source_key: item.sourceKey, source_location: "이전 주소", latitude: 35, longitude: 128,
+    kakao_address_name: "기존 주소", kakao_road_address_name: "기존 도로명주소", geocode_status: "SUCCESS",
+  }))});
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: verifiedStationCoordinates.map(item => station(item.sourceKey, "새 원천 주소"))}),
+    geocodeAddress: async () => {throw new Error("보정 좌표 재지오코딩 금지");},
+  });
+  assert.ok(result.ok);
+  assert.equal(writes.length, verifiedStationCoordinates.length);
+  verifiedStationCoordinates.forEach((item, index) => {
+    assert.deepEqual(writes[index].slice(13, 15), [item.latitude, item.longitude]);
+    assert.equal(writes[index][15], index ? "기존 주소" : "새 원천 주소");
+    assert.equal(writes[index][18], index ? "기존 도로명주소" : null);
     assert.equal(writes[index][19], "SUCCESS");
   });
 });

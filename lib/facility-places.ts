@@ -22,7 +22,7 @@ export type FacilityPlaces<T extends GasStation = GasStation, A extends RestArea
 
 export function normalizedFacilityName(value: string): string {
   return value
-    .replace(/\([^)]*\)/g, "")
+    .replace(/[（(][^）)]*[）)]/g, "")
     .replace(/(?:휴게소|주유소|충전소)/g, "")
     .replace(/\s+/g, "")
     .trim()
@@ -44,7 +44,13 @@ function areaDirection(area: RestArea) {
   return normalizedDirection(area.directionLabel ?? area.routeDirection);
 }
 
-function canMatch(area: RestArea, station: GasStation): boolean {
+export function stationNameDirections(name: string): string[] {
+  return [...name.matchAll(/[（(]([^()（）]*)[）)]/g)]
+    .map(match => normalizedDirection(match[1]))
+    .filter((value): value is string => value !== null);
+}
+
+function canMatch(area: RestArea, station: GasStation, allowNameDirection = false): boolean {
   if (station.brand !== "EX" || !area.routeName || !station.routeName) return false;
   if (canonicalHighwayRouteName(area.routeName) !== canonicalHighwayRouteName(station.routeName))
     return false;
@@ -55,8 +61,10 @@ function canMatch(area: RestArea, station: GasStation): boolean {
   if (normalizedFacilityName(area.name) !== normalizedFacilityName(station.name)) return false;
   const restDirection = areaDirection(area);
   const stationDirection = normalizedDirection(station.direction);
-  return restDirection !== null && stationDirection !== null &&
-    (isBidirectionalDirection(restDirection) || restDirection === stationDirection);
+  if (restDirection !== null && stationDirection !== null &&
+    (isBidirectionalDirection(restDirection) || restDirection === stationDirection)) return true;
+  return allowNameDirection && restDirection !== null && !isBidirectionalDirection(restDirection) &&
+    stationNameDirections(station.name).includes(restDirection);
 }
 
 /**
@@ -71,14 +79,16 @@ export function mergeFacilityPlaces<T extends GasStation, A extends RestArea>(
   const facilities = areas.map(area => ({area}));
   const linkedRestAreaBySiteCode = new Map<string, number>();
   for (const station of candidates) {
-    const match = facilities
+    const findMatch = (allowNameDirection: boolean) => facilities
       .flatMap((facility, index) => {
         const {area} = facility;
-        if (!canMatch(area, station) || !hasCoordinates(area) || !hasCoordinates(station)) return [];
+        if (!canMatch(area, station, allowNameDirection) || !hasCoordinates(area) || !hasCoordinates(station)) return [];
         const distance = distanceMeters(area, station);
         return distance <= REST_AREA_STATION_MATCH_METERS ? [{index, distance}] : [];
       })
       .sort((left, right) => left.distance - right.distance || left.index - right.index)[0];
+    // 기존 방향 필드·검증된 연결을 우선하고, 후보가 없을 때만 이름의 방향으로 보완한다.
+    const match = findMatch(false) ?? findMatch(true);
     if (match) {
       linkedRestAreaBySiteCode.set(station.siteCode, facilities[match.index].area.id);
     }

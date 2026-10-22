@@ -1,0 +1,341 @@
+{
+  "createdAt": "2026-10-22T05:11:41.470Z",
+  "changes": [
+    {
+      "stationId": 5,
+      "sourceKey": "0010|B00022|부산|AD",
+      "stationName": "옥산(부산)주유소",
+      "restAreaId": 25,
+      "restAreaName": "옥산(부산 방향)",
+      "distance": 301.6661001392317,
+      "before": {
+        "latitude": 36.6552728,
+        "longitude": 127.3715107
+      },
+      "after": {
+        "latitude": 36.6577,
+        "longitude": 127.37
+      }
+    },
+    {
+      "stationId": 45,
+      "sourceKey": "0101|B00181|부산|AD",
+      "stationName": "보성녹차(영암)주유소",
+      "restAreaId": 171,
+      "restAreaName": "보성녹차(영암 방향)",
+      "distance": 4927.22408968883,
+      "before": {
+        "latitude": 34.8136656,
+        "longitude": 127.1275901
+      },
+      "after": {
+        "latitude": 34.8073,
+        "longitude": 127.181
+      }
+    },
+    {
+      "stationId": 49,
+      "sourceKey": "0121|B00142|무안|AD",
+      "stationName": "함평나비(무안)주유소",
+      "restAreaId": 139,
+      "restAreaName": "함평나비(무안 방향)",
+      "distance": 967.6278307464784,
+      "before": {
+        "latitude": 35.0301049,
+        "longitude": 126.5128996
+      },
+      "after": {
+        "latitude": 35.0382,
+        "longitude": 126.509
+      }
+    },
+    {
+      "stationId": 51,
+      "sourceKey": "0122|B00116|대구|AD",
+      "stationName": "거창(대구)주유소",
+      "restAreaId": 62,
+      "restAreaName": "거창(대구 방향)",
+      "distance": 1015.0623601217433,
+      "before": {
+        "latitude": 35.7012948,
+        "longitude": 128.066235
+      },
+      "after": {
+        "latitude": 35.7065,
+        "longitude": 128.057
+      }
+    },
+    {
+      "stationId": 55,
+      "sourceKey": "0122|B00117|무안|AD",
+      "stationName": "거창(광주)주유소",
+      "restAreaId": 63,
+      "restAreaName": "거창(광주 방향)",
+      "distance": 1126.0724715050346,
+      "before": {
+        "latitude": 35.7012948,
+        "longitude": 128.066235
+      },
+      "after": {
+        "latitude": 35.7089,
+        "longitude": 128.058
+      }
+    },
+    {
+      "stationId": 52,
+      "sourceKey": "0122|B00191|대구|AD",
+      "stationName": "강천산(대구)주유소",
+      "restAreaId": 178,
+      "restAreaName": "강천산(대구 방향)",
+      "distance": 4040.4023025841193,
+      "before": {
+        "latitude": 35.3632956,
+        "longitude": 127.1495367
+      },
+      "after": {
+        "latitude": 35.3644,
+        "longitude": 127.105
+      }
+    },
+    {
+      "stationId": 56,
+      "sourceKey": "0122|B00195|무안|AD",
+      "stationName": "강천산(광주)주유소",
+      "restAreaId": 179,
+      "restAreaName": "강천산(광주 방향)",
+      "distance": 4047.343245665619,
+      "before": {
+        "latitude": 35.3632956,
+        "longitude": 127.1495367
+      },
+      "after": {
+        "latitude": 35.3657,
+        "longitude": 127.105
+      }
+    },
+    {
+      "stationId": 53,
+      "sourceKey": "0122|B00198|대구|AD",
+      "stationName": "논공(대구)주유소",
+      "restAreaId": 173,
+      "restAreaName": "논공(대구 방향)",
+      "distance": 2971.9057186603695,
+      "before": {
+        "latitude": 35.7911929,
+        "longitude": 128.4095528
+      },
+      "after": {
+        "latitude": 35.765,
+        "longitude": 128.403
+      }
+    },
+    {
+      "stationId": 57,
+      "sourceKey": "0122|B00199|무안|AD",
+      "stationName": "논공(광주)주유소",
+      "restAreaId": 170,
+      "restAreaName": "논공(광주 방향)",
+      "distance": 2710.88784859946,
+      "before": {
+        "latitude": 35.7911929,
+        "longitude": 128.4095528
+      },
+      "after": {
+        "latitude": 35.7674,
+        "longitude": 128.403
+      }
+    },
+    {
+      "stationId": 58,
+      "sourceKey": "0140|B00243|밀양|AD",
+      "stationName": "밀양영남루(울산)주유소",
+      "restAreaId": 209,
+      "restAreaName": "밀양영남루(울산 방향)",
+      "distance": 382.80385280752233,
+      "before": {
+        "latitude": 35.4894755,
+        "longitude": 128.6644334
+      },
+      "after": {
+        "latitude": 35.4929,
+        "longitude": 128.664
+      }
+    },
+    {
+      "stationId": 76,
+      "sourceKey": "0150|B00097|시흥|AD",
+      "stationName": "군산(서울)주유소",
+      "restAreaId": 101,
+      "restAreaName": "군산(서울 방향)",
+      "distance": 372.88168116855275,
+      "before": {
+        "latitude": 36.0192002,
+        "longitude": 126.8021164
+      },
+      "after": {
+        "latitude": 36.0188,
+        "longitude": 126.798
+      }
+    },
+    {
+      "stationId": 79,
+      "sourceKey": "0150|B00128|시흥|AD",
+      "stationName": "홍성(서울)주유소",
+      "restAreaId": 121,
+      "restAreaName": "홍성(서울 방향)",
+      "distance": 827.7510060311386,
+      "before": {
+        "latitude": 36.558109,
+        "longitude": 126.5760528
+      },
+      "after": {
+        "latitude": 36.5524,
+        "longitude": 126.582
+      }
+    },
+    {
+      "stationId": 69,
+      "sourceKey": "0150|B00129|목포|AD",
+      "stationName": "홍성(목포)주유소",
+      "restAreaId": 122,
+      "restAreaName": "홍성(목포 방향)",
+      "distance": 706.7889252040341,
+      "before": {
+        "latitude": 36.558109,
+        "longitude": 126.5760528
+      },
+      "after": {
+        "latitude": 36.5526,
+        "longitude": 126.58
+      }
+    },
+    {
+      "stationId": 95,
+      "sourceKey": "0251|B00038|순천|AD",
+      "stationName": "익산미륵사지(순천)주유소",
+      "restAreaId": 38,
+      "restAreaName": "익산미륵사지(순천 방향)",
+      "distance": 869.2873432040818,
+      "before": {
+        "latitude": 36.0443274,
+        "longitude": 127.1100971
+      },
+      "after": {
+        "latitude": 36.0486,
+        "longitude": 127.102
+      }
+    },
+    {
+      "stationId": 97,
+      "sourceKey": "0251|B00046|순천|AD",
+      "stationName": "곡성(순천)주유소",
+      "restAreaId": 54,
+      "restAreaName": "곡성(순천 방향)",
+      "distance": 1973.8746064460079,
+      "before": {
+        "latitude": 35.2556403,
+        "longitude": 127.1724551
+      },
+      "after": {
+        "latitude": 35.2585,
+        "longitude": 127.151
+      }
+    },
+    {
+      "stationId": 98,
+      "sourceKey": "0251|B00073|순천|AD",
+      "stationName": "주암(순천)주유소",
+      "restAreaId": 47,
+      "restAreaName": "주암(순천 방향)",
+      "distance": 836.3688749294498,
+      "before": {
+        "latitude": 35.0825638,
+        "longitude": 127.2688996
+      },
+      "after": {
+        "latitude": 35.0762,
+        "longitude": 127.264
+      }
+    },
+    {
+      "stationId": 1288,
+      "sourceKey": "0251|B00169|순천|AD",
+      "stationName": "이서(순천)주유소",
+      "restAreaId": 161,
+      "restAreaName": "이서(순천 방향)",
+      "distance": 188675.95325636188,
+      "before": {
+        "latitude": 37.4991171,
+        "longitude": 127.1153788
+      },
+      "after": {
+        "latitude": 35.8039,
+        "longitude": 127.024
+      }
+    },
+    {
+      "stationId": 1290,
+      "sourceKey": "0270|B00175|광양|AD",
+      "stationName": "황전(순천)주유소",
+      "restAreaId": 165,
+      "restAreaName": "황전(순천 방향)",
+      "distance": 510.90263924007695,
+      "before": {
+        "latitude": 35.1534634,
+        "longitude": 127.4546543
+      },
+      "after": {
+        "latitude": 35.1489,
+        "longitude": 127.454
+      }
+    },
+    {
+      "stationId": 1306,
+      "sourceKey": "0300|B00152|청원|AD",
+      "stationName": "예산(대전)주유소",
+      "restAreaId": 152,
+      "restAreaName": "예산(대전 방향)",
+      "distance": 484.91405454972573,
+      "before": {
+        "latitude": 36.6206463,
+        "longitude": 126.8441087
+      },
+      "after": {
+        "latitude": 36.6235,
+        "longitude": 126.84
+      }
+    },
+    {
+      "stationId": 1330,
+      "sourceKey": "0400|B00185|제천|AD",
+      "stationName": "금왕(제천)주유소",
+      "restAreaId": 177,
+      "restAreaName": "금왕(제천 방향)",
+      "distance": 683.7093837812242,
+      "before": {
+        "latitude": 36.9753173,
+        "longitude": 127.5885073
+      },
+      "after": {
+        "latitude": 36.9695,
+        "longitude": 127.591
+      }
+    },
+    {
+      "stationId": 1370,
+      "sourceKey": "0550|B00054|부산|AD",
+      "stationName": "안동(부산)주유소",
+      "restAreaId": 66,
+      "restAreaName": "안동(부산 방향)",
+      "distance": 1530.9132207868236,
+      "before": {
+        "latitude": 36.5526181,
+        "longitude": 128.6591236
+      },
+      "after": {
+        "latitude": 36.5532,
+        "longitude": 128.642
+      }
+    }
+  ]
+}

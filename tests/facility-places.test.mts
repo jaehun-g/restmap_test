@@ -48,7 +48,7 @@ test("same route, service area, direction, and a 300m coordinate match become on
 
 test("opposite direction, a route mismatch, or a far coordinate never auto-merges", () => {
   const stations = [
-    station({siteCode: "opposite", direction: "부산"}),
+    station({siteCode: "opposite", name: "죽전(부산)주유소", direction: "부산"}),
     station({siteCode: "route", routeName: "중부선"}),
     station({siteCode: "far", latitude: 37.34}),
   ];
@@ -64,6 +64,45 @@ test("one EX station is assigned to only the nearest duplicate rest-area record"
     [station({latitude: 37.3307})],
   );
   assert.deepEqual(result.stations.map(station => station.linkedRestAreaId), [2]);
+});
+
+test("방향 필드가 다르거나 비어 있어도 이름의 방향이 맞으면 연결한다", () => {
+  for (const direction of ["시흥", null]) {
+    for (const name of ["죽전(서울)주유소", "죽전（ 서울 방향 ）주유소"]) {
+      const result = mergeFacilityPlaces([area()], [station({direction, name})]);
+      assert.equal(result.stations[0].linkedRestAreaId, 1);
+    }
+  }
+});
+
+test("이름 방향 후보가 더 가까워도 방향 필드로 매칭되는 기존 후보를 우선한다", () => {
+  const result = mergeFacilityPlaces([
+    area({id: 1, latitude: 37.331}),
+    area({id: 2, name: "죽전(부산 방향)", directionLabel: "부산 방향", latitude: 37.3305}),
+  ], [station({name: "죽전(부산)주유소", direction: "서울"})]);
+  assert.equal(result.stations[0].linkedRestAreaId, 1);
+});
+
+test("이름 방향 보조 매칭에서도 명칭·노선·거리·좌표 조건을 유지한다", () => {
+  for (const candidate of [
+    station({direction: "시흥", name: "다른(서울)주유소"}),
+    station({direction: "시흥", routeName: "중부선"}),
+    station({direction: "시흥", latitude: 38}),
+    station({direction: "시흥", longitude: null}),
+    station({direction: "시흥", name: "죽전주유소"}),
+  ]) assert.equal(mergeFacilityPlaces([area()], [candidate]).stations[0].linkedRestAreaId, null);
+});
+
+test("이천(남이)는 이천 휴게소에 연결하고 마장은 마장복합(상) 연결을 유지한다", () => {
+  const result = mergeFacilityPlaces([
+    area({id: 175, name: "마장(양방향)", routeName: "중부선", directionLabel: "양방향", latitude: 37.2638, longitude: 127.407}),
+    area({id: 8, name: "이천(남이 방향)", routeName: "중부선", directionLabel: "남이 방향", latitude: 37.2646, longitude: 127.404}),
+  ], [
+    station({id: 1324, siteCode: "0352|B00120|통영|AD", name: "이천(남이)주유소", routeName: "중부선", direction: "통영", latitude: 37.2646114, longitude: 127.4038441}),
+    station({id: 1328, siteCode: "0352|B00187|하남|SK", name: "마장복합(상)주유소", routeName: "중부선", direction: "하남", latitude: 37.2635349, longitude: 127.4075671}),
+  ]);
+  assert.equal(result.stations.find(item => item.id === 1324)?.linkedRestAreaId, 8);
+  assert.equal(result.stations.find(item => item.id === 1328)?.linkedRestAreaId, 175);
 });
 
 test("양방향 휴게소는 양쪽 방향 주유소를 연결하되 이름·노선·거리 검증을 유지한다", () => {
