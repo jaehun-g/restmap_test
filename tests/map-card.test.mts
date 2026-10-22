@@ -4,6 +4,7 @@ import {createMapCard} from "../lib/map-card.ts";
 import {normalizeRestAreas, type RestArea} from "../lib/rest-areas.ts";
 import {createStationMapCard} from "../lib/station-map-card.ts";
 import {normalizeGasStations} from "../lib/gas-stations.ts";
+import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
 import {CardElement, installCardDOM} from "./helpers/card-dom.mts";
 
 class ElementDouble {
@@ -58,6 +59,18 @@ function area(lounge: boolean | null, route: string | null): RestArea {
   if (!normalized.ok) assert.fail(normalized.error.message);
   return normalized.value[0];
 }
+
+test("휴게소 요약은 방향별 주유소의 유가 범위와 일부 가격 미확인을 표시한다", t => {
+  installDocument(t);
+  const stations = normalizeExGasStations([
+    {id: 1, source_key: "a", service_area_name: "서울 주유소", gasoline_price: 1650, diesel_price: 1520},
+    {id: 2, source_key: "b", service_area_name: "부산 주유소", gasoline_price: 1680, diesel_price: null},
+  ]);
+  assert.ok(stations.ok);
+  const card = createMapCard(area(true, "경부선"), "mobile", () => {}, () => {}, stations.value) as unknown as ElementDouble;
+  assert.ok(card.all().some(element => element.textContent === "휘발유 1,650~1,680원/L"));
+  assert.ok(card.all().some(element => element.textContent === "경유 1,520원/L · 일부 가격 미확인"));
+});
 
 test("map card keeps database strings as literal text and links its close/detail actions", t => {
   installDocument(t);

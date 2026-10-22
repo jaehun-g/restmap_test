@@ -35,7 +35,7 @@ import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
-import {linkedStationsByArea} from "@/lib/facility-places";
+import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
@@ -90,8 +90,8 @@ export default function AdminExplorer() {
   const visibleAreas = results;
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => linkedStationsByArea(mergedFacilities.facilities, mergedFacilities.stations),
-    [mergedFacilities.facilities, mergedFacilities.stations],
+    () => linkedStationsByArea(mergedFacilities.facilities, mergeFacilityPlaces(areas, gas.stations).stations),
+    [mergedFacilities.facilities, areas, gas.stations],
   );
   const selectedDirectionLabel = useMemo(
     () =>
@@ -99,7 +99,8 @@ export default function AdminExplorer() {
         ?.label ?? filters.direction,
     [areas, filters.routeName, filters.direction],
   );
-  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
+  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
+    [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
   const mayLeave = useCallback(
     () =>
       !editState.current.saving &&
@@ -237,6 +238,8 @@ export default function AdminExplorer() {
   }, [dirty]);
   const mapAreas = placeView === "ex" ? [] : visibleAreas;
   const mapStations = placeView === "rest" ? [] : stationResults;
+  const selectedMapStations = selectedStation && !mapStations.some(station => stationKey(station) === stationKey(selectedStation))
+    ? [...mapStations, selectedStation] : mapStations;
   const mapped = mapAreas.filter(hasCoordinates).length + mapStations.filter(hasCoordinates).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
@@ -460,7 +463,7 @@ export default function AdminExplorer() {
           <div className="admin-map h-full min-h-0">
             <KakaoMap
               areas={mapAreas}
-              stations={mapStations}
+              stations={selectedMapStations}
               linkedStationsByRestId={linkedStationsByRestId}
               selectedDirection={selectedDirectionLabel}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
@@ -599,7 +602,11 @@ export default function AdminExplorer() {
                   </Button>
                 </div>
                 <div className="admin-detail-body min-h-0 flex-1">
-                  <RestAreaDetails area={selected} onClose={close} stations={linkedStationsByRestId.get(selected.id)} />
+                  <RestAreaDetails area={selected} onClose={close} stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => {
+                    if (!mayLeave()) return;
+                    selectStation(stationKey(station));
+                    setDetailModal(false);
+                  }} />
                 </div>
               </>
             ) : (

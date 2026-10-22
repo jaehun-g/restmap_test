@@ -1,11 +1,14 @@
 import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
+import type {GasStation} from "./gas-stations.ts";
+import {restAreaPriceSummary} from "./rest-area-prices.ts";
 
 export function createMapCard(
   area: RestArea,
   audience: "admin" | "mobile",
   onClose: () => void,
   onDetails: () => void,
+  stations: readonly GasStation[] = [],
 ): HTMLElement {
   const card = document.createElement("section");
   card.className = "map-info-card";
@@ -30,6 +33,17 @@ export function createMapCard(
   card.append(heading);
   const body = document.createElement("div");
   body.className = "map-card-body";
+  if (stations.length) {
+    const prices = document.createElement("div");
+    prices.className = "map-card-prices";
+    for (const [fuel, label] of [["gasoline", "휘발유"], ["diesel", "경유"]] as const) {
+      const summary = restAreaPriceSummary(stations, fuel);
+      const line = document.createElement("p");
+      line.textContent = `${label} ${summary.text}${summary.partial ? " · 일부 가격 미확인" : ""}`;
+      prices.append(line);
+    }
+    body.append(prices);
+  }
   const route = routeDescription(area, audience);
   if (route) {
     const text = document.createElement("p");

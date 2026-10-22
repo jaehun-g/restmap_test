@@ -147,6 +147,62 @@ const gasStationResponse = {
   fetchedAt: "2026-10-21T00:00:00.000Z",
 };
 
+for (const audience of ["mobile", "admin"] as const) {
+  test(`${audience} 양방향 휴게소의 유가 범위와 방향별 주유소 지도 이동`, async ({page, context}) => {
+    const pageErrors: Error[] = [];
+    page.on("pageerror", error => pageErrors.push(error));
+    await page.addInitScript({content: installKakaoMapsMock + `
+      window.__testCards = [];
+      const BaseOverlay = window.kakao.maps.CustomOverlay;
+      window.kakao.maps.CustomOverlay = class extends BaseOverlay {
+        setContent(content) {
+          super.setContent(content);
+          if (content instanceof HTMLElement) window.__testCards.push(content);
+        }
+      };
+    `});
+    const area = {...restAreaResponse.items[0], name: "E2E(양방향)", routeName: "경부선", directionLabel: "양방향", routeDirection: "양방향"};
+    const stations = ["서울", "부산"].map((direction, index) => ({
+      ...gasStationResponse.items[0], id: index + 1, siteCode: `direction-${index}`,
+      name: `E2E(${direction})주유소`, direction, routeName: "경부선",
+      latitude: 37.4905 + index * 0.0005,
+      prices: {gasoline: 1650 + index * 30, diesel: 1520 + index * 20, lpg: null},
+      priceUpdatedAt: "2026-10-22T00:00:00Z",
+    }));
+    await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
+    await page.route("**/api/gas-stations**", route => route.fulfill({json: {...gasStationResponse, items: stations}}));
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({latitude: 37.49, longitude: 127});
+    await page.setViewportSize(audience === "mobile" ? {width: 390, height: 844} : {width: 1440, height: 1000});
+    await page.goto(`/${audience}`);
+    await waitForMarkerLayerToSettle(page);
+    if (audience === "mobile") {
+      // 휴게소 보기에서도 연결 주유소 정보와 지도 이동이 유지되어야 한다.
+      await page.getByRole("button", {name: "휴게소", exact: true}).click();
+      await page.locator(".sheet-summary").click();
+      await page.locator(".mobile-area-card").filter({hasText: area.name}).click();
+    } else {
+      await page.locator("#area-row-1, #rest-area-row-1, tr").filter({hasText: area.name}).last().click();
+      await page.evaluate(() => {
+        const cards = (window as unknown as {__testCards: HTMLElement[]}).__testCards;
+        const card = cards.findLast(card => card.getAttribute("aria-label") === "E2E(양방향) 요약");
+        if (!card?.textContent?.includes("1,650~1,680원/L")) throw new Error("유가 범위 요약 누락");
+        card.querySelector<HTMLButtonElement>(".map-card-details")!.click();
+      });
+    }
+    await expect(page.locator(".detail-overview-prices")).toContainText("1,650~1,680원/L");
+    await expect(page.locator(".detail-overview-prices")).toContainText("1,520~1,540원/L");
+    await page.getByRole("button", {name: "주유소 2곳 · 방향별 가격 확인 →"}).click();
+    await expect(page.locator(".detail-gas-content article")).toHaveCount(2);
+    await expect(page.locator(".detail-gas-content")).toContainText("서울 방향");
+    await expect(page.locator(".detail-gas-content")).toContainText("부산 방향");
+    await page.locator(".detail-gas-content article").filter({hasText: "부산 방향"}).getByRole("button", {name: "지도에서 보기 →"}).click();
+    await expect(page.locator(".detail-gas-content")).not.toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("E2E(부산)주유소");
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 const restAreaResponse = {
   items: [
     {

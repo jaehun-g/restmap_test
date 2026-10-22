@@ -5,6 +5,7 @@ import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton} from "@/components/ui/button";
 import {facilityDefinitions, type RestArea, routeDescription} from "@/lib/rest-areas";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
+import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import FoodMenuSection from "@/components/food-menu-section";
 import Icon from "./icon";
 
@@ -15,21 +16,20 @@ export default function RestAreaDetails({
   onClose,
   audience = "admin",
   stations = [],
+  onStationMap,
 }: {
   area: RestArea;
   onClose: () => void;
   audience?: "admin" | "mobile";
   stations?: GasStation[];
+  onStationMap?: (station: GasStation) => void;
 }) {
   const [tab, setTab] = useState<Tab>("시설");
   const provided = facilityDefinitions.filter(([key]) => area.facilities[key] === true);
   const unavailable = facilityDefinitions.filter(([key]) => area.facilities[key] === false);
   const linkedStations = stations.filter(station => station.brand === "EX");
-  const headlineStation =
-    linkedStations.find(station => stationPriceItems(station).length > 0) ?? linkedStations[0];
-  const headlinePrices = headlineStation ? stationPriceItems(headlineStation) : [];
-  const fuelPrice = (key: "gasoline" | "diesel") =>
-    headlinePrices.find(price => price.key === key)?.text.replace("원/L", "/L") ?? "정보 없음";
+  const gasoline = restAreaPriceSummary(linkedStations, "gasoline");
+  const diesel = restAreaPriceSummary(linkedStations, "diesel");
 
   return (
     <section className={sharedClasses.detailPanel} aria-labelledby="detail-title">
@@ -62,13 +62,20 @@ export default function RestAreaDetails({
         <div className="detail-overview-prices">
           <span>
             <small>휘발유</small>
-            <strong>{fuelPrice("gasoline")}</strong>
+            <strong>{gasoline.text}</strong>
+            {gasoline.partial && <small>일부 가격 미확인</small>}
           </span>
           <span>
             <small>경유</small>
-            <strong>{fuelPrice("diesel")}</strong>
+            <strong>{diesel.text}</strong>
+            {diesel.partial && <small>일부 가격 미확인</small>}
           </span>
         </div>
+        {linkedStations.length > 0 && (
+          <button type="button" className="detail-station-link" onClick={() => setTab("주유")}>
+            주유소 {linkedStations.length}곳 · 방향별 가격 확인 →
+          </button>
+        )}
       </div>
 
       <div className="detail-tabs shrink-0" role="tablist" aria-label="휴게소 상세정보">
@@ -143,6 +150,12 @@ export default function RestAreaDetails({
                 return (
                   <article key={station.siteCode} className="station-price-section">
                     <h3>{station.name}</h3>
+                    <p>{station.direction ? `${station.direction.replace(/방향/g, "").trim()} 방향` : "방향 정보 없음"}</p>
+                    {onStationMap && (
+                      <button type="button" className="detail-station-link" onClick={() => onStationMap(station)}>
+                        지도에서 보기 →
+                      </button>
+                    )}
                     {prices.length ? (
                       <dl className="station-fuel-prices">
                         {prices.map(price => (

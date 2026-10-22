@@ -1,6 +1,7 @@
 import {stationNumber, stationText, type GasStationRecord} from "./gas-stations.ts";
 import type {Result} from "./rest-areas.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
+import {verifiedStationDirection} from "./verified-rest-area-stations.ts";
 
 export const selectExStationColumns = `SELECT id, source_key, service_area_name, route_name,
   direction, oil_company, source_location, tel_no, lpg_available, gasoline_price, diesel_price,
@@ -80,7 +81,7 @@ export function normalizeExGasStations(
         const routeName = stationText(row.route_name);
         return routeName === null ? null : canonicalHighwayRouteName(routeName);
       })(),
-      direction: stationText(row.direction),
+      direction: verifiedStationDirection(siteCode) ?? stationText(row.direction),
       oilCompany: stationText(row.oil_company),
       prices: {
         gasoline: price(row.gasoline_price),

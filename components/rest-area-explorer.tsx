@@ -12,7 +12,7 @@ import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/
 import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
-import {linkedStationsByArea} from "@/lib/facility-places";
+import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
@@ -112,8 +112,8 @@ export default function MobileExplorer() {
   const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => linkedStationsByArea(mergedFacilities.facilities, mergedFacilities.stations),
-    [mergedFacilities.facilities, mergedFacilities.stations],
+    () => linkedStationsByArea(mergedFacilities.facilities, mergeFacilityPlaces(areas, gas.stations).stations),
+    [mergedFacilities.facilities, areas, gas.stations],
   );
   const selectedDirectionLabel = useMemo(
     () =>
@@ -135,7 +135,11 @@ export default function MobileExplorer() {
     return places;
   }, [visibleAreas, stationResults, location.position, placeView]);
   const selected = visibleAreas.find(area => area.id === selectedId);
-  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId);
+  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
+    [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
+  const mapStations = placeView === "rest" ? [] : stationResults;
+  const selectedMapStations = selectedStation && !mapStations.some(station => stationKey(station) === stationKey(selectedStation))
+    ? [...mapStations, selectedStation] : mapStations;
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
@@ -325,7 +329,7 @@ export default function MobileExplorer() {
         <div className="mobile-map absolute inset-[0]">
           <KakaoMap
             areas={placeView === "ex" ? [] : visibleAreas}
-            stations={placeView === "rest" ? [] : stationResults}
+            stations={selectedMapStations}
             linkedStationsByRestId={linkedStationsByRestId}
             selectedDirection={selectedDirectionLabel}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
@@ -439,7 +443,7 @@ export default function MobileExplorer() {
                     <Icon name="arrow" size={16} style={{transform: "rotate(180deg)"}} />
                     휴게소 목록
                   </button>
-                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} />
+                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => selectStation(stationKey(station))} />
                 </>
               ) : (
                 <>

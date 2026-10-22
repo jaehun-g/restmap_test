@@ -30,6 +30,21 @@ const row = () => ({
   lpg_price: "999.0",
   source_fetched_at: new Date("2026-10-15T00:00:00Z"),
 });
+
+test("검증된 처인·고삼호수 방향은 원천 코드별로 보완하고 식별자는 보존한다", () => {
+  for (const [sourceKey, direction] of [
+    ["0290|B00244|-|AD", "포천"], ["0290|B00245|-|AD", "세종"],
+    ["0290|B00250|-|AD", "포천"], ["0290|B00251|-|AD", "세종"],
+  ]) {
+    const result = normalizeExGasStations([{...row(), source_key: sourceKey, direction: null}]);
+    assert.ok(result.ok);
+    assert.equal(result.value[0].direction, direction);
+    assert.equal(result.value[0].siteCode, sourceKey);
+  }
+  const unknown = normalizeExGasStations([{...row(), source_key: "unknown", direction: null}]);
+  assert.ok(unknown.ok);
+  assert.equal(unknown.value[0].direction, null);
+});
 function station() {
   const result = normalizeExGasStations([row()]);
   assert.ok(result.ok);

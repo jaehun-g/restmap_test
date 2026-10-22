@@ -170,6 +170,7 @@ export default function KakaoMap({
             audience,
             () => onSelect(null),
             () => onDetails(place.record.id),
+            linkedStationsRef.current?.get(place.record.id),
           ),
     [audience, onSelect, onDetails, onStationSelect, onStationDetails],
   );

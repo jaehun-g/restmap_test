@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {synchronizeExStations, type ExStationSyncDependencies} from "../lib/ex-station-sync.ts";
 import type {ExStationStatus} from "../lib/ex-station-status.ts";
+import {verifiedStationLocations} from "../lib/verified-rest-area-stations.ts";
 
 const station = (sourceKey: string, location: string | null = "서울시 도로 1"): ExStationStatus => ({
   sourceKey,
@@ -17,6 +18,26 @@ const station = (sourceKey: string, location: string | null = "서울시 도로 
   gasolinePrice: 1700,
   dieselPrice: 1600,
   lpgPrice: 1000,
+});
+
+test("검증 좌표·주소는 원천 주소와 캐시가 바뀌어도 유지하며 지오코딩을 호출하지 않는다", async () => {
+  const {pool, writes} = fakePool({cached: verifiedStationLocations.map(item => ({
+    source_key: item.sourceKey, source_location: "이전 원천 주소", latitude: 35, longitude: 128,
+    geocode_status: "SUCCESS", geocoded_at: new Date("2026-10-21T00:00:00Z"),
+  }))});
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: verifiedStationLocations.map(item => station(item.sourceKey, "잘못된 새 원천 주소"))}),
+    geocodeAddress: async () => {throw new Error("검증된 위치는 재지오코딩하면 안 됩니다.");},
+    now: () => new Date("2026-10-22T00:00:00Z"),
+  });
+  assert.ok(result.ok);
+  assert.equal(writes.length, 2);
+  verifiedStationLocations.forEach((item, index) => {
+    assert.deepEqual(writes[index].slice(13, 19), [item.latitude, item.longitude, item.roadAddress, "ROAD_ADDR", item.parcelAddress, item.roadAddress]);
+    assert.equal(writes[index][7], "잘못된 새 원천 주소");
+    assert.equal(writes[index][19], "SUCCESS");
+  });
 });
 
 function fakePool({

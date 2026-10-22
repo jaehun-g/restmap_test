@@ -277,8 +277,10 @@ input[type="checkbox"] {
   line-height: 1.6;
 }
 /* Rest area detail tabs follow the existing blue, rounded-card visual language. */
-.detail-overview { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px 12px; }
-.detail-overview-prices { display: flex; gap: 8px; }
+.detail-overview { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px 12px; }
+.detail-station-link { padding: 7px 0; border: 0; background: transparent; color: var(--blue); font-size: 11px; font-weight: 650; cursor: pointer; }
+.map-card-prices { display: grid; gap: 4px; color: var(--blue); font-size: 12px; }
+.detail-overview-prices { display: flex; flex-wrap: wrap; gap: 8px; }
 .detail-overview-prices > span { display: grid; gap: 1px; min-width: 90px; padding: 7px 10px; border-radius: 8px; background: #f1f7ff; }
 .detail-overview-prices small { color: #718198; font-size: 9px; }
 .detail-overview-prices strong { color: #24589d; font-size: 12px; }

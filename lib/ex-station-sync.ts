@@ -11,6 +11,7 @@ import {
   selectKakaoKeywordPlace,
 } from "./kakao-local.ts";
 import type {Result} from "./rest-areas.ts";
+import {verifiedStationLocations} from "./verified-rest-area-stations.ts";
 
 type CachedStation = {
   sourceKey: string;
@@ -138,6 +139,23 @@ async function resolveStation(
     >
   >,
 ): Promise<{resolved: ResolvedStation; geocoded: boolean; reused: boolean; unresolved: boolean}> {
+  const verified = verifiedStationLocations.find(item => item.sourceKey === station.sourceKey);
+  if (verified) return {
+    resolved: {
+      latitude: verified.latitude,
+      longitude: verified.longitude,
+      kakaoAddressName: verified.roadAddress,
+      kakaoAddressType: "ROAD_ADDR",
+      kakaoParcelAddressName: verified.parcelAddress,
+      kakaoRoadAddressName: verified.roadAddress,
+      geocodeStatus: "SUCCESS",
+      geocodeErrorCode: null,
+      geocodedAt: dependencies.now(),
+    },
+    geocoded: false,
+    reused: true,
+    unresolved: false,
+  };
   const overrideChanged =
     Boolean(override) &&
     (!previous?.geocodedAt || override!.updatedAt > previous.geocodedAt);

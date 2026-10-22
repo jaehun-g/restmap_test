@@ -2,6 +2,7 @@ import {distanceMeters} from "./geo-search.ts";
 import type {GasStation} from "./gas-stations.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {hasCoordinates, type RestArea} from "./rest-areas.ts";
+import {verifiedRestAreaStations} from "./verified-rest-area-stations.ts";
 
 /** EX 주유소를 휴게소 정보에 자동 연결할 수 있는 최대 거리입니다. */
 export const REST_AREA_STATION_MATCH_METERS = 300;
@@ -47,10 +48,15 @@ function canMatch(area: RestArea, station: GasStation): boolean {
   if (station.brand !== "EX" || !area.routeName || !station.routeName) return false;
   if (canonicalHighwayRouteName(area.routeName) !== canonicalHighwayRouteName(station.routeName))
     return false;
+  if (isBidirectionalDirection(areaDirection(area)) && verifiedRestAreaStations.some(item =>
+    item.sourceKey === station.siteCode && item.restName === normalizedFacilityName(area.name) &&
+    item.routeName === canonicalHighwayRouteName(area.routeName!),
+  )) return true;
   if (normalizedFacilityName(area.name) !== normalizedFacilityName(station.name)) return false;
   const restDirection = areaDirection(area);
   const stationDirection = normalizedDirection(station.direction);
-  return restDirection !== null && stationDirection !== null && restDirection === stationDirection;
+  return restDirection !== null && stationDirection !== null &&
+    (isBidirectionalDirection(restDirection) || restDirection === stationDirection);
 }
 
 /**
