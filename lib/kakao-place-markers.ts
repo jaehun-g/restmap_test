@@ -227,10 +227,12 @@ export function createPlaceMarkers(
         },
         onZoom: canZoom(bounds)
           ? () => {
-              closeList();
-              const level = map.getLevel();
-              map.setBounds(bounds, 65, 45, 65, 45);
-              if (map.getLevel() >= level) map.setLevel(Math.max(1, level - 1));
+              runProgrammaticMapAction(() => {
+                closeList();
+                const level = map.getLevel();
+                map.setBounds(bounds, 65, 45, 65, 45);
+                if (map.getLevel() >= level) map.setLevel(Math.max(1, level - 1));
+              }, true);
             }
           : undefined,
       },

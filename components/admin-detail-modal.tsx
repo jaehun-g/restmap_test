@@ -1,6 +1,9 @@
 "use client";
 
-import {useEffect, useRef, type ReactNode} from "react";
+import {useEffect, useRef, useSyncExternalStore, type ReactNode} from "react";
+import {createPortal} from "react-dom";
+
+const emptySubscribe = () => () => {};
 
 export default function AdminDetailModal({
   children,
@@ -10,6 +13,12 @@ export default function AdminDetailModal({
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDivElement>(null);
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+
   useEffect(() => {
     dialog.current?.focus({preventScroll: true});
     const escape = (event: KeyboardEvent) => {
@@ -18,7 +27,13 @@ export default function AdminDetailModal({
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
   }, [onClose]);
-  return (
+
+  if (!isClient) return null;
+
+  const target =
+    (document.fullscreenElement as HTMLElement | null) ?? document.body;
+
+  return createPortal(
     <div
       className="admin-detail-modal-backdrop fixed inset-[0] z-[60] flex items-center justify-center bg-[#12233b99] p-[28px]"
       onMouseDown={onClose}
@@ -33,6 +48,7 @@ export default function AdminDetailModal({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    target,
   );
 }
