@@ -102,18 +102,19 @@ export default function MobileExplorer() {
     );
     return new DOMRect(area.left, area.top, area.width, area.height);
   }, []);
+  const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
       filters, query: search.query, stationServices: stationFilters,
       scope: location.scope, position: location.position,
-    }),
-    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position],
+    }, sourceFacilities),
+    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position, sourceFacilities],
   );
   const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => linkedStationsByArea(mergedFacilities.facilities, mergeFacilityPlaces(areas, gas.stations).stations),
-    [mergedFacilities.facilities, areas, gas.stations],
+    () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
+    [mergedFacilities.facilities, sourceFacilities],
   );
   const selectedDirectionLabel = useMemo(
     () =>

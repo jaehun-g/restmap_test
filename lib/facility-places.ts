@@ -96,10 +96,9 @@ export function linkedStationsByArea<T extends GasStation, A extends RestArea>(
   facilities: FacilityPlace<A>[],
   stations: FacilityStation<T>[],
 ): Map<number, T[]> {
-  return new Map(
-    facilities.map(({area}) => [
-      area.id,
-      stations.filter(station => station.linkedRestAreaId === area.id),
-    ]),
-  );
+  const linked = new Map<number, T[]>(facilities.map(({area}) => [area.id, []]));
+  for (const station of stations) {
+    if (station.linkedRestAreaId !== null) linked.get(station.linkedRestAreaId)?.push(station);
+  }
+  return linked;
 }

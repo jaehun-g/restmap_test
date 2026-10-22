@@ -156,6 +156,52 @@ function areas(): RestArea[] {
   return result.value;
 }
 const label = () => ({}) as HTMLElement;
+
+test("표시 집합 변경은 남는 마커를 재사용하고 추가·제외된 마커만 반영한다", t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const original = areas().filter(area => area.latitude !== null).map(restPlace);
+  let selected: MapPlaceForTest | undefined;
+  type MapPlaceForTest = ReturnType<typeof restPlace>;
+  const layer = createPlaceMarkers(sdk, map, original, place => {selected = place as MapPlaceForTest;}, label);
+  assert.equal(state.created, 2);
+  const changed = structuredClone(original[0]);
+  if (changed.kind !== "rest") throw new Error("Expected rest area");
+  changed.record.parkingCount = 123;
+  layer.update([changed]);
+  assert.equal(state.created, 2, "기존 마커를 다시 만들지 않음");
+  assert.equal(state.detached, 1, "제외한 마커만 해제");
+  state.clicks[0]();
+  assert.equal(selected?.kind === "rest" ? selected.record.parkingCount : null, 123, "재사용 마커 클릭은 최신 데이터를 사용");
+  const third = restPlace({...areas()[0], id: 4, name: "추가", latitude: 35});
+  layer.update([changed, third]);
+  assert.equal(state.created, 3, "새 장소만 추가 생성");
+  layer.update([changed, third]);
+  assert.equal(state.created, 3);
+  layer.dispose();
+});
+
+test("비어 있던 레이어에 주유소가 추가돼도 EX 아이콘을 사용하고 선택된 카드의 가격을 갱신한다", t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const ex = normalizeExGasStations([{id: 1, source_key: "test", service_area_name: "가격 주유소", latitude: 37, longitude: 127, gasoline_price: 1700}]);
+  assert.ok(ex.ok);
+  const prices: (number | null | undefined)[] = [];
+  const layer = createPlaceMarkers(sdk, map, [], () => {}, place => {
+    if (place.kind === "station") prices.push(place.record.prices?.gasoline);
+    return new CardElement("section") as unknown as HTMLElement;
+  });
+  const first = stationPlace(ex.value[0]);
+  layer.update([first]);
+  layer.select(first.key);
+  layer.update([stationPlace({...ex.value[0], prices: {...ex.value[0].prices!, gasoline: 1800}})]);
+  assert.equal(state.created, 1);
+  assert.ok(state.images.includes("/marker-ex-station.svg"));
+  assert.deepEqual(prices, [1700, 1800]);
+  layer.update([]);
+  assert.equal(state.content.at(-1), "");
+  layer.dispose();
+});
 test("marker clicks do not bubble into map-close and EX selections keep their distinct identity and icon", t => {
   installCardDOM(t);
   const ex = normalizeExGasStations([

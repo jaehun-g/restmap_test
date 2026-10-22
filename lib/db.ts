@@ -34,7 +34,8 @@ import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-syn
 import {synchronizeExStationPrices, type ExStationPriceSyncSummary} from "./ex-station-price-sync";
 import {fetchFoodMenus} from "./food-menu-source";
 import {synchronizeFoodMenus, type FoodMenuSyncSummary} from "./food-menu-sync";
-import type {FoodMenuSummary, FoodMenusResponse} from "./food-menus";
+import type {FoodMenusResponse} from "./food-menus";
+import {invalidateMapData} from "./map-cache-tags";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -63,31 +64,11 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
     const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} ORDER BY name, id`);
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
-    const {rows: foodRows} = await pool.value.query<QueryResultRow>(
-      `SELECT m.rest_area_id, count(f.source_key)::integer AS menu_count,
-        max(f.collected_at) AS collected_at,
-        COALESCE(jsonb_agg(jsonb_build_object('key',f.source_key,'name',f.food_nm,'price',f.food_cost,
-          'recommended',f.recommendyn,'best',f.bestfoodyn) ORDER BY f.bestfoodyn DESC NULLS LAST,
-          f.recommendyn DESC NULLS LAST, f.food_nm) FILTER (WHERE f.source_key IS NOT NULL), '[]'::jsonb) AS featured
-       FROM public.test_food_area_mappings m
-       LEFT JOIN public.test_food_menus f ON f.std_rest_cd=m.std_rest_cd
-         AND f.source_present=true AND f.app_visible=true
-       WHERE m.match_status='matched' AND m.rest_area_id IS NOT NULL
-       GROUP BY m.rest_area_id`,
-    );
-    const summaries = new Map<number, FoodMenuSummary>(
-      foodRows.map(row => [Number(row.rest_area_id), {
-        count: Number(row.menu_count),
-        collectedAt: row.collected_at instanceof Date ? row.collected_at.toISOString() : null,
-        featured: (Array.isArray(row.featured) ? row.featured.slice(0, 2) : []) as FoodMenuSummary["featured"],
-      }]),
-    );
     return {
       ok: true,
       value: {
         items: parsed.value.map((area, index) => ({
           ...area,
-          ...(summaries.has(area.id) ? {foodMenuSummary: summaries.get(area.id)!} : {}),
           revision: rowRevision(rows[index]),
         })),
         unmappedCount: parsed.value.filter(area => !hasCoordinates(area)).length,
@@ -191,13 +172,17 @@ export async function queryGasStations(
 export async function syncExStationStatuses(): Promise<Result<ExStationSyncSummary>> {
   const pool = getPool();
   if (!pool.ok) return pool;
-  return synchronizeExStations({pool: pool.value});
+  const result = await synchronizeExStations({pool: pool.value});
+  if (result.ok) invalidateMapData("station");
+  return result;
 }
 
 export async function syncExStationPrices(): Promise<Result<ExStationPriceSyncSummary>> {
   const pool = getPool();
   if (!pool.ok) return pool;
-  return synchronizeExStationPrices({pool: pool.value});
+  const result = await synchronizeExStationPrices({pool: pool.value});
+  if (result.ok) invalidateMapData("station");
+  return result;
 }
 
 export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMenusResponse>> {
@@ -230,7 +215,7 @@ export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMen
 export async function syncFoodMenuSnapshot(): Promise<Result<FoodMenuSyncSummary>> {
   const pool = getPool();
   if (!pool.ok) return pool;
-  return synchronizeFoodMenus({
+  const result = await synchronizeFoodMenus({
     pool: pool.value,
     fetchMenus: fetchFoodMenus,
     loadAreas: async () => {
@@ -238,6 +223,8 @@ export async function syncFoodMenuSnapshot(): Promise<Result<FoodMenuSyncSummary
       return result.ok ? {ok: true, value: result.value.items} : result;
     },
   });
+  if (result.ok) invalidateMapData("rest");
+  return result;
 }
 
 export async function queryGasStation(id: number): Promise<Result<GasStationRecord>> {
@@ -267,7 +254,7 @@ export async function updateGasStation(
     const pool = getPool();
     if (!pool.ok) return pool;
     const connection = await pool.value.connect();
-    return await saveGasStation(
+    const result = await saveGasStation(
       {
         beginTransaction: () => connection.query("BEGIN").then(() => undefined),
         query: (sql, values) => connection.query(sql, values),
@@ -279,6 +266,8 @@ export async function updateGasStation(
       id,
       request,
     );
+    if (result.ok) invalidateMapData("station");
+    return result;
   } catch (reason) {
     return {ok: false, error: databaseError(reason, "write")};
   }
@@ -292,7 +281,7 @@ export async function updateRestArea(
     const pool = getPool();
     if (!pool.ok) return pool;
     const connection = await pool.value.connect();
-    return await saveRestArea(
+    const result = await saveRestArea(
       {
         beginTransaction: () => connection.query("BEGIN").then(() => undefined),
         query: (sql, values) => connection.query(sql, values),
@@ -304,6 +293,8 @@ export async function updateRestArea(
       id,
       request,
     );
+    if (result.ok) invalidateMapData("rest");
+    return result;
   } catch (error) {
     return {ok: false, error: databaseError(error, "write")};
   }

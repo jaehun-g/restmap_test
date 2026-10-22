@@ -14,7 +14,6 @@ import {createHighwayRouteLayer} from "@/lib/kakao-highway-route";
 import {createHighwayRouteViewport} from "@/lib/kakao-route-viewport";
 import {useHighwayRoute} from "@/hooks/use-highway-route";
 import {createMapCard} from "@/lib/map-card";
-import {markerLayerSignature} from "@/lib/marker-layer";
 import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
 import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
 import {
@@ -109,9 +108,8 @@ export default function KakaoMap({
     setPrevRadius(radius);
   }
 
-  const markerSignature = useMemo(() => markerLayerSignature(committedPlaces), [committedPlaces]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- 표시 단위가 같으면 기존 레이어의 배열 참조를 유지한다.
-  const markerPlaces = useMemo(() => committedPlaces, [markerSignature]);
+  const latestPlaces = useRef(committedPlaces);
+  useEffect(() => { latestPlaces.current = committedPlaces; }, [committedPlaces]);
   const positionedItems = useMemo(() => committedPlaces.map(place => place.record), [committedPlaces]);
   const linkedStationsRef = useRef<ReadonlyMap<number, GasStation[]> | undefined>(linkedStationsByRestId);
   useEffect(() => {
@@ -222,7 +220,7 @@ export default function KakaoMap({
     const current = createPlaceMarkers(
       sdk,
       map,
-      markerPlaces,
+      latestPlaces.current,
       selectPlace,
       card,
       () => {
@@ -248,7 +246,6 @@ export default function KakaoMap({
     };
   }, [
     map,
-    markerPlaces,
     selectPlace,
     card,
     cardViewport,
@@ -257,6 +254,9 @@ export default function KakaoMap({
     runProgrammaticMapAction,
     selectedRouteName,
   ]);
+  useEffect(() => {
+    layer.current?.update(committedPlaces);
+  }, [map, committedPlaces]);
   useEffect(() => {
     if (!map || !container.current) return;
     const adjust = () => layer.current?.adjustCard();

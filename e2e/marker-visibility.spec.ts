@@ -18,6 +18,12 @@ if (!parsedAreas.ok || !parsedStations.ok) throw new Error("Invalid visibility f
 const areas = parsedAreas.value;
 const stations = parsedStations.value;
 
+// 현재 지도는 휴게소와 연결 주유소를 각각 선택 가능한 마커로 표시한다.
+const expectedTitles = [
+  ...areas.map(area => `${area.name}${area.facilities.has_truck_lounge ? " · 화물차 라운지" : ""}`),
+  ...stations.map(station => `${station.name} · 고속도로 주유소`),
+].sort();
+
 // 실제 SDK의 getMap/clustered 결과로 표시 상태를 검사한다. SDK 메서드의 동작은 바꾸지 않는다.
 const instrument = `
   (() => {
@@ -113,7 +119,7 @@ for (const mode of ["admin", "mobile"] as const) {
     await context.setGeolocation({latitude: 37.5, longitude: 127});
     const control = await setup(page);
     await page.goto(`/${mode}`);
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     if (mode === 'admin') await page.getByRole('button', {name: '내 위치로 이동'}).click();
     await expect(page.getByRole('img', {name: /내 위치 기준 반경/})).toBeVisible();
     await page.waitForTimeout(500);
@@ -125,12 +131,12 @@ for (const mode of ["admin", "mobile"] as const) {
     });
     await level(page, nextLevel);
     await expect.poll(() => control.stationRequests).toBeGreaterThan(requests);
-    await expect(page.getByText('검증용 일시적 조회 실패', {exact: true})).toBeVisible();
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect(page.locator('.map-route-error').getByText('검증용 일시적 조회 실패', {exact: true})).toBeVisible();
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     control.failStations = false;
     await page.getByRole('button', {name: '주유소 다시 조회', exact: true}).click();
     await expect(page.getByText('검증용 일시적 조회 실패', {exact: true})).toHaveCount(0);
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
   });
 
   test(`${mode}: 기본 목록에서 선택 후 줌과 화면 크기를 바꿔도 마커를 유지한다`, async ({page, context}, testInfo) => {
@@ -139,7 +145,7 @@ for (const mode of ["admin", "mobile"] as const) {
     await context.setGeolocation({latitude: 37.5, longitude: 127});
     await setup(page);
     await page.goto(`/${mode}`);
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     if (mode === 'admin') {
       await page.getByRole('button', {name: '내 위치로 이동'}).click();
       await page.locator('#rest-area-row-901').click();
@@ -149,11 +155,11 @@ for (const mode of ["admin", "mobile"] as const) {
     }
     for (const value of [8, 4, 6, 7]) {
       await level(page, value);
-      await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+      await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
       await expect.poll(() => selectedMarkerVisible(page)).toBe(true);
     }
     await page.setViewportSize(mode === 'admin' ? {width: 1280, height: 800} : {width: 430, height: 900});
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     await expect.poll(() => selectedMarkerVisible(page)).toBe(true);
     await page.screenshot({path: testInfo.outputPath(`${mode}-list-selection-zoom.png`)});
   });
@@ -165,10 +171,10 @@ for (const mode of ["admin", "mobile"] as const) {
     await context.setGeolocation({latitude: 37.5, longitude: 127});
     await setup(page);
     await page.goto(`/${mode}`);
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     for (const value of [8, 6, 4, 7, 5, 8]) {
       await level(page, value);
-      await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+      await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     }
     // 실제 마커 클릭 이벤트와 React 선택 상태 갱신을 모두 거친다.
     await level(page, 4);
@@ -179,10 +185,10 @@ for (const mode of ["admin", "mobile"] as const) {
     });
     for (const value of [8, 4, 7]) {
       await level(page, value);
-      await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+      await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     }
     await page.keyboard.press("Escape");
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     await page.evaluate(() => {
       const state = (window as unknown as {__markerVisibility: {maps: unknown[]}}).__markerVisibility;
       const event = window.kakao!.maps.event as unknown as {trigger(target: unknown, name: string): void};
@@ -191,7 +197,7 @@ for (const mode of ["admin", "mobile"] as const) {
       event.trigger(state.maps.at(-1), 'dragend');
       event.trigger(state.maps.at(-1), 'idle');
     });
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     await page.screenshot({path: testInfo.outputPath(`${mode}-markers.png`)});
   });
 
@@ -202,27 +208,27 @@ for (const mode of ["admin", "mobile"] as const) {
     await context.setGeolocation({latitude: 37.5, longitude: 127});
     await setup(page);
     await page.goto(`/${mode}`);
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     await level(page, 8);
     await page.locator('.place-cluster-pin').first().click();
-    await page.locator('.cluster-popover-list button').filter({hasText: '검증A'}).click();
+    await page.locator('.cluster-popover-list button[data-place-key="rest:901"]').click();
     for (const value of [7, 4, 8]) {
       await level(page, value);
-      await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+      await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     }
     await page.keyboard.press('Escape');
     const search = page.locator('input[type="search"]').first();
     await search.fill('경부선');
     await search.press('Enter');
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     await search.fill('검증A 주유소');
     await search.press('Enter');
-    await expect.poll(async () => (await visibility(page)).represented).toEqual(['검증A(부산) · 화물차 라운지']);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles.filter(title => title.startsWith('검증A')));
     await search.fill('없는 장소');
     await search.press('Enter');
     await expect.poll(async () => (await visibility(page)).represented.length).toBe(0);
     await page.getByRole('button', {name: '검색어 지우기'}).click();
-    await expect.poll(async () => (await visibility(page)).represented.length).toBe(5);
+    await expect.poll(async () => (await visibility(page)).represented).toEqual(expectedTitles);
     if (mode === 'admin') {
       await page.getByLabel('노선 필터').selectOption({label: '경부선'});
       await page.getByLabel('방향 필터').selectOption({label: '서울 방향'});

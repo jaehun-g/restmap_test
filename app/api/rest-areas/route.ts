@@ -1,10 +1,11 @@
 import {connection} from "next/server";
-import {queryRestAreas} from "@/lib/db";
+import {queryMapRestAreas} from "@/lib/cached-map-queries";
 
-export async function GET() {
+export async function GET(request: Request) {
   await connection();
-  const result = await queryRestAreas();
-  const headers = {"Cache-Control": "no-store"};
+  const started = performance.now();
+  const result = await queryMapRestAreas(request.headers.get("x-map-fresh") === "1");
+  const headers = {"Cache-Control": "no-store", "Server-Timing": `map-query;dur=${(performance.now() - started).toFixed(1)}`};
   if (!result.ok) {
     const status = result.error.code.startsWith("DB_CONFIG") ? 503 : 502;
     return Response.json({error: result.error}, {status, headers});

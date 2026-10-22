@@ -1,5 +1,4 @@
 import {expect, test, type Page} from "@playwright/test";
-import type {FoodMenuSummary} from "../lib/food-menus.ts";
 
 type KakaoMapMockMetrics = {
   map: {getLevel(): number; setLevel(level: number): void} | null;
@@ -316,18 +315,63 @@ test("지도 레벨 변경 중 EX 재조회는 기존 마커를 유지하고 클
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before);
 });
 
-test("mobile rest-area details show the linked food menu and its source date", async ({page, context}) => {
+test("검색으로 일부 장소를 제외해도 남아 있는 마커를 재생성하지 않는다", async ({page, context}) => {
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas", route => route.fulfill({json: restAreaResponse}));
+  await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.5, longitude: 127});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  const before = await waitForMarkerLayerToSettle(page);
+  await page.getByRole("searchbox").fill("휴게소 A");
+  await page.getByRole("searchbox").press("Enter");
+  await page.locator(".sheet-summary").click();
+  await expect(page.locator(".mobile-area-card")).toHaveCount(1);
+  await expect(page.locator(".mobile-area-card")).toContainText("E2E 휴게소 A");
+  expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before);
+});
+
+test("동일 반경으로 복귀하면 주유소 조회 결과를 재사용하고 수동 새로고침은 최신 조회한다", async ({page, context}) => {
+  let requests = 0;
+  let freshRequests = 0;
+  let failNextScope = false;
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas", route => route.fulfill({json: restAreaResponse}));
+  await page.route("**/api/gas-stations**", route => {
+    requests++;
+    if (route.request().headers()["x-map-fresh"] === "1") freshRequests++;
+    if (failNextScope) return route.fulfill({status: 503, json: {error: {message: "테스트 조회 실패"}}});
+    return route.fulfill({json: gasStationResponse});
+  });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.5, longitude: 127});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  await waitForMarkerLayerToSettle(page);
+  await page.waitForTimeout(300);
+  const initialLevel = await page.evaluate(() => window.__kakaoMapMock.map!.getLevel());
+  const before = requests;
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level + 1), initialLevel);
+  await expect.poll(() => requests).toBeGreaterThan(before);
+  await page.waitForTimeout(300);
+  const afterZoom = requests;
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level), initialLevel);
+  await page.waitForTimeout(400);
+  expect(requests).toBe(afterZoom);
+  failNextScope = true;
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level + 2), initialLevel);
+  await expect(page.getByText("테스트 조회 실패", {exact: true})).toBeVisible();
+  failNextScope = false;
+  await page.getByRole("button", {name: "주유소 다시 조회", exact: true}).click();
+  await expect(page.getByText("테스트 조회 실패", {exact: true})).toHaveCount(0);
+  expect(freshRequests).toBeGreaterThan(0);
+});
+
+test("mobile rest-area details load food menus independently of the map response", async ({page, context}) => {
   await page.addInitScript({content: installKakaoMapsMock});
   await page.route("**/api/rest-areas", async route => {
-    const areas = structuredClone(restAreaResponse);
-    const area = structuredClone(areas.items[0]) as typeof areas.items[number] & {foodMenuSummary?: FoodMenuSummary};
-    areas.items[0] = area;
-    area.foodMenuSummary = {
-      count: 1,
-      collectedAt: "2026-10-21T00:00:00.000Z",
-      featured: [{key: "000001|272", name: "E2E signature udon", price: 9500, recommended: true, best: true}],
-    };
-    await route.fulfill({contentType: "application/json", body: JSON.stringify(areas)});
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(restAreaResponse)});
   });
   await page.route("**/api/gas-stations**", route => route.fulfill({
     contentType: "application/json",
@@ -360,14 +404,17 @@ test("mobile rest-area details show the linked food menu and its source date", a
   const restArea = page.locator(".mobile-area-card").filter({hasText: "E2E"}).first();
   await expect(restArea).toBeVisible();
   await restArea.click();
+  const menusResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/rest-areas/1/food-menus");
+  await page.getByRole("tab", {name: "음식", exact: true}).click();
+  expect((await (await menusResponse).json()).collectedAt).toBe("2026-10-21T00:00:00.000Z");
   const foodSection = page.locator(".food-menu-section");
   await expect(foodSection).toBeVisible();
   await expect(foodSection).toContainText("E2E signature udon");
   await expect(foodSection).toContainText("9,500");
   await expect(foodSection).toContainText("\uCD94\uCC9C");
   await expect(foodSection).toContainText("\uC778\uAE30");
-  await expect(foodSection).toContainText("2026-10-21");
   await page.locator(".back-to-list").click();
   await page.locator(".mobile-area-card").filter({hasText: "B"}).first().click();
+  await page.getByRole("tab", {name: "음식", exact: true}).click();
   await expect(page.locator(".food-menu-section")).toContainText("\uB4F1\uB85D\uB41C \uBA54\uB274 \uC815\uBCF4\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
 });

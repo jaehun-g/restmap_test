@@ -39,7 +39,7 @@ import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
-  const {data, areas, loading, error, reload, replaceItem} = useRestAreas();
+  const {data, areas, loading, error, reload, replaceItem} = useRestAreas(true);
   const view = useMapFitRequest();
   const search = useSearchQuery(view.requestFit);
   const auth = useAdminSession();
@@ -47,7 +47,7 @@ export default function AdminExplorer() {
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
-    stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"),
+    stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"), true,
   );
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
@@ -74,12 +74,13 @@ export default function AdminExplorer() {
   useEffect(() => {
     editState.current = {dirty, saving};
   }, [dirty, saving]);
+  const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
       filters, query: search.query, stationServices: stationFilters,
       scope: location.scope, position: location.position,
-    }),
-    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position],
+    }, sourceFacilities),
+    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position, sourceFacilities],
   );
   const results = useMemo(() => mergedFacilities.facilities.map(({area}) => area), [mergedFacilities]);
   const sorted = useMemo(
@@ -90,8 +91,8 @@ export default function AdminExplorer() {
   const visibleAreas = results;
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
-    () => linkedStationsByArea(mergedFacilities.facilities, mergeFacilityPlaces(areas, gas.stations).stations),
-    [mergedFacilities.facilities, areas, gas.stations],
+    () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
+    [mergedFacilities.facilities, sourceFacilities],
   );
   const selectedDirectionLabel = useMemo(
     () =>

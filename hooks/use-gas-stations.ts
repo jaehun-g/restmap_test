@@ -3,10 +3,13 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import type {GasStationsResponse, GasStationRecord} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import {canKeepPreviousStations} from "@/lib/gas-station-query";
+import {QueryCache} from "@/lib/query-cache";
 
 const empty: GasStationRecord[] = [];
 
-export function useGasStations(query: string | null) {
+export function useGasStations(query: string | null, fresh = false) {
+  const cache = useRef(new QueryCache<GasStationsResponse>());
+  const requested = useRef(false);
   const [state, setState] = useState<{
     query: string | null;
     data: GasStationsResponse | null;
@@ -14,10 +17,16 @@ export function useGasStations(query: string | null) {
     error: string | null;
   }>({query: null, data: null, loading: false, error: null});
   const request = useRef<AbortController | null>(null);
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (force = true) => {
     request.current?.abort();
+    if (force) cache.current.clear();
     if (query === null) {
       setState({query: null, data: null, loading: false, error: null});
+      return;
+    }
+    const cached = !force && !fresh ? cache.current.get(query) : undefined;
+    if (cached) {
+      setState({query, data: cached, loading: false, error: null});
       return;
     }
     const controller = new AbortController();
@@ -26,13 +35,17 @@ export function useGasStations(query: string | null) {
     try {
       const response = await globalThis.fetch(`/api/gas-stations${query ? `?${query}` : ""}`, {
         cache: "no-store",
+        headers: force || fresh ? {"x-map-fresh": "1"} : {},
         signal: controller.signal,
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message || "주유소를 조회하지 못했습니다.");
       if (!Array.isArray(body.items) || typeof body.fetchedAt !== "string")
         throw new Error("주유소 응답 형식이 올바르지 않습니다.");
-      if (!controller.signal.aborted) setState({query, data: body, loading: false, error: null});
+      if (!controller.signal.aborted) {
+        if (!fresh) cache.current.set(query, body);
+        setState({query, data: body, loading: false, error: null});
+      }
     } catch (reason) {
       if (!controller.signal.aborted)
         setState(prev => ({
@@ -43,18 +56,20 @@ export function useGasStations(query: string | null) {
           error: reason instanceof Error ? reason.message : "주유소를 조회하지 못했습니다.",
         }));
     }
-  }, [query]);
+  }, [query, fresh]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void reload();
-    }, 150);
+      if (query !== null) requested.current = true;
+      void reload(false);
+    }, requested.current ? 150 : 0);
     return () => {
       window.clearTimeout(timer);
       request.current?.abort();
     };
-  }, [reload]);
+  }, [reload, query]);
   const replaceItem = useCallback(
-    (item: GasStationRecord) =>
+    (item: GasStationRecord) => {
+      cache.current.clear();
       setState(current =>
         current.data
           ? {
@@ -67,7 +82,8 @@ export function useGasStations(query: string | null) {
               },
             }
           : current,
-      ),
+      );
+    },
     [],
   );
   const current = query !== null && state.query === query;

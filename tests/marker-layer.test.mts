@@ -14,3 +14,13 @@ test("equivalent place arrays keep the same marker-layer signature", () => {
   assert.equal(markerLayerSignature([place()]), markerLayerSignature([place()]));
   assert.notEqual(markerLayerSignature([place()]), markerLayerSignature([place("다른 휴게소")]));
 });
+
+test("음식·유가 메타데이터 변경과 마커의 위치·외형 변경을 구분한다", () => {
+  const first = place();
+  const updated = structuredClone(first);
+  if (updated.kind !== "rest") throw new Error("Expected rest area");
+  updated.record.foodMenuSummary = {count: 1, collectedAt: null, featured: []};
+  assert.equal(markerLayerSignature([first]), markerLayerSignature([updated]));
+  updated.record.latitude = 38;
+  assert.notEqual(markerLayerSignature([first]), markerLayerSignature([updated]));
+});

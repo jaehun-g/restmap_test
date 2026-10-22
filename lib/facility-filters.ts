@@ -1,4 +1,4 @@
-import {isBidirectionalDirection, mergeFacilityPlaces, normalizedDirection, type FacilityPlaces} from "./facility-places.ts";
+import {isBidirectionalDirection, linkedStationsByArea, mergeFacilityPlaces, normalizedDirection, type FacilityPlaces} from "./facility-places.ts";
 import {filterRestAreas, type RestAreaFilters} from "./rest-area-filters.ts";
 import {filterStations} from "./map-places.ts";
 import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
@@ -17,9 +17,10 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     scope: GeoSearchScope;
     position: GeoPoint | null;
   },
+  merged: FacilityPlaces<T, A> = mergeFacilityPlaces(areas, stations),
 ): FacilityPlaces<T, A> {
   const {filters, query, stationServices, scope, position} = options;
-  const merged = mergeFacilityPlaces(areas, stations);
+  const linkedByArea = linkedStationsByArea(merged.facilities, merged.stations);
   const searchScope = filters.routeName ? {kind: "all" as const} : scope;
   const eligible = new Set(filterByGeoScope(filterRestAreas(areas, filters, ""), searchScope, position).map(area => area.id));
   const terms = query.trim().toLocaleLowerCase("ko-KR").split(/\s+/).filter(Boolean);
@@ -30,7 +31,7 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     return terms.every(term => haystack.includes(term));
   };
   const facilities = merged.facilities.filter(({area}) => {
-    const linked = merged.stations.filter(station => station.linkedRestAreaId === area.id);
+    const linked = linkedByArea.get(area.id) ?? [];
     return (
       eligible.has(area.id) &&
       (!stationServices.length || filterStations(linked, "", stationServices).length > 0) &&
