@@ -1,6 +1,7 @@
 import {normalizedFacilityName, normalizedDirection} from "./facility-places.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {distanceMeters} from "./geo-search.ts";
+import {excludedPrivateRestAreas, excludedPrivateRestAreaCodes} from "./excluded-private-rest-areas.ts";
 import type {RestAreaSources, SourceRow} from "./rest-area-sources.ts";
 
 export type LoungeRow = Record<string, string | number | null> & {id: number; name: string};
@@ -10,7 +11,7 @@ export type IntegratedArea = {
   fields: Record<string, string | number | null>; sources: string[]; warnings: string[];
 };
 export type IntegrationEntry = {
-  area: IntegratedArea; status: "existing" | "new" | "alias" | "review";
+  area: IntegratedArea; status: "existing" | "new" | "alias" | "review" | "excluded";
   targetId: number | null; candidates: number[]; reason: string;
   changes: Record<string, string | number | null>;
 };
@@ -80,7 +81,10 @@ export function integrateRestAreaSources(sources: RestAreaSources): IntegratedAr
     if (serviceCodes.length > 1) throw new Error(`${code}에 여러 serviceAreaCode가 있습니다.`);
     const fields: IntegratedArea["fields"] = {
       name: restDisplayName(name, direction), std_rest_cd: code, service_area_code: serviceCodes[0] ?? null,
-      route_name: location?.routeName ?? service[0]?.routeName ?? detail[0]?.routeNm ?? null,
+      route_name: (() => {
+        const route = location?.routeName ?? service[0]?.routeName ?? detail[0]?.routeNm;
+        return route ? canonicalHighwayRouteName(route) : null;
+      })(),
       route_number: routeCodes[0] ? routeNumberKey(routeCodes[0]) : null,
       direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
       route_direction: direction === "양방" ? "양방향" : text(usableService[0]?.direction), phone: usableService[0]?.telNo ?? null,
@@ -102,7 +106,7 @@ export function integrateRestAreaSources(sources: RestAreaSources): IntegratedAr
 function csvFields(row: Record<string, string>, id: number): LoungeRow {
   const direction = restNameDirection(row["휴게소명"]) ?? normalizedDirection(row["기준정보_도로노선방향"]);
   const values: LoungeRow = {id, name: restDisplayName(row["휴게소명"], direction), phone: text(row["전화번호"]),
-    route_name: text(row["기준정보_도로노선명"]), route_number: text(row["기준정보_도로노선번호"]),
+    route_name: text(row["기준정보_도로노선명"]) ? canonicalHighwayRouteName(row["기준정보_도로노선명"]) : null, route_number: text(row["기준정보_도로노선번호"]),
     route_direction: text(row["기준정보_도로노선방향"]), direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
     rest_area_type: text(row["기준정보_휴게소종류"]), parking_count: numeric(row["기준정보_주차면수"]),
     latitude: numeric(row.latitude), longitude: numeric(row.longitude)};
@@ -121,6 +125,10 @@ export function planRestAreaIntegration(sources: RestAreaSources, csv: Record<st
   const usedCsvIds = new Set<number>();
   for (const record of csv) {
     const name = restDisplayName(record["휴게소명"], normalizedDirection(record["기준정보_도로노선방향"]) === "양방" ? "양방" : undefined);
+    if (excludedPrivateRestAreas.some(item => item.name === name && canonicalHighwayRouteName(item.route) === canonicalHighwayRouteName(record["기준정보_도로노선명"] ?? ""))) {
+      csvReviews.push(`${name}: 사용자 요청으로 제외한 민자 구간 휴게소`);
+      continue;
+    }
     let candidates = existing.filter(row => restDisplayName(row.name) === name);
     if (!candidates.length && phoneKey(record["전화번호"]) && validRestCoordinates(record.latitude, record.longitude)) candidates = existing.filter(row => phoneKey(row.phone) === phoneKey(record["전화번호"]) && validRestCoordinates(row.latitude, row.longitude) && distanceMeters({latitude: Number(record.latitude), longitude: Number(record.longitude)}, {latitude: Number(row.latitude), longitude: Number(row.longitude)}) < 200 && restNameDirection(row.name) === restNameDirection(name));
     if (candidates.length > 1) throw new Error(`CSV 행의 기존 DB 후보가 여러 개입니다: ${name}`);
@@ -139,6 +147,7 @@ export function planRestAreaIntegration(sources: RestAreaSources, csv: Record<st
   }
   const groups = integrateRestAreaSources(sources);
   const entries: IntegrationEntry[] = groups.map(area => {
+    if (excludedPrivateRestAreaCodes.has(area.code)) return {area, status: "excluded", targetId: null, candidates: [], reason: "사용자 요청으로 제외한 민자 구간 휴게소", changes: {}};
     if (!area.names.length || /테스트/.test(area.name)) return {area, status: "review", targetId: null, candidates: [], reason: !area.names.length ? "API에 휴게소 이름이 없음" : "테스트 데이터: 실제 휴게소 확인 필요", changes: {}};
     const byCode = retained.filter(row => row.std_rest_cd === area.code || (area.serviceCode && row.service_area_code === area.serviceCode));
     const byIdentity = retained.filter(row => area.names.some(name => normalizedFacilityName(row.name) === normalizedFacilityName(name)) && (routeCompatible(area, row) || Boolean(phoneKey(area.fields.phone) && phoneKey(area.fields.phone) === phoneKey(row.phone))) && directionCompatible(area, row));

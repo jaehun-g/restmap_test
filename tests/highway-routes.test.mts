@@ -82,6 +82,15 @@ test("query names are trimmed and invalid names are rejected", () => {
     assert.equal(validateHighwayRouteName(value).ok, false);
 });
 
+test("동해선의 구간별 노선명은 같은 동해선으로 조회한다", () => {
+  for (const name of ["동해선", "동해선(부산-포항)", "동해선(삼척-속초)"]) {
+    assert.deepEqual(validateHighwayRouteName(name), {ok: true, value: "동해선"});
+    const parsed = normalizeHighwayRoute({...row(), route_name: name, route_number: 65});
+    assert.ok(parsed.ok);
+    assert.equal(parsed.value.routeName, "동해선");
+  }
+});
+
 test("legacy Miryang-Ulsan route name resolves to the Hamyang-Ulsan canonical name", () => {
   assert.deepEqual(validateHighwayRouteName("밀양울산선"), {ok: true, value: "함양울산선"});
   const parsed = parseHighwayRoute({...route(), routeName: "밀양울산선"});

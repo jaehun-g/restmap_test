@@ -2,6 +2,8 @@
 
 CSV의 기존 휴게소와 기존 DB ID를 유지하고 EX API에만 있는 시설을 추가한다. 명시적으로 `--apply`를 전달해야 DB를 변경한다. 새로운 의존성은 사용하지 않는다.
 
+2026-10-22 사용자 요청으로 검증한 민자 구간 휴게소 23곳은 서비스 대상에서 제외한다. `lib/excluded-private-rest-areas.ts`의 표준 코드 목록으로 API 재추가를 막으며, CSV에서도 해당 시설명·노선을 대조해 제외한다. 혼합 노선 전체를 제외하지 않는다. [삭제 결과](./private-rest-area-removal.md)에 대상과 백업 정보를 기록한다.
+
 ```powershell
 npm run sync:rest-areas -- --csv "<CSV 경로>" --geocode
 npm run sync:rest-areas -- --csv "<CSV 경로>" --geocode --apply

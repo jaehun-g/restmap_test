@@ -5,6 +5,7 @@ import {parseRestAreaCsv, type RestAreaSources} from "../lib/rest-area-sources.t
 import {normalizedDirection, isBidirectionalDirection} from "../lib/facility-places.ts";
 import {resolveRestAreaCoordinates, selectRestAreaKeywordPlace} from "../lib/rest-area-geocode.ts";
 import type {KakaoKeywordPlace} from "../lib/kakao-local.ts";
+import {excludedPrivateRestAreas} from "../lib/excluded-private-rest-areas.ts";
 
 const sources = (): RestAreaSources => ({fetchedAt: new Date().toISOString(), locations: [
   {stdRestCd: "000119", serviceAreaCode: "A00045", unitName: "익산미륵사지(순천)휴게소", routeName: "호남선", routeNo: "0251", yValue: "36.048719", xValue: "127.103033"},
@@ -12,6 +13,33 @@ const sources = (): RestAreaSources => ({fetchedAt: new Date().toISOString(), lo
   {serviceAreaCode: "A00045", serviceAreaCode2: "000119", serviceAreaName: "익산미륵사지(순천)휴게소", direction: "순천", routeCode: "0251", routeName: "호남선", telNo: "063-836-5280"},
 ], serviceExpectedCount: 1, serviceComplete: true, recovery: []});
 const existing: LoungeRow[] = [{id: 38, name: "여산(순천 방향)", route_name: "호남선", route_number: "25", direction_label: "순천 방향", phone: "063-836-5280", latitude: 36.0486, longitude: 127.102, has_store: 1}];
+
+test("동해선 구간명은 API·CSV 통합 시 동해선으로 저장한다", () => {
+  for (const route of ["동해선(부산-포항)", "동해선(삼척-속초)"]) {
+    const input = sources();
+    input.locations[0].routeName = route;
+    assert.equal(integrateRestAreaSources(input)[0].fields.route_name, "동해선");
+    const plan = planRestAreaIntegration(input, [{휴게소명: "양양(속초 방향)", 기준정보_도로노선명: route}], []);
+    assert.equal(plan.csvRows[0].route_name, "동해선");
+  }
+});
+
+test("제외한 민자 휴게소 23곳은 API 재수집 시 다시 추가하지 않는다", () => {
+  const input = sources();
+  for (const item of excludedPrivateRestAreas) input.facilities.push({stdRestCd: item.code, stdRestNm: item.name, routeNm: item.route, psName: "편의점", psCode: "01"});
+  const plan = planRestAreaIntegration(input, [], existing);
+  assert.equal(plan.entries.filter(entry => entry.status === "excluded").length, 23);
+  assert.equal(plan.entries.filter(entry => entry.status === "new").length, 0);
+  assert.equal(plan.entries.find(entry => entry.area.code === "000119")?.status, "existing");
+});
+
+test("민자 휴게소가 CSV로 들어와도 재추가하지 않고 같은 노선의 공영 시설은 유지한다", () => {
+  const csv = excludedPrivateRestAreas.map(item => ({휴게소명: item.name, 기준정보_도로노선명: item.route}));
+  const plan = planRestAreaIntegration(sources(), [...csv, {휴게소명: "내린천(양방향)", 기준정보_도로노선명: "서울양양선"}], existing);
+  assert.equal(plan.csvRows.length, 1);
+  assert.equal(plan.csvRows[0].name, "내린천(양방향)");
+  assert.equal(plan.csvReviews.filter(note => note.includes("민자")).length, 23);
+});
 
 test("양방향 정규화가 양양·함양 방향을 양방향으로 오인하지 않는다", () => {
   for (const value of ["양방향", "통합 방향", "양방"]) assert.equal(normalizedDirection(value), "양방");
