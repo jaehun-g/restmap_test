@@ -331,7 +331,7 @@ export default function MobileExplorer() {
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
-            stationsLoading={gas.loading}
+            stationsLoading={placeView === "rest" ? false : gas.loading}
             stationError={gas.error}
             onRetryStations={() => {
               void gas.reload();

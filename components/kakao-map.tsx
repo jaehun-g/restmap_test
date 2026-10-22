@@ -89,10 +89,18 @@ export default function KakaoMap({
     () => [...areas.map(restPlace), ...stations.map(stationPlace)],
     [areas, stations],
   );
-  const markerSignature = useMemo(() => markerLayerSignature(places), [places]);
+  const [prevPlaces, setPrevPlaces] = useState(places);
+  const [committedPlaces, setCommittedPlaces] = useState(places);
+
+  if (!stationsLoading && places !== prevPlaces) {
+    setPrevPlaces(places);
+    setCommittedPlaces(places);
+  }
+
+  const markerSignature = useMemo(() => markerLayerSignature(committedPlaces), [committedPlaces]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 표시 단위가 같으면 기존 레이어의 배열 참조를 유지한다.
-  const markerPlaces = useMemo(() => places, [markerSignature]);
-  const positionedItems = useMemo(() => places.map(place => place.record), [places]);
+  const markerPlaces = useMemo(() => committedPlaces, [markerSignature]);
+  const positionedItems = useMemo(() => committedPlaces.map(place => place.record), [committedPlaces]);
   const linkedStationsRef = useRef<ReadonlyMap<number, GasStation[]> | undefined>(linkedStationsByRestId);
   useEffect(() => {
     linkedStationsRef.current = linkedStationsByRestId;
