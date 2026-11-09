@@ -427,6 +427,10 @@ export default function KakaoMap({
     audience,
   ]);
   useEffect(() => {
+    if (!map || selectedId === null || selectedStationId !== null || !showCard) return;
+    layer.current?.select(`rest:${selectedId}`, true, false, true);
+  }, [map, selectedId, selectedStationId, showCard, linkedStationsByRestId]);
+  useEffect(() => {
     layer.current?.adjustCard();
   }, [map, viewportVersion]);
   const prevFullscreenRef = useRef(fullscreen);

@@ -2,6 +2,34 @@ import {expect, test, type Page} from "@playwright/test";
 import {installKakaoMapsMock} from "./kakao-map-mock";
 import {gasStationResponse, restAreaResponse} from "./kakao-map-fixtures";
 
+test("휴게소 요약을 먼저 열어도 늦게 도착한 주유소 가격을 표시한다", async ({page, context}) => {
+  await page.addInitScript({content: installKakaoMapsMock});
+  const area = {...restAreaResponse.items[0], id: 223, name: "서하남행복드림쉼터", routeName: "수도권제1순환선", directionLabel: "판교 방향", latitude: 37.5258, longitude: 127.193};
+  const station = {...gasStationResponse.items[0], siteCode: "1000|B00161|판교|S", name: "서하남(판교)주유소", routeName: "수도권제1순환선", direction: "판교", latitude: 37.525914, longitude: 127.1930451, prices: {gasoline: 1835, diesel: 1825, lpg: null}};
+  let releaseStation!: () => void;
+  const waitForStation = new Promise<void>(resolve => { releaseStation = resolve; });
+  await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
+  await page.route("**/api/gas-stations**", async route => {
+    await waitForStation;
+    await route.fulfill({json: {...gasStationResponse, items: [station]}});
+  });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.5258, longitude: 127.193});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile", {waitUntil: "domcontentloaded"});
+  try {
+    await page.getByRole("button", {name: "휴게소", exact: true}).click();
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBeGreaterThan(0);
+    await page.evaluate(() => window.__kakaoMapMock.markers[0].click());
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("서하남행복드림쉼터");
+    releaseStation();
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("1,835원/L");
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("1,825원/L");
+  } finally {
+    releaseStation();
+  }
+});
+
 async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
   let previous = -1;
   for (let attempt = 0; attempt < 10; attempt++) {
