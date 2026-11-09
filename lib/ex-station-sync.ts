@@ -261,7 +261,7 @@ function stationValues(station: ExStationStatus, resolved: ResolvedStation) {
     station.serviceAreaCode,
     station.routeName,
     station.direction,
-    verifiedStationName(station.sourceKey, station.serviceAreaName),
+    station.serviceAreaName === null ? null : verifiedStationName(station.sourceKey, station.serviceAreaName),
     station.oilCompany,
     station.location,
     station.phone,

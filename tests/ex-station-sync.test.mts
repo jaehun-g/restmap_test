@@ -72,6 +72,17 @@ test("동기화해도 밀양영남루 주유소의 보정된 이름을 유지한
   assert.equal(writes[0][0], sourceKey);
 });
 
+test("원천 주유소 이름이 없으면 동기화 시 null을 유지한다", async () => {
+  const sourceKey = "0140|B00243|밀양|AD";
+  const {pool, writes} = fakePool();
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: [{...station(sourceKey), serviceAreaName: null}]}),
+  });
+  assert.ok(result.ok);
+  assert.equal(writes[0][5], null);
+});
+
 function fakePool({
   cached = [],
   overrides = [],
