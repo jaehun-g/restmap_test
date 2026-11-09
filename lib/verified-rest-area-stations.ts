@@ -33,6 +33,10 @@ export function verifiedStationDirection(sourceKey: string): string | undefined 
   return verified && "direction" in verified ? verified.direction : undefined;
 }
 
+export function verifiedStationName(sourceKey: string, name: string): string {
+  return sourceKey === "0140|B00243|밀양|AD" ? "밀양영남루(밀양)주유소" : name;
+}
+
 /** 사용자 지시로 거리만 실패한 동명·동방향 시설의 좌표를 휴게소에 맞춘다. */
 export const verifiedStationCoordinates = [
   {sourceKey: "0010|B00022|부산|AD", restAreaId: 25, latitude: 36.6577, longitude: 127.37},

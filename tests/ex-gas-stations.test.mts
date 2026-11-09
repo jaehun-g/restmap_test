@@ -51,6 +51,17 @@ function station() {
   return result.value[0];
 }
 
+test("밀양영남루 주유소는 원천 이름이 울산이어도 밀양 방향으로 표시한다", () => {
+  const sourceKey = "0140|B00243|밀양|AD";
+  const result = normalizeExGasStations([{...row(), source_key: sourceKey, service_area_name: "밀양영남루(울산)주유소"}]);
+  assert.ok(result.ok);
+  assert.equal(result.value[0].name, "밀양영남루(밀양)주유소");
+  assert.equal(result.value[0].siteCode, sourceKey);
+  const other = normalizeExGasStations([{...row(), service_area_name: "밀양영남루(울산)주유소"}]);
+  assert.ok(other.ok);
+  assert.equal(other.value[0].name, "밀양영남루(울산)주유소");
+});
+
 test("EX rows decode UTF-8, decimal prices, coordinates and source collection time", () => {
   const result = normalizeExGasStations([
     {

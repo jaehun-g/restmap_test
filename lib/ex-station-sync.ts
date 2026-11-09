@@ -11,7 +11,7 @@ import {
   selectKakaoKeywordPlace,
 } from "./kakao-local.ts";
 import type {Result} from "./rest-areas.ts";
-import {verifiedStationLocations, verifiedStationCoordinates} from "./verified-rest-area-stations.ts";
+import {verifiedStationLocations, verifiedStationCoordinates, verifiedStationName} from "./verified-rest-area-stations.ts";
 
 type CachedStation = {
   sourceKey: string;
@@ -261,7 +261,7 @@ function stationValues(station: ExStationStatus, resolved: ResolvedStation) {
     station.serviceAreaCode,
     station.routeName,
     station.direction,
-    station.serviceAreaName,
+    verifiedStationName(station.sourceKey, station.serviceAreaName),
     station.oilCompany,
     station.location,
     station.phone,
