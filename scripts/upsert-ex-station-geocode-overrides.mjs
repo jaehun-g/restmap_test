@@ -3,6 +3,7 @@ import {Pool} from "pg";
 import nextEnv from "@next/env";
 import {readDatabaseConfig} from "../lib/db-config.ts";
 import {parseExStationGeocodeOverrides} from "../lib/ex-station-geocode-overrides.ts";
+import {dbColumn, dbTable} from "./db-columns.mjs";
 
 const {loadEnvConfig} = nextEnv;
 loadEnvConfig(process.cwd());
@@ -19,10 +20,10 @@ const db = new Pool({connectionString: config.value.connectionString, max: 1, ss
 try {
   for (const override of overrides.value)
     await db.query(
-      `INSERT INTO test_ex_station_geocode_overrides (source_key, search_address, enabled)
+      `INSERT INTO public.${dbTable("ex_station_geocode_overrides")} (${dbColumn("ex_station_geocode_overrides", "source_key")}, ${dbColumn("ex_station_geocode_overrides", "search_address")}, ${dbColumn("ex_station_geocode_overrides", "enabled")})
        VALUES ($1, $2, TRUE)
-       ON CONFLICT (source_key) DO UPDATE
-       SET search_address = EXCLUDED.search_address, enabled = TRUE, updated_at = CURRENT_TIMESTAMP`,
+       ON CONFLICT (${dbColumn("ex_station_geocode_overrides", "source_key")}) DO UPDATE
+       SET ${dbColumn("ex_station_geocode_overrides", "search_address")} = EXCLUDED.${dbColumn("ex_station_geocode_overrides", "search_address")}, ${dbColumn("ex_station_geocode_overrides", "enabled")} = TRUE, ${dbColumn("ex_station_geocode_overrides", "updated_at")} = CURRENT_TIMESTAMP`,
       [override.sourceKey, override.searchAddress],
     );
   console.log(`${overrides.value.length}건의 수동 주소 매핑을 반영했습니다.`);

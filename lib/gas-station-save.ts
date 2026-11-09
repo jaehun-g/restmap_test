@@ -29,7 +29,7 @@ export async function saveGasStation(
       };
     await connection.beginTransaction();
     active = true;
-    const {rows} = await connection.query(`${selectStationColumns} WHERE id = $1 FOR UPDATE`, [id]);
+    const {rows} = await connection.query(`${selectStationColumns} WHERE "gs_id" = $1 FOR UPDATE`, [id]);
     if (rows.length !== 1)
       return {ok: false, error: {code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다."}};
     const current = stationRecordFromRow(rows[0]);
@@ -48,7 +48,7 @@ export async function saveGasStation(
       values: unknown[] = [];
     for (const {key, column} of stationFields) {
       if (Object.hasOwn(request.changes, key) && current.value[key] !== request.changes[key]) {
-        assignments.push(`"${column.toLowerCase()}" = $${values.length + 1}`);
+        assignments.push(`"gs_${column.toLowerCase()}" = $${values.length + 1}`);
         values.push(request.changes[key]);
       }
     }
@@ -58,17 +58,17 @@ export async function saveGasStation(
         Object.hasOwn(request.changes.services, key) &&
         current.value.services[key] !== request.changes.services[key]
       ) {
-        assignments.push(`"${column.toLowerCase()}" = $${values.length + 1}`);
+        assignments.push(`"gs_${column.toLowerCase()}" = $${values.length + 1}`);
         const value = request.changes.services[key];
         values.push(value === null ? null : value ? "Y" : "N");
       }
     }
     if (assignments.length)
-      await connection.query(`UPDATE test_gscargo SET ${assignments.join(", ")} WHERE id = $${values.length + 1}`, [
+      await connection.query(`UPDATE tb_gscargo SET ${assignments.join(", ")} WHERE gs_id = $${values.length + 1}`, [
         ...values,
         id,
       ]);
-    const {rows: updated} = await connection.query(`${selectStationColumns} WHERE id = $1`, [id]);
+    const {rows: updated} = await connection.query(`${selectStationColumns} WHERE "gs_id" = $1`, [id]);
     if (updated.length !== 1) throw new Error("Missing updated station");
     const record = stationRecordFromRow(updated[0]);
     if (!record.ok) return record;

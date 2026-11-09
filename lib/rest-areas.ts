@@ -104,7 +104,7 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
         ok: false,
         error: {
           code: "INVALID_DATA",
-          message: "휴게소의 ID 또는 이름이 올바르지 않습니다. test_lounge 데이터를 확인해주세요.",
+          message: "휴게소의 ID 또는 이름이 올바르지 않습니다. tb_lounge 데이터를 확인해주세요.",
         },
       };
     }

@@ -281,23 +281,23 @@ function stationValues(station: ExStationStatus, resolved: ResolvedStation) {
   ];
 }
 
-const upsertSql = `INSERT INTO test_ex_station_geocodes (
-  source_key, route_code, service_area_code, route_name, direction, service_area_name, oil_company,
-  source_location, tel_no, lpg_available, gasoline_price, diesel_price, lpg_price,
-  latitude, longitude, kakao_address_name, kakao_address_type,
-  kakao_parcel_address_name, kakao_road_address_name, geocode_status, geocode_error_code,
-  source_fetched_at, geocoded_at
+const upsertSql = `INSERT INTO tb_ex_station_geocodes (
+  ex_source_key, ex_route_code, ex_service_area_code, ex_route_name, ex_direction, ex_service_area_name, ex_oil_company,
+  ex_source_location, ex_tel_no, ex_lpg_available, ex_gasoline_price, ex_diesel_price, ex_lpg_price,
+  ex_latitude, ex_longitude, ex_kakao_address_name, ex_kakao_address_type,
+  ex_kakao_parcel_address_name, ex_kakao_road_address_name, ex_geocode_status, ex_geocode_error_code,
+  ex_source_fetched_at, ex_geocoded_at
 ) VALUES (${Array.from({length: 21}, (_, index) => `$${index + 1}`).join(", ")}, CURRENT_TIMESTAMP(3), $22)
-ON CONFLICT (source_key) DO UPDATE SET
-  route_code = EXCLUDED.route_code, service_area_code = EXCLUDED.service_area_code, route_name = EXCLUDED.route_name,
-  direction = EXCLUDED.direction, service_area_name = EXCLUDED.service_area_name, oil_company = EXCLUDED.oil_company,
-  source_location = EXCLUDED.source_location, tel_no = EXCLUDED.tel_no, lpg_available = EXCLUDED.lpg_available,
-  gasoline_price = EXCLUDED.gasoline_price, diesel_price = EXCLUDED.diesel_price, lpg_price = EXCLUDED.lpg_price,
-  latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude, kakao_address_name = EXCLUDED.kakao_address_name,
-  kakao_address_type = EXCLUDED.kakao_address_type, kakao_parcel_address_name = EXCLUDED.kakao_parcel_address_name,
-  kakao_road_address_name = EXCLUDED.kakao_road_address_name, geocode_status = EXCLUDED.geocode_status,
-  geocode_error_code = EXCLUDED.geocode_error_code, source_fetched_at = EXCLUDED.source_fetched_at,
-  geocoded_at = EXCLUDED.geocoded_at, updated_at = CURRENT_TIMESTAMP`;
+ON CONFLICT (ex_source_key) DO UPDATE SET
+  ex_route_code = EXCLUDED.ex_route_code, ex_service_area_code = EXCLUDED.ex_service_area_code, ex_route_name = EXCLUDED.ex_route_name,
+  ex_direction = EXCLUDED.ex_direction, ex_service_area_name = EXCLUDED.ex_service_area_name, ex_oil_company = EXCLUDED.ex_oil_company,
+  ex_source_location = EXCLUDED.ex_source_location, ex_tel_no = EXCLUDED.ex_tel_no, ex_lpg_available = EXCLUDED.ex_lpg_available,
+  ex_gasoline_price = EXCLUDED.ex_gasoline_price, ex_diesel_price = EXCLUDED.ex_diesel_price, ex_lpg_price = EXCLUDED.ex_lpg_price,
+  ex_latitude = EXCLUDED.ex_latitude, ex_longitude = EXCLUDED.ex_longitude, ex_kakao_address_name = EXCLUDED.ex_kakao_address_name,
+  ex_kakao_address_type = EXCLUDED.ex_kakao_address_type, ex_kakao_parcel_address_name = EXCLUDED.ex_kakao_parcel_address_name,
+  ex_kakao_road_address_name = EXCLUDED.ex_kakao_road_address_name, ex_geocode_status = EXCLUDED.ex_geocode_status,
+  ex_geocode_error_code = EXCLUDED.ex_geocode_error_code, ex_source_fetched_at = EXCLUDED.ex_source_fetched_at,
+  ex_geocoded_at = EXCLUDED.ex_geocoded_at, ex_updated_at = CURRENT_TIMESTAMP`;
 
 /** Synchronizes the EX station table only after the complete source snapshot is validated. */
 export async function synchronizeExStations(
@@ -312,7 +312,13 @@ export async function synchronizeExStations(
   if (!fetched.ok) return fetched;
   try {
     const {rows: cachedRows} = await dependencies.pool.query<QueryResultRow>(
-      "SELECT source_key, source_location, latitude, longitude, kakao_address_name, kakao_address_type, kakao_parcel_address_name, kakao_road_address_name, geocode_status, geocode_error_code, geocoded_at FROM test_ex_station_geocodes",
+      `SELECT ex_source_key AS source_key, ex_source_location AS source_location,
+        ex_latitude AS latitude, ex_longitude AS longitude,
+        ex_kakao_address_name AS kakao_address_name, ex_kakao_address_type AS kakao_address_type,
+        ex_kakao_parcel_address_name AS kakao_parcel_address_name,
+        ex_kakao_road_address_name AS kakao_road_address_name,
+        ex_geocode_status AS geocode_status, ex_geocode_error_code AS geocode_error_code,
+        ex_geocoded_at AS geocoded_at FROM tb_ex_station_geocodes`,
     );
     const cached = new Map(
       cachedRows.flatMap(row => {
@@ -321,7 +327,8 @@ export async function synchronizeExStations(
       }),
     );
     const {rows: overrideRows} = await dependencies.pool.query<QueryResultRow>(
-      "SELECT source_key, search_address, updated_at FROM test_ex_station_geocode_overrides WHERE enabled IS TRUE",
+      `SELECT eo_source_key AS source_key, eo_search_address AS search_address,
+        eo_updated_at AS updated_at FROM tb_ex_station_geocode_overrides WHERE eo_enabled IS TRUE`,
     );
     const overrides = new Map(
       overrideRows.flatMap(row => {
@@ -356,10 +363,10 @@ export async function synchronizeExStations(
       const sourceKeys = fetched.value.map(station => station.sourceKey);
       const deleted = sourceKeys.length
         ? await connection.query(
-            "DELETE FROM test_ex_station_geocodes WHERE source_key <> ALL($1::text[])",
+            "DELETE FROM tb_ex_station_geocodes WHERE ex_source_key <> ALL($1::text[])",
             [sourceKeys],
           )
-        : await connection.query("DELETE FROM test_ex_station_geocodes");
+        : await connection.query("DELETE FROM tb_ex_station_geocodes");
       await connection.query("COMMIT");
       return {
         ok: true,

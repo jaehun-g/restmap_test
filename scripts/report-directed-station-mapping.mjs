@@ -6,6 +6,7 @@ import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
 import {mergeFacilityPlaces, isBidirectionalDirection, normalizedDirection, normalizedFacilityName, stationNameDirections} from "../lib/facility-places.ts";
 import {canonicalHighwayRouteName} from "../lib/highway-route-name.ts";
 import {distanceMeters} from "../lib/geo-search.ts";
+import {selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rejectUnauthorized: false}, connectionTimeoutMillis: 10_000});
@@ -18,8 +19,8 @@ const missingDirections = new Set(["미제공", "미등록", "정보없음", "�
 try {
   await client.connect();
   await client.query("BEGIN READ ONLY");
-  const parsedAreas = normalizeRestAreas((await client.query("SELECT * FROM public.test_lounge ORDER BY id")).rows);
-  const parsedStations = normalizeExGasStations((await client.query("SELECT * FROM public.test_ex_station_geocodes ORDER BY id")).rows);
+  const parsedAreas = normalizeRestAreas(await selectLegacyRows(client, "lounge", "ORDER BY lg_id"));
+  const parsedStations = normalizeExGasStations(await selectLegacyRows(client, "ex_station_geocodes", "ORDER BY ex_id"));
   if (!parsedAreas.ok || !parsedStations.ok) throw new Error("휴게소 또는 EX 주유소 원본 형식이 올바르지 않습니다.");
   const areas = parsedAreas.value;
   const stations = parsedStations.value;

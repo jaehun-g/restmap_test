@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import nextEnv from "@next/env";
 import {Client} from "pg";
 import {fetchRestAreaSources, parseRestAreaCsv} from "../lib/rest-area-sources.ts";
+import {selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const csvPath = process.argv[2];
@@ -12,8 +13,8 @@ const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rej
 await client.connect();
 try {
   await client.query("BEGIN READ ONLY");
-  const existing = (await client.query("SELECT * FROM test_lounge ORDER BY id")).rows;
-  const columns = (await client.query("SELECT column_name, data_type, character_maximum_length, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='test_lounge' ORDER BY ordinal_position")).rows;
+  const existing = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
+  const columns = (await client.query("SELECT column_name, data_type, character_maximum_length, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='tb_lounge' ORDER BY ordinal_position")).rows;
   await client.query("ROLLBACK");
   await fs.mkdir(".rest-area-sync", {recursive: true});
   await fs.writeFile(".rest-area-sync/snapshot.json", JSON.stringify({sources, csv, existing, columns}, null, 2));

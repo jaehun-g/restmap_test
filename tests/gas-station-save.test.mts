@@ -25,7 +25,8 @@ function setup(failure?: "update" | "commit" | "rollback") {
         if (failure === "update" || failure === "rollback") throw new Error("write failed");
         const columns = [...sql.matchAll(/"(\w+)" = \$\d+/g)].map((match) => match[1]);
         columns.forEach((column, index) => {
-          row[column === "sitenm" ? "siteNm" : column === "cargoyn" ? "cargoYn" : column] = bound[index];
+          const logicalColumn = column.replace(/^gs_/, "");
+          row[logicalColumn === "sitenm" ? "siteNm" : logicalColumn === "cargoyn" ? "cargoYn" : logicalColumn] = bound[index];
         });
         return {rows: []};
       }
@@ -56,7 +57,7 @@ function setup(failure?: "update" | "commit" | "rollback") {
 
 test("station save binds names and Y/N/NULL flags and never changes identity or readonly columns", async () => {
   const mock = setup();
-  const name = "GS ' 주유소; DROP TABLE test_lounge; --";
+  const name = "GS ' 주유소; DROP TABLE tb_lounge; --";
   const result = await saveGasStation(
     mock.connection,
     17,
@@ -68,7 +69,7 @@ test("station save binds names and Y/N/NULL flags and never changes identity or 
   assert.equal(result.value.services.cargo, false);
   const update = mock.calls.find((call) => call.sql.startsWith("UPDATE"));
   assert.ok(update);
-  assert.equal(update.sql, "UPDATE test_gscargo SET \"sitenm\" = $1, \"cargoyn\" = $2 WHERE id = $3");
+  assert.equal(update.sql, "UPDATE tb_gscargo SET \"gs_sitenm\" = $1, \"gs_cargoyn\" = $2 WHERE gs_id = $3");
   assert.deepEqual(update.values, [name, "N", 17]);
   assert.equal(mock.state.committed, 1);
   assert.equal(mock.state.rolledBack, 0);

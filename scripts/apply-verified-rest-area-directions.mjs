@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import nextEnv from "@next/env";
 import {Client} from "pg";
 import {verifiedRestAreaDirections} from "../lib/verified-rest-area-directions.ts";
+import {dbColumn, dbTable, selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const apply = process.argv.includes("--apply");
@@ -10,8 +11,8 @@ const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rej
 try {
   await client.connect();
   await client.query(apply ? "BEGIN" : "BEGIN READ ONLY");
-  if (apply) await client.query("LOCK TABLE test_lounge IN SHARE ROW EXCLUSIVE MODE");
-  const before = (await client.query("SELECT * FROM test_lounge ORDER BY id")).rows;
+  if (apply) await client.query(`LOCK TABLE public.${dbTable("lounge")} IN SHARE ROW EXCLUSIVE MODE`);
+  const before = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
   const changes = verifiedRestAreaDirections.map(verified => {
     const matches = before.filter(row => row.std_rest_cd === verified.code);
     assert.equal(matches.length, 1, `표준 코드 ${verified.code}의 대상이 유일하지 않습니다.`);
@@ -26,10 +27,10 @@ try {
     backupPath = `.rest-area-sync/rest-area-directions-backup-${Date.now()}.json`;
     await fs.writeFile(backupPath, JSON.stringify({createdAt: new Date().toISOString(), changes}, null, 2), {encoding: "utf8", flag: "wx"});
     for (const item of changes) {
-      const result = await client.query("UPDATE test_lounge SET name=$2, direction_label=$3, route_direction=$4 WHERE id=$1 AND std_rest_cd=$5", [item.id, item.after.name, item.after.direction_label, item.after.route_direction, item.code]);
+      const result = await client.query(`UPDATE public.${dbTable("lounge")} SET ${dbColumn("lounge", "name")}=$2, ${dbColumn("lounge", "direction_label")}=$3, ${dbColumn("lounge", "route_direction")}=$4 WHERE ${dbColumn("lounge", "id")}=$1 AND ${dbColumn("lounge", "std_rest_cd")}=$5`, [item.id, item.after.name, item.after.direction_label, item.after.route_direction, item.code]);
       assert.equal(result.rowCount, 1);
     }
-    const after = (await client.query("SELECT * FROM test_lounge ORDER BY id")).rows;
+    const after = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
     assert.deepEqual(after, before.map(row => changes.find(item => item.id === row.id)?.after ?? row));
   }
   await client.query(apply ? "COMMIT" : "ROLLBACK");

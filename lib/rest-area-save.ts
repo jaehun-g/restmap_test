@@ -1,4 +1,4 @@
-import {scalarFields, selectRestAreaColumns} from "./rest-area-fields.ts";
+import {restAreaDbColumn, scalarFields, selectRestAreaColumns} from "./rest-area-fields.ts";
 import {facilityDefinitions, type Result, type RestAreaRecord} from "./rest-areas.ts";
 import {recordFromRow} from "./rest-area-revision.ts";
 import {validateCoordinatePair, type UpdateRequest} from "./rest-area-validation.ts";
@@ -32,7 +32,7 @@ export async function saveRestArea(
       };
     await connection.beginTransaction();
     active = true;
-    const {rows} = await connection.query(`${selectRestAreaColumns} WHERE id = $1 FOR UPDATE`, [id]);
+    const {rows} = await connection.query(`${selectRestAreaColumns} WHERE "lg_id" = $1 FOR UPDATE`, [id]);
     if (rows.length !== 1)
       return {
         ok: false,
@@ -58,7 +58,7 @@ export async function saveRestArea(
     const values: unknown[] = [];
     for (const {key, column} of scalarFields) {
       if (Object.hasOwn(request.changes, key) && request.changes[key] !== current.value[key]) {
-        assignments.push(`"${column}" = $${values.length + 1}`);
+        assignments.push(`${restAreaDbColumn(column)} = $${values.length + 1}`);
         values.push(request.changes[key]);
       }
     }
@@ -69,16 +69,16 @@ export async function saveRestArea(
         request.changes.facilities[key] !== current.value.facilities[key]
       ) {
         const value = request.changes.facilities[key];
-        assignments.push(`"${key}" = $${values.length + 1}`);
+        assignments.push(`${restAreaDbColumn(key)} = $${values.length + 1}`);
         values.push(value === null ? null : value ? 1 : 0);
       }
     }
     if (assignments.length)
-      await connection.query(`UPDATE test_lounge SET ${assignments.join(", ")} WHERE id = $${values.length + 1}`, [
+      await connection.query(`UPDATE tb_lounge SET ${assignments.join(", ")} WHERE lg_id = $${values.length + 1}`, [
         ...values,
         id,
       ]);
-    const {rows: updatedRows} = await connection.query(`${selectRestAreaColumns} WHERE id = $1`, [id]);
+    const {rows: updatedRows} = await connection.query(`${selectRestAreaColumns} WHERE "lg_id" = $1`, [id]);
     if (updatedRows.length !== 1)
       throw new Error("Missing updated row");
     const updated = recordFromRow(updatedRows[0]);

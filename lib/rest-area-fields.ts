@@ -92,7 +92,10 @@ export const databaseColumns = [
   ...scalarFields.map(field => field.column),
   ...facilityDefinitions.map(([key]) => key),
 ];
-export const selectRestAreaColumns = `SELECT ${databaseColumns.map(column => `"${column}"`).join(", ")} FROM test_lounge`;
+export const restAreaDbColumn = (column: string) => `"lg_${column}"`;
+export const selectRestAreaColumns = `SELECT ${databaseColumns
+  .map(column => `${restAreaDbColumn(column)} AS "${column}"`)
+  .join(", ")} FROM tb_lounge`;
 
 export type RestAreaChanges = Partial<Pick<RestArea, ScalarKey>> & {
   facilities?: Partial<RestArea["facilities"]>;

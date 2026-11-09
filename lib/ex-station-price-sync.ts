@@ -47,7 +47,7 @@ export async function synchronizeExStationPrices({
       }
       const keys = stations.map(item => item.sourceKey);
       const matched = await client.query(
-        "SELECT source_key FROM public.test_ex_station_geocodes WHERE source_key = ANY($1::text[])",
+        "SELECT ex_source_key AS source_key FROM public.tb_ex_station_geocodes WHERE ex_source_key = ANY($1::text[])",
         [keys],
       );
       if (!matched.rows.length) {
@@ -61,15 +61,15 @@ export async function synchronizeExStationPrices({
         lpg_price: item.lpgPrice,
       }));
       const updated = await client.query(
-        `UPDATE public.test_ex_station_geocodes AS station
-         SET gasoline_price = source.gasoline_price, diesel_price = source.diesel_price,
-             lpg_price = source.lpg_price, source_fetched_at = $2, updated_at = CURRENT_TIMESTAMP
+        `UPDATE public.tb_ex_station_geocodes AS station
+         SET ex_gasoline_price = source.gasoline_price, ex_diesel_price = source.diesel_price,
+             ex_lpg_price = source.lpg_price, ex_source_fetched_at = $2, ex_updated_at = CURRENT_TIMESTAMP
          FROM jsonb_to_recordset($1::jsonb) AS source(
            source_key text, gasoline_price numeric, diesel_price numeric, lpg_price numeric
          )
-         WHERE station.source_key = source.source_key
-           AND (station.source_fetched_at IS NULL OR station.source_fetched_at <= $2)
-         RETURNING station.source_key`,
+         WHERE station.ex_source_key = source.source_key
+           AND (station.ex_source_fetched_at IS NULL OR station.ex_source_fetched_at <= $2)
+         RETURNING station.ex_source_key AS source_key`,
         [JSON.stringify(prices), at],
       );
       await client.query("COMMIT");

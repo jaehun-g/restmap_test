@@ -17,7 +17,7 @@ function mock(options:{missing?:boolean;failUpdate?:boolean;failCommit?:boolean;
       if(sql.startsWith("UPDATE")) {
         if(options.failUpdate)throw {code:"ER_TABLEACCESS_DENIED_ERROR",message:"secret sql"};
         const columns=[...sql.matchAll(/"([a-z_]+)" = \$\d+/g)].map(match=>match[1]);
-        columns.forEach((column,index)=>{state.row[column]=bound[index];});
+        columns.forEach((column,index)=>{state.row[column.replace(/^lg_/,"")]=bound[index];});
         return {rows:[]};
       }
       return {rows:options.missing?[]:[{...state.row}]};
@@ -33,9 +33,9 @@ test("save locks one row, updates only whitelisted test_lounge columns with boun
   const text="'; UPDATE another_table SET name='bad";
   const result=await saveRestArea(connection,7,payload({routeName:text,facilities:{has_truck_lounge:true}}));
   if(!result.ok)assert.fail(result.error.message);
-  assert.ok(state.sql[0].endsWith("WHERE id = $1 FOR UPDATE"));
+  assert.ok(state.sql[0].endsWith('WHERE "lg_id" = $1 FOR UPDATE'));
   assert.equal(state.sql.filter(sql=>sql.startsWith("UPDATE")).length,1);
-  assert.equal(state.sql[1],"UPDATE test_lounge SET \"route_name\" = $1, \"has_truck_lounge\" = $2 WHERE id = $3");
+  assert.equal(state.sql[1],"UPDATE tb_lounge SET \"lg_route_name\" = $1, \"lg_has_truck_lounge\" = $2 WHERE lg_id = $3");
   assert.deepEqual(state.values[1],[text,1,7]);
   assert.ok(state.sql.every(sql=>!sql.includes("another_table")));
   assert.equal(result.value.routeName,text); assert.equal(result.value.facilities.has_truck_lounge,true);

@@ -26,7 +26,7 @@ function database({locked = true, matched = 1, updated = 1, failWrite = false} =
           }
           if (sql.startsWith("SET LOCAL")) return {rows: []};
           if (sql.includes("pg_try_advisory_xact_lock")) return {rows: [{locked}]};
-          if (sql.startsWith("SELECT source_key")) return {rows: Array.from({length: matched}, () => ({source_key: station.sourceKey}))};
+          if (sql.includes("FROM public.tb_ex_station_geocodes")) return {rows: Array.from({length: matched}, () => ({source_key: station.sourceKey}))};
           if (sql.startsWith("UPDATE")) {
             events.push("update");
             query = sql;
@@ -56,7 +56,7 @@ test("updates only fuel prices by stable source key, retaining null LPG without 
   assert.deepEqual(db.payload(), [station, {...station, sourceKey: "new-station"}].map(item => ({
     source_key: item.sourceKey, gasoline_price: 1700, diesel_price: 1600, lpg_price: null,
   })));
-  assert.match(db.query(), /station.source_key = source.source_key/);
+  assert.match(db.query(), /station.ex_source_key = source.source_key/);
   assert.doesNotMatch(db.query(), /\b(latitude|longitude|geocoded_at|geocode_status|INSERT|DELETE)\b/);
   assert.deepEqual(db.events, ["connect", "BEGIN", "update", "COMMIT", "release"]);
 });
@@ -90,7 +90,7 @@ test("guards more recent snapshots against stale or overlapping requests", async
   const db = database({updated: 0});
   const result = await synchronizeExStationPrices({pool: db.pool, now: () => at, fetchStations: async () => ({ok: true, value: [station]})});
   assert.equal(result.ok && result.value.newerSnapshotCount, 1);
-  assert.match(db.query(), /station.source_fetched_at <= \$2/);
+  assert.match(db.query(), /station.ex_source_fetched_at <= \$2/);
 });
 
 test("rolls back failed writes so previous prices and timestamps remain unchanged", async () => {

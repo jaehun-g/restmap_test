@@ -3,10 +3,11 @@ import type {Result} from "./rest-areas.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {verifiedStationDirection, verifiedStationName} from "./verified-rest-area-stations.ts";
 
-export const selectExStationColumns = `SELECT id, source_key, service_area_name, route_name,
-  direction, oil_company, source_location, tel_no, lpg_available, gasoline_price, diesel_price,
-  lpg_price, latitude, longitude, kakao_address_name, kakao_road_address_name,
-  source_fetched_at, updated_at FROM test_ex_station_geocodes`;
+const exColumns = ["id", "source_key", "service_area_name", "route_name", "direction", "oil_company",
+  "source_location", "tel_no", "lpg_available", "gasoline_price", "diesel_price", "lpg_price",
+  "latitude", "longitude", "kakao_address_name", "kakao_road_address_name", "source_fetched_at", "updated_at"];
+export const selectExStationColumns = `SELECT ${exColumns.map(column => `"ex_${column}" AS "${column}"`).join(", ")}
+  FROM tb_ex_station_geocodes`;
 
 function timestamp(value: unknown): string | null {
   if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : null;

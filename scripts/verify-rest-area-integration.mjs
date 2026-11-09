@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import nextEnv from "@next/env";
 import {Client} from "pg";
 import {validRestCoordinates} from "../lib/rest-area-integration.ts";
+import {dbColumn, dbTable, selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const snapshot = JSON.parse(await fs.readFile(process.argv[2] ?? ".rest-area-sync/snapshot.json", "utf8"));
@@ -10,9 +11,9 @@ const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rej
 await client.connect();
 try {
   await client.query("BEGIN READ ONLY");
-  const rows = (await client.query("SELECT * FROM public.test_lounge ORDER BY id")).rows;
-  const mappings = (await client.query("SELECT std_rest_cd,rest_area_id,match_status FROM public.test_food_area_mappings ORDER BY std_rest_cd")).rows;
-  const foodCounts = (await client.query("SELECT count(*)::int AS total, count(*) FILTER (WHERE source_present AND app_visible)::int AS visible FROM public.test_food_menus")).rows[0];
+  const rows = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
+  const mappings = await selectLegacyRows(client, "food_area_mappings", "ORDER BY am_std_rest_cd");
+  const foodCounts = (await client.query(`SELECT count(*)::int AS total, count(*) FILTER (WHERE ${dbColumn("food_menus", "source_present")} AND ${dbColumn("food_menus", "app_visible")} )::int AS visible FROM public.${dbTable("food_menus")}`)).rows[0];
   await client.query("ROLLBACK");
   assert.equal(new Set(rows.map(row => row.id)).size, rows.length);
   const retained = snapshot.existing.map(before => {

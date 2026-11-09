@@ -3,6 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import {fileURLToPath} from "node:url";
 import {Client} from "pg";
+import {dbColumn, dbTable} from "./db-columns.mjs";
 
 const coordinatePrecision = 5;
 const coordinateFactor = 10 ** coordinatePrecision;
@@ -98,14 +99,14 @@ async function main() {
   try {
     await client.query("BEGIN");
     const result = await client.query(
-      `UPDATE test_highway_routes
-       SET path_coordinates = $1::jsonb,
-           sw_lat = $2,
-           sw_lng = $3,
-           ne_lat = $4,
-           ne_lng = $5
-       WHERE route_name = $6
-       RETURNING id, route_name, sw_lat, sw_lng, ne_lat, ne_lng, jsonb_array_length(path_coordinates) AS path_count`,
+      `UPDATE public.${dbTable("highway_routes")}
+       SET ${dbColumn("highway_routes", "path_coordinates")} = $1::jsonb,
+           ${dbColumn("highway_routes", "sw_lat")} = $2,
+           ${dbColumn("highway_routes", "sw_lng")} = $3,
+           ${dbColumn("highway_routes", "ne_lat")} = $4,
+           ${dbColumn("highway_routes", "ne_lng")} = $5
+       WHERE ${dbColumn("highway_routes", "route_name")} = $6
+       RETURNING ${dbColumn("highway_routes", "id")} AS id, ${dbColumn("highway_routes", "route_name")} AS route_name, ${dbColumn("highway_routes", "sw_lat")} AS sw_lat, ${dbColumn("highway_routes", "sw_lng")} AS sw_lng, ${dbColumn("highway_routes", "ne_lat")} AS ne_lat, ${dbColumn("highway_routes", "ne_lng")} AS ne_lng, jsonb_array_length(${dbColumn("highway_routes", "path_coordinates")}) AS path_count`,
       [JSON.stringify(route.paths), route.bounds.south, route.bounds.west, route.bounds.north, route.bounds.east, routeName],
     );
     if (result.rows.length !== 1) fail(`Expected exactly one '${routeName}' route row, found ${result.rows.length}.`);

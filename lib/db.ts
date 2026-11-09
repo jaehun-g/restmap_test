@@ -86,9 +86,10 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
     const pool = getPool();
     if (!pool.ok) return pool;
     const {rows} = await pool.value.query<QueryResultRow>(
-      `SELECT id, route_name, route_number, sw_lat, sw_lng, ne_lat, ne_lng,
-              path_coordinates
-       FROM test_highway_routes WHERE route_name = $1 LIMIT 1`,
+      `SELECT hr_id AS id, hr_route_name AS route_name, hr_route_number AS route_number,
+              hr_sw_lat AS sw_lat, hr_sw_lng AS sw_lng, hr_ne_lat AS ne_lat,
+              hr_ne_lng AS ne_lng, hr_path_coordinates AS path_coordinates
+       FROM tb_highway_routes WHERE hr_route_name = $1 LIMIT 1`,
       [routeName],
     );
     if (!rows.length)
@@ -100,7 +101,7 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
   } catch (reason) {
     const error = databaseError(reason);
     if (error.code === "DB_SCHEMA_ERROR")
-      error.message = "노선 경로 테이블(test_highway_routes)을 확인해주세요.";
+      error.message = "노선 경로 테이블(tb_highway_routes)을 확인해주세요.";
     if (error.code === "DB_QUERY_FAILED")
       error.message = "노선 경로를 조회하지 못했습니다. 잠시 후 다시 시도해주세요.";
     return {ok: false, error};
@@ -125,14 +126,14 @@ export async function queryGasStations(
     let where = "";
     if (bounds) {
       const longitude =
-        bounds.west <= bounds.east ? "longi BETWEEN $3 AND $4" : "(longi >= $3 OR longi <= $4)";
-      where = ` WHERE lat BETWEEN $1 AND $2 AND ${longitude}`;
+        bounds.west <= bounds.east ? "gs_longi BETWEEN $3 AND $4" : "(gs_longi >= $3 OR gs_longi <= $4)";
+      where = ` WHERE gs_lat BETWEEN $1 AND $2 AND ${longitude}`;
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
       const records: GasStationRecord[] = [];
       if (query.source === "all") {
         const {rows} = await pool.value.query<QueryResultRow>(
-          `${selectStationColumns}${where} ORDER BY "siteNm", id`,
+          `${selectStationColumns}${where} ORDER BY "gs_sitenm", "gs_id"`,
           values,
         );
         for (const row of rows) {
@@ -141,7 +142,7 @@ export async function queryGasStations(
           records.push(parsed.value);
         }
       }
-    const exWhere = where.replace(/\blat\b/g, "latitude").replace(/\blongi\b/g, "longitude");
+    const exWhere = where.replace(/\bgs_lat\b/g, "ex_latitude").replace(/\bgs_longi\b/g, "ex_longitude");
     const {rows: exRows} = await pool.value.query<QueryResultRow>(
       `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,
       values,
@@ -163,7 +164,7 @@ export async function queryGasStations(
   } catch (reason) {
     const error = databaseError(reason);
     if (error.code === "DB_SCHEMA_ERROR")
-      error.message = "주유소 테이블(test_gscargo, test_ex_station_geocodes)을 확인해주세요.";
+      error.message = "주유소 테이블(tb_gscargo, tb_ex_station_geocodes)을 확인해주세요.";
     return {ok: false, error};
   }
 }
@@ -190,12 +191,17 @@ export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMen
     const pool = getPool();
     if (!pool.ok) return pool;
     const {rows} = await pool.value.query<QueryResultRow>(
-      `SELECT f.source_key, f.food_nm, f.food_cost, f.recommendyn, f.bestfoodyn,
-        to_char(f.source_updated_at,'YYYY-MM-DD') AS source_updated_at, f.collected_at
-       FROM public.test_food_menus f
-       JOIN public.test_food_area_mappings m ON m.std_rest_cd=f.std_rest_cd
-       WHERE m.rest_area_id=$1 AND m.match_status='matched' AND f.source_present=true AND f.app_visible=true
-       ORDER BY f.bestfoodyn DESC NULLS LAST, f.recommendyn DESC NULLS LAST, f.food_nm`,
+      `SELECT f.fm_source_key AS source_key, f.fm_food_nm AS food_nm,
+        f.fm_food_cost AS food_cost, f.fm_recommendyn AS recommendyn,
+        f.fm_bestfoodyn AS bestfoodyn,
+        to_char(f.fm_source_updated_at,'YYYY-MM-DD') AS source_updated_at,
+        f.fm_collected_at AS collected_at
+       FROM public.tb_food_menus f
+       JOIN public.tb_food_area_mappings m ON m.am_std_rest_cd=f.fm_std_rest_cd
+       WHERE m.am_rest_area_id=$1 AND m.am_match_status='matched'
+         AND f.fm_source_present=true AND f.fm_app_visible=true
+       ORDER BY f.fm_bestfoodyn DESC NULLS LAST,
+         f.fm_recommendyn DESC NULLS LAST, f.fm_food_nm`,
       [restAreaId],
     );
     const items = rows.map(row => ({
@@ -235,7 +241,7 @@ export async function queryGasStation(id: number): Promise<Result<GasStationReco
       .map(selectStationColumn)
       .join(", ");
     const {rows} = await pool.value.query<QueryResultRow>(
-      `SELECT ${columns} FROM test_gscargo WHERE id = $1 LIMIT 1`,
+      `SELECT ${columns} FROM tb_gscargo WHERE gs_id = $1 LIMIT 1`,
       [id],
     );
     if (!rows.length)

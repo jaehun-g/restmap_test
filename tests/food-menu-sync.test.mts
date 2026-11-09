@@ -23,7 +23,7 @@ function mockPool(initial: Record<string, Record<string, unknown>>, failMenuWrit
   const menus = new Map(Object.entries(initial));
   let beforeTransaction: Map<string, Record<string, unknown>> | null = null;
   const pool = {
-    query: async (sql: string) => ({rows: sql.includes("INSERT INTO public.test_food_menu_sync_runs") ? [{id: "1"}] : []}),
+    query: async (sql: string) => ({rows: sql.includes("INSERT INTO public.tb_food_menu_sync_runs") ? [{id: "1"}] : []}),
     connect: async () => ({
       query: async (sql: string, values: unknown[] = []) => {
         if (sql === "BEGIN") beforeTransaction = new Map([...menus].map(([key, value]) => [key, {...value}]));
@@ -32,14 +32,14 @@ function mockPool(initial: Record<string, Record<string, unknown>>, failMenuWrit
           for (const [key, value] of beforeTransaction) menus.set(key, value);
         }
         if (sql.includes("SELECT std_rest_cd")) return {rows: []};
-        if (sql.includes("UPDATE public.test_food_menus")) {
+        if (sql.includes("UPDATE public.tb_food_menus")) {
           const [at, keys] = values as [Date, string[]];
           for (const [key, row] of menus) if (!keys.includes(key) && row.source_present) {
             row.source_present = false;
             row.missing_since ??= at;
           }
         }
-        if (sql.includes("INSERT INTO public.test_food_menus")) {
+        if (sql.includes("INSERT INTO public.tb_food_menus")) {
           if (failMenuWrite) throw Object.assign(new Error("injected write failure"), {code: "TEST_WRITE_FAILED"});
           const rows = JSON.parse(String(values[0])) as Record<string, unknown>[];
           for (const row of rows) {
@@ -80,7 +80,7 @@ test("failed source snapshot leaves the existing food menu table untouched", asy
   });
   assert.equal(result.ok, false);
   assert.equal(connected, false);
-  assert.equal(statements.some(sql => sql.includes("test_food_menus")), false);
+  assert.equal(statements.some(sql => sql.includes("tb_food_menus")), false);
   assert.equal(statements.at(-1)?.includes("status='failed'"), true);
 });
 

@@ -9,6 +9,7 @@ import {canonicalHighwayRouteName} from "../lib/highway-route-name.ts";
 import {normalizeHighwayRoute} from "../lib/highway-routes.ts";
 import {compileRouteProximity} from "../lib/route-proximity.ts";
 import {distanceMeters} from "../lib/geo-search.ts";
+import {dbColumn, dbTable, selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const args = process.argv.slice(2), option = key => args.includes(key) ? args[args.indexOf(key) + 1] : null;
@@ -31,8 +32,8 @@ const allowed = new Set(["id", "name", "std_rest_cd", "service_area_code", "lati
 await client.connect();
 try {
   await client.query("BEGIN READ ONLY");
-  const existing = (await client.query("SELECT * FROM public.test_lounge ORDER BY id")).rows;
-  const routeRows = (await client.query("SELECT * FROM public.test_highway_routes ORDER BY id")).rows;
+  const existing = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
+  const routeRows = await selectLegacyRows(client, "highway_routes", "ORDER BY hr_id");
   await client.query("ROLLBACK");
   const baselineHash = hash(existing);
   const plan = planRestAreaIntegration(sources, csv, existing);
@@ -104,17 +105,17 @@ try {
     catch (error) { if (error.code !== "EEXIST") throw error; }
     await client.query("BEGIN");
     try {
-      await client.query("LOCK TABLE public.test_lounge IN SHARE ROW EXCLUSIVE MODE");
-      const current = (await client.query("SELECT * FROM public.test_lounge ORDER BY id")).rows;
+      await client.query(`LOCK TABLE public.${dbTable("lounge")} IN SHARE ROW EXCLUSIVE MODE`);
+      const current = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
       if (hash(current) !== baselineHash) throw new Error("계획 생성 중 DB가 변경됐습니다. 다시 실행해주세요.");
       await client.query(await fs.readFile(new URL("../sql/test_lounge_source_codes.sql", import.meta.url), "utf8"));
       for (const {row, before} of changes) {
         const columns = [...allowed].filter(key => row[key] !== undefined && (!before || (key !== "id" && row[key] !== before[key])));
         const values = columns.map(key => row[key]);
-        if (before) await client.query(`UPDATE public.test_lounge SET ${columns.map((column, i) => `"${column}"=$${i + 1}`).join(", ")} WHERE id=$${columns.length + 1}`, [...values, row.id]);
-        else await client.query(`INSERT INTO public.test_lounge (${columns.map(column => `"${column}"`).join(",")}) VALUES (${columns.map((_, i) => `$${i + 1}`).join(",")})`, values);
+        if (before) await client.query(`UPDATE public.${dbTable("lounge")} SET ${columns.map((column, i) => `"${dbColumn("lounge", column)}"=$${i + 1}`).join(", ")} WHERE ${dbColumn("lounge", "id")}=$${columns.length + 1}`, [...values, row.id]);
+        else await client.query(`INSERT INTO public.${dbTable("lounge")} (${columns.map(column => `"${dbColumn("lounge", column)}"`).join(",")}) VALUES (${columns.map((_, i) => `$${i + 1}`).join(",")})`, values);
       }
-      const after = (await client.query("SELECT * FROM public.test_lounge ORDER BY id")).rows;
+      const after = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
       if (after.length !== stagedRows.length || existing.some(row => !after.some(item => item.id === row.id))) throw new Error("기존 행 보존 검증에 실패했습니다.");
       await client.query("COMMIT"); applied = true;
     } catch (error) { await client.query("ROLLBACK"); throw error; }

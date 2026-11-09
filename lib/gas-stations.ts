@@ -106,8 +106,8 @@ export const stationReadOnlyColumns = [
   "hyundaiPayYn",
   "tossPayYn",
 ];
-export const selectStationColumn = (column: string) => `"${column.toLowerCase()}" AS "${column}"`;
-export const selectStationColumns = `SELECT ${stationColumns.map(selectStationColumn).join(", ")} FROM test_gscargo`;
+export const selectStationColumn = (column: string) => `"gs_${column.toLowerCase()}" AS "${column}"`;
+export const selectStationColumns = `SELECT ${stationColumns.map(selectStationColumn).join(", ")} FROM tb_gscargo`;
 
 export function stationText(value: unknown): string | null {
   if (value instanceof Uint8Array) {
@@ -151,7 +151,7 @@ export function normalizeGasStations(rows: Record<string, unknown>[]): Result<Ga
         error: {
           code: "INVALID_DATA",
           message:
-            "주유소의 식별자 또는 이름이 올바르지 않습니다. test_gscargo 데이터를 확인해주세요.",
+            "주유소의 식별자 또는 이름이 올바르지 않습니다. tb_gscargo 데이터를 확인해주세요.",
         },
       };
     ids.add(id);

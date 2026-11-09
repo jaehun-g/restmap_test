@@ -1,5 +1,6 @@
 import nextEnv from "@next/env";
 import {Client} from "pg";
+import {selectLegacyRows} from "./db-columns.mjs";
 import {fetchFoodMenus} from "../lib/food-menu-source.ts";
 import {matchFoodAreas} from "../lib/food-menu-matching.ts";
 import {reviewDuplicateFoodAreaTargets} from "../lib/food-menu-sync.ts";
@@ -18,7 +19,7 @@ const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rej
 try {
   await client.connect();
   await client.query("BEGIN READ ONLY");
-  const {rows} = await client.query("SELECT * FROM test_lounge ORDER BY id");
+  const rows = await selectLegacyRows(client, "lounge", "ORDER BY lg_id");
   const parsed = normalizeRestAreas(rows);
   if (!parsed.ok) throw new Error(parsed.error.message);
   const areas = parsed.value;

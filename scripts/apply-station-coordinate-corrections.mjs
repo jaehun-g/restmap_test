@@ -6,6 +6,7 @@ import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
 import {mergeFacilityPlaces} from "../lib/facility-places.ts";
 import {planStationCoordinateCorrections} from "../lib/station-coordinate-corrections.ts";
 import {verifiedStationCoordinates} from "../lib/verified-rest-area-stations.ts";
+import {dbColumn, dbTable, selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const apply = process.argv.includes("--apply");
@@ -14,8 +15,8 @@ try {
   await client.connect();
   await client.query(apply ? "BEGIN" : "BEGIN READ ONLY");
   const read = async () => {
-    const areas = normalizeRestAreas((await client.query("SELECT * FROM test_lounge ORDER BY id" + (apply ? " FOR SHARE" : ""))).rows);
-    const stations = normalizeExGasStations((await client.query("SELECT * FROM test_ex_station_geocodes ORDER BY id" + (apply ? " FOR UPDATE" : ""))).rows);
+    const areas = normalizeRestAreas(await selectLegacyRows(client, "lounge", `ORDER BY lg_id${apply ? " FOR SHARE" : ""}`));
+    const stations = normalizeExGasStations(await selectLegacyRows(client, "ex_station_geocodes", `ORDER BY ex_id${apply ? " FOR UPDATE" : ""}`));
     if (!areas.ok || !stations.ok) throw new Error("휴게소·주유소 데이터 형식 오류");
     return {areas: areas.value, stations: stations.value};
   };
@@ -46,7 +47,7 @@ try {
     const stamp = Date.now();
     await fs.writeFile(new URL(`../docs/station-coordinate-corrections-${stamp}.json`, import.meta.url), JSON.stringify(backup, null, 2) + "\n", "utf8");
     for (const change of changes) {
-      const result = await client.query("UPDATE test_ex_station_geocodes SET latitude=$2, longitude=$3, geocode_status='SUCCESS', geocode_error_code=NULL, geocoded_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE source_key=$1 RETURNING id", [change.sourceKey, change.after.latitude, change.after.longitude]);
+      const result = await client.query(`UPDATE public.${dbTable("ex_station_geocodes")} SET ${dbColumn("ex_station_geocodes", "latitude")}=$2, ${dbColumn("ex_station_geocodes", "longitude")}=$3, ${dbColumn("ex_station_geocodes", "geocode_status")}='SUCCESS', ${dbColumn("ex_station_geocodes", "geocode_error_code")}=NULL, ${dbColumn("ex_station_geocodes", "geocoded_at")}=CURRENT_TIMESTAMP, ${dbColumn("ex_station_geocodes", "updated_at")}=CURRENT_TIMESTAMP WHERE ${dbColumn("ex_station_geocodes", "source_key")}=$1 RETURNING ${dbColumn("ex_station_geocodes", "id")} AS id`, [change.sourceKey, change.after.latitude, change.after.longitude]);
       if (result.rowCount !== 1) throw new Error(`갱신 건수 오류: ${change.sourceKey}`);
     }
     const after = await read();

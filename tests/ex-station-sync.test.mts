@@ -138,8 +138,8 @@ function fakePool({
   };
   const pool = {
     async query(sql: string) {
-      if (sql.startsWith("SELECT source_key, source_location")) return {rows: cached};
-      if (sql.startsWith("SELECT source_key, search_address")) return {rows: overrides};
+      if (sql.includes("FROM tb_ex_station_geocodes")) return {rows: cached};
+      if (sql.includes("FROM tb_ex_station_geocode_overrides")) return {rows: overrides};
       throw new Error(`unexpected pool query: ${sql}`);
     },
     async connect() {
