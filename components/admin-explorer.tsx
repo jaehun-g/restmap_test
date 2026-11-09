@@ -470,6 +470,7 @@ export default function AdminExplorer() {
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
               onStationSelect={selectStation}
               onStationDetails={openStationDetails}
+              areasLoading={loading}
               stationsLoading={gas.loading}
               stationError={gas.error}
               onRetryStations={() => {

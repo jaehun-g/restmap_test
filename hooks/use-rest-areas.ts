@@ -1,11 +1,11 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState} from "react";
-import {hasCoordinates, type RestAreasResponse, type RestAreaRecord} from "@/lib/rest-areas";
+import {hasCoordinates, type RestAreasResponse, type RestAreaRecord, type Result} from "@/lib/rest-areas";
 
 const emptyAreas: RestAreasResponse["items"] = [];
 
-export function useRestAreas(fresh = false) {
+export function useRestAreas(fresh = false, initial?: Promise<Result<RestAreasResponse> | undefined>) {
   const [data, setData] = useState<RestAreasResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +38,20 @@ export function useRestAreas(fresh = false) {
   }, [fresh]);
 
   useEffect(() => {
+    if (initial && !fresh) {
+      const controller = new AbortController();
+      request.current = controller;
+      void Promise.resolve(initial).then(result => {
+        if (controller.signal.aborted) return;
+        if (!result) return reload(false);
+        if (result.ok) setData(result.value);
+        setError(result.ok ? null : result.error.message);
+        setLoading(false);
+      }).catch(() => {
+        if (!controller.signal.aborted) void reload(false);
+      });
+      return () => { request.current?.abort(); };
+    }
     // Cancel the first Strict Mode mount before it can issue a duplicate DB read.
     const timer = window.setTimeout(() => {
       void reload(false);
@@ -46,7 +60,7 @@ export function useRestAreas(fresh = false) {
       window.clearTimeout(timer);
       request.current?.abort();
     };
-  }, [reload]);
+  }, [reload, initial, fresh]);
 
   const replaceItem = useCallback((item: RestAreaRecord) => {
     setData(current => {

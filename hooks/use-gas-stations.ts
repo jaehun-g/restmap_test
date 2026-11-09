@@ -4,11 +4,14 @@ import type {GasStationsResponse, GasStationRecord} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import {canKeepPreviousStations} from "@/lib/gas-station-query";
 import {QueryCache} from "@/lib/query-cache";
+import type {Result} from "@/lib/rest-areas";
 
 const empty: GasStationRecord[] = [];
 
-export function useGasStations(query: string | null, fresh = false) {
-  const cache = useRef(new QueryCache<GasStationsResponse>());
+export type InitialGasStations = {query: string; result: Promise<Result<GasStationsResponse> | undefined>};
+
+export function useGasStations(query: string | null, fresh = false, initial?: InitialGasStations) {
+  const [cache] = useState(() => new QueryCache<GasStationsResponse>());
   const requested = useRef(false);
   const [state, setState] = useState<{
     query: string | null;
@@ -19,12 +22,15 @@ export function useGasStations(query: string | null, fresh = false) {
   const request = useRef<AbortController | null>(null);
   const reload = useCallback(async (force = true) => {
     request.current?.abort();
-    if (force) cache.current.clear();
+    if (force) {
+      requested.current = true;
+      cache.clear();
+    }
     if (query === null) {
       setState({query: null, data: null, loading: false, error: null});
       return;
     }
-    const cached = !force && !fresh ? cache.current.get(query) : undefined;
+    const cached = !force && !fresh ? cache.get(query) : undefined;
     if (cached) {
       setState({query, data: cached, loading: false, error: null});
       return;
@@ -43,7 +49,7 @@ export function useGasStations(query: string | null, fresh = false) {
       if (!Array.isArray(body.items) || typeof body.fetchedAt !== "string")
         throw new Error("주유소 응답 형식이 올바르지 않습니다.");
       if (!controller.signal.aborted) {
-        if (!fresh) cache.current.set(query, body);
+        if (!fresh) cache.set(query, body);
         setState({query, data: body, loading: false, error: null});
       }
     } catch (reason) {
@@ -56,8 +62,26 @@ export function useGasStations(query: string | null, fresh = false) {
           error: reason instanceof Error ? reason.message : "주유소를 조회하지 못했습니다.",
         }));
     }
-  }, [query, fresh]);
+  }, [query, fresh, cache]);
   useEffect(() => {
+    if (!fresh && initial?.query === query && !requested.current) {
+      const controller = new AbortController();
+      request.current = controller;
+      void Promise.resolve(initial.result).then(result => {
+        if (controller.signal.aborted) return;
+        requested.current = true;
+        if (!result) return reload(false);
+        if (result.ok) cache.set(query, result.value);
+        setState({query, data: result.ok ? result.value : null, loading: false,
+          error: result.ok ? null : result.error.message});
+      }).catch(() => {
+        if (!controller.signal.aborted) {
+          requested.current = true;
+          void reload(false);
+        }
+      });
+      return () => { request.current?.abort(); };
+    }
     const timer = window.setTimeout(() => {
       if (query !== null) requested.current = true;
       void reload(false);
@@ -66,10 +90,10 @@ export function useGasStations(query: string | null, fresh = false) {
       window.clearTimeout(timer);
       request.current?.abort();
     };
-  }, [reload, query]);
+  }, [reload, query, initial, fresh, cache]);
   const replaceItem = useCallback(
     (item: GasStationRecord) => {
-      cache.current.clear();
+      cache.clear();
       setState(current =>
         current.data
           ? {
@@ -84,7 +108,7 @@ export function useGasStations(query: string | null, fresh = false) {
           : current,
       );
     },
-    [],
+    [cache],
   );
   const current = query !== null && state.query === query;
   const keepPrevious =

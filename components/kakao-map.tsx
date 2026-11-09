@@ -43,6 +43,7 @@ export default function KakaoMap({
   selectedStationId = null,
   onStationSelect,
   onStationDetails,
+  areasLoading = false,
   stationsLoading = false,
   stationError,
   onRetryStations,
@@ -70,6 +71,7 @@ export default function KakaoMap({
   selectedStationId?: string | null;
   onStationSelect?: (id: string | null) => void;
   onStationDetails?: (id: string) => void;
+  areasLoading?: boolean;
   stationsLoading?: boolean;
   stationError?: string | null;
   onRetryStations?: () => void;
@@ -97,14 +99,16 @@ export default function KakaoMap({
   // 줌인(반경 축소) 시: 이미 이전 넓은 반경의 주유소 데이터가 메모리에 있으므로 서버 응답을 기다리지 않고 즉시 반영하여 반경 밖 마커가 남거나 쪼개지는 현상을 방지한다.
   // 줌아웃(반경 확대) 시: 새 영역의 주유소가 서버에서 올 때까지 stationsLoading 동안 대기하여 단일 핀 중간 노출을 방지한다.
   const isZoomingIn = radius !== null && prevRadius !== null && radius < prevRadius;
+  // 최초에는 두 조회가 모두 끝난 뒤 마커를 함께 반영한다.
+  const canCommitPlaces = !areasLoading && (!stationsLoading || isZoomingIn);
 
   if (places !== prevPlaces) {
-    if (!stationsLoading || isZoomingIn) {
+    if (canCommitPlaces) {
       setPrevPlaces(places);
       setCommittedPlaces(places);
       setPrevRadius(radius);
     }
-  } else if (radius !== prevRadius && (!stationsLoading || isZoomingIn)) {
+  } else if (radius !== prevRadius && canCommitPlaces) {
     setPrevRadius(radius);
   }
 

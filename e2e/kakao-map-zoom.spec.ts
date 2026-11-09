@@ -1,21 +1,6 @@
 import {expect, test, type Page} from "@playwright/test";
-
-type KakaoMapMockMetrics = {
-  map: {getLevel(): number; setLevel(level: number): void} | null;
-  mapCreates: number;
-  markerCreates: number;
-  clusterers: number;
-  markers: Array<{click(): void}>;
-  overlayContents: string[];
-  addCalls: boolean[];
-  redraws: number;
-};
-
-declare global {
-  interface Window {
-    __kakaoMapMock: KakaoMapMockMetrics;
-  }
-}
+import {installKakaoMapsMock} from "./kakao-map-mock";
+import {gasStationResponse, restAreaResponse} from "./kakao-map-fixtures";
 
 async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
   let previous = -1;
@@ -27,124 +12,6 @@ async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
   }
   throw new Error("마커 레이어가 데이터 조회 완료 후 안정화되지 않았습니다.");
 }
-
-const installKakaoMapsMock = `
-  (() => {
-    const listeners = target => (target.__listeners ??= new Map());
-    const emit = (target, name) => {
-      for (const listener of listeners(target).get(name) ?? []) listener();
-    };
-    class LatLng {
-      constructor(latitude, longitude) { this.latitude = latitude; this.longitude = longitude; }
-      getLat() { return this.latitude; }
-      getLng() { return this.longitude; }
-    }
-    class LatLngBounds {
-      constructor() { this.points = []; }
-      extend(point) { this.points.push(point); }
-      getSouthWest() { return this.points[0] ?? new LatLng(35, 126); }
-      getNorthEast() { return this.points.at(-1) ?? new LatLng(38, 128); }
-    }
-    class MapView {
-      constructor(_container, options) {
-        this.center = options.center;
-        this.level = options.level;
-        this.bounds = new LatLngBounds();
-        this.bounds.extend(new LatLng(35, 126));
-        this.bounds.extend(new LatLng(38, 128));
-        window.__kakaoMapMock.map = this;
-        window.__kakaoMapMock.mapCreates++;
-      }
-      setCenter(center) { this.center = center; }
-      panTo(center) { this.center = center; }
-      panBy() {}
-      getCenter() { return this.center; }
-      getBounds() { return this.bounds; }
-      setLevel(level) { this.level = level; emit(this, "zoom_changed"); emit(this, "idle"); }
-      getLevel() { return this.level; }
-      setBounds(bounds) { this.bounds = bounds; emit(this, "idle"); }
-      relayout() {}
-    }
-    class Marker {
-      constructor(options) { this.options = options; this.__listeners = new Map(); window.__kakaoMapMock.markers.push(this); window.__kakaoMapMock.markerCreates++; }
-      setMap() {}
-      setImage() {}
-      setZIndex() {}
-      click() { for (const listener of this.__listeners.get("click") ?? []) listener(); }
-    }
-    class Overlay {
-      setContent(content) { window.__kakaoMapMock.overlayContents.push(typeof content === "string" ? content : content?.textContent ?? ""); }
-      setPosition() {}
-      setMap() {}
-    }
-    class Circle extends Overlay {
-      constructor(options) { super(); this.center = options.center; this.radius = options.radius; }
-      setPosition(position) { this.center = position; }
-      setRadius(radius) { this.radius = radius; }
-      getBounds() { const bounds = new LatLngBounds(); bounds.extend(this.center); return bounds; }
-    }
-    class Clusterer {
-      constructor() { window.__kakaoMapMock.clusterers++; }
-      addMarkers(_markers, nodraw) { window.__kakaoMapMock.addCalls.push(nodraw); }
-      addMarker() {}
-      removeMarker() {}
-      redraw() { window.__kakaoMapMock.redraws++; }
-      setMinLevel() {}
-      clear() {}
-    }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0};
-    window.kakao = {maps: {
-      Map: MapView,
-      LatLng,
-      LatLngBounds,
-      Size: class { constructor(width, height) { this.width = width; this.height = height; } },
-      Point: class { constructor(x, y) { this.x = x; this.y = y; } },
-      MarkerImage: class { constructor(source) { this.source = source; } },
-      Marker,
-      MarkerClusterer: Clusterer,
-      InfoWindow: class { setContent() {} open() {} close() {} },
-      CustomOverlay: Overlay,
-      Circle,
-      Polyline: class extends Overlay {},
-      load: callback => callback(),
-      event: {
-        addListener(target, name, callback) {
-          const targetListeners = listeners(target);
-          targetListeners.set(name, [...(targetListeners.get(name) ?? []), callback]);
-        },
-        removeListener(target, name, callback) {
-          const targetListeners = listeners(target);
-          targetListeners.set(name, (targetListeners.get(name) ?? []).filter(item => item !== callback));
-        },
-        preventMap() {},
-      },
-    }};
-  })();
-`;
-
-const gasStationResponse = {
-  items: [
-    {
-      id: 1,
-      siteCode: "E2E-EX-1",
-      brand: "EX",
-      name: "E2E 주유소",
-      latitude: 37.5,
-      longitude: 127,
-      phone: null,
-      address: null,
-      detailAddress: null,
-      openTime: null,
-      closeTime: null,
-      services: {cargo: null, convenience: null, self: null, lpg: null, carWash: null, ev: null},
-      routeName: null,
-      direction: null,
-      revision: "e".repeat(64),
-    },
-  ],
-  unmappedCount: 0,
-  fetchedAt: "2026-10-21T00:00:00.000Z",
-};
 
 for (const audience of ["mobile", "admin"] as const) {
   test(`${audience} 양방향 휴게소의 유가 범위와 방향별 주유소 지도 이동`, async ({page, context}) => {
@@ -202,73 +69,55 @@ for (const audience of ["mobile", "admin"] as const) {
   });
 }
 
-const restAreaResponse = {
-  items: [
-    {
-      id: 1,
-      name: "E2E 휴게소 A",
-      latitude: 37.49,
-      longitude: 127,
-      phone: null,
-      routeName: null,
-      routeNumber: null,
-      routeDirection: null,
-      directionLabel: null,
-      restAreaType: null,
-      parkingCount: null,
-      facilities: {
-        has_truck_lounge: false,
-        has_gas_station: null,
-        has_lpg_station: null,
-        has_ev_charger: null,
-        has_repair_shop: null,
-        has_car_wash: null,
-        has_shower: null,
-        has_sleeping_room: null,
-        has_laundry: null,
-        has_restaurant: null,
-        has_store: null,
-        has_restroom: null,
+for (const delayed of ["rest-areas", "gas-stations"] as const) {
+test(`${delayed} 응답이 늦어도 두 종류 마커를 함께 표시하고 위치 확인에도 요청을 유지한다`, async ({page}) => {
+  const queries: string[] = [];
+  let releaseResponse!: () => void;
+  const responseReady = new Promise<void>(resolve => { releaseResponse = resolve; });
+  await page.addInitScript({content: installKakaoMapsMock + `
+    Object.defineProperty(navigator, "geolocation", {value: {
+      getCurrentPosition(success) {
+        window.__resolveTestLocation = () => success({coords: {latitude: 37.5, longitude: 127}});
       },
-      revision: "a".repeat(64),
-    },
-    {
-      id: 2,
-      name: "E2E 휴게소 B",
-      latitude: 37.51,
-      longitude: 127,
-      phone: null,
-      routeName: null,
-      routeNumber: null,
-      routeDirection: null,
-      directionLabel: null,
-      restAreaType: null,
-      parkingCount: null,
-      facilities: {
-        has_truck_lounge: false,
-        has_gas_station: null,
-        has_lpg_station: null,
-        has_ev_charger: null,
-        has_repair_shop: null,
-        has_car_wash: null,
-        has_shower: null,
-        has_sleeping_room: null,
-        has_laundry: null,
-        has_restaurant: null,
-        has_store: null,
-        has_restroom: null,
-      },
-      revision: "b".repeat(64),
-    },
-  ],
-  unmappedCount: 0,
-  fetchedAt: "2026-10-21T00:00:00.000Z",
-};
+    }});
+  `});
+  await page.route("**/api/rest-areas", async route => {
+    if (delayed === "rest-areas") await responseReady;
+    await route.fulfill({json: restAreaResponse});
+  });
+  await page.route("**/api/gas-stations**", async route => {
+    queries.push(new URL(route.request().url()).search);
+    if (delayed === "gas-stations") await responseReady;
+    await route.fulfill({json: gasStationResponse});
+  });
+  await page.setViewportSize({width: 390, height: 844});
+  try {
+    const firstResponse = page.waitForResponse(response =>
+      new URL(response.url()).pathname === `/api/${delayed === "rest-areas" ? "gas-stations" : "rest-areas"}`,
+    );
+    await page.goto("/mobile");
+    await firstResponse;
+    await expect.poll(() => queries.length).toBe(1);
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.mapCreates)).toBe(1);
+    await page.evaluate(() => (window as unknown as {__resolveTestLocation(): void}).__resolveTestLocation());
+    await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(0);
+    releaseResponse();
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(3);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__kakaoMapMock.addCalls)).toEqual([true]);
+    expect(queries).toEqual(["?source=ex"]);
+  } finally {
+    releaseResponse();
+  }
+});
+}
 
-test("지도 레벨 변경 중 EX 재조회는 기존 마커를 유지하고 클러스터를 일괄 렌더링한다", async ({page, context}) => {
+test("지도 확대·축소와 지도 내 재검색은 전국 EX 목록을 재조회하지 않고 범위 내 마커만 갱신한다", async ({page, context}) => {
   const pageErrors: Error[] = [];
   let stationRequests = 0;
-  let delayScopeRefresh = false;
+  const outside = {...gasStationResponse.items[0], id: 2, siteCode: "E2E-EX-2", name: "반경 밖 주유소", latitude: 37.7};
   page.on("pageerror", error => pageErrors.push(error));
   await page.addInitScript({content: installKakaoMapsMock});
   await page.route("**/api/rest-areas", async route => {
@@ -279,10 +128,8 @@ test("지도 레벨 변경 중 EX 재조회는 기존 마커를 유지하고 클
   });
   await page.route("**/api/gas-stations**", async route => {
     stationRequests++;
-    if (delayScopeRefresh) await new Promise(resolve => setTimeout(resolve, 1_000));
     await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify(gasStationResponse),
+      json: {...gasStationResponse, items: [...gasStationResponse.items, outside]},
     });
   });
   await context.grantPermissions(["geolocation"]);
@@ -295,24 +142,41 @@ test("지도 레벨 변경 중 EX 재조회는 기존 마커를 유지하고 클
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBeGreaterThan(0);
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.clusterers)).toBeGreaterThan(0);
 
-  await page.waitForTimeout(1_200);
+  await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
   const before = await waitForMarkerLayerToSettle(page);
+  expect(before).toBe(3);
   const initial = await page.evaluate(() => window.__kakaoMapMock);
   expect(initial.addCalls).toEqual(expect.arrayContaining([true]));
   expect(initial.redraws).toBeGreaterThanOrEqual(initial.addCalls.length);
   await expect.poll(() => stationRequests).toBeGreaterThan(0);
-  const requestsBeforeZoom = stationRequests;
-  delayScopeRefresh = true;
+  expect(stationRequests).toBe(1);
+  await page.locator(".sheet-summary").click();
+  await expect(page.locator(".mobile-area-card")).toHaveCount(3);
+  await expect(page.locator(".mobile-area-card").filter({hasText: outside.name})).toHaveCount(0);
+  const initialLevel = await page.evaluate(() => window.__kakaoMapMock.map!.getLevel());
 
   await page.evaluate(() => {
     const map = window.__kakaoMapMock.map;
     if (!map) throw new Error("Kakao map mock was not initialized");
     map.setLevel(map.getLevel() + 1);
   });
-  await expect.poll(() => stationRequests).toBeGreaterThan(requestsBeforeZoom);
+  await expect(page.locator(".mobile-area-card")).toHaveCount(4);
+  await expect(page.locator(".mobile-area-card").filter({hasText: outside.name})).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before + 1);
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level), initialLevel);
+  await expect(page.locator(".mobile-area-card")).toHaveCount(3);
   await page.waitForTimeout(300);
-
-  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before);
+  expect(stationRequests).toBe(1);
+  expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before + 1);
+  await page.keyboard.press("Escape");
+  await page.evaluate(() => window.__kakaoMapMock.map!.moveBounds(37.69, 126.99, 37.71, 127.01));
+  await page.getByRole("button", {name: "지도 내 재검색", exact: true}).click();
+  await page.locator(".sheet-summary").click();
+  await expect(page.locator(".mobile-area-card")).toHaveCount(1);
+  await expect(page.locator(".mobile-area-card")).toContainText(outside.name);
+  await page.waitForTimeout(300);
+  expect(stationRequests).toBe(1);
+  expect(pageErrors).toEqual([]);
 });
 
 test("검색으로 일부 장소를 제외해도 남아 있는 마커를 재생성하지 않는다", async ({page, context}) => {
@@ -332,40 +196,66 @@ test("검색으로 일부 장소를 제외해도 남아 있는 마커를 재생�
   expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before);
 });
 
-test("동일 반경으로 복귀하면 주유소 조회 결과를 재사용하고 수동 새로고침은 최신 조회한다", async ({page, context}) => {
+test("전국 주유소 조회 실패 후 재시도는 최신 조회하고 이후 줌은 응답을 재사용한다", async ({page, context}) => {
   let requests = 0;
   let freshRequests = 0;
-  let failNextScope = false;
+  let failRequest = true;
   await page.addInitScript({content: installKakaoMapsMock});
   await page.route("**/api/rest-areas", route => route.fulfill({json: restAreaResponse}));
   await page.route("**/api/gas-stations**", route => {
     requests++;
     if (route.request().headers()["x-map-fresh"] === "1") freshRequests++;
-    if (failNextScope) return route.fulfill({status: 503, json: {error: {message: "테스트 조회 실패"}}});
+    if (failRequest) return route.fulfill({status: 503, json: {error: {message: "테스트 조회 실패"}}});
     return route.fulfill({json: gasStationResponse});
   });
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({latitude: 37.5, longitude: 127});
   await page.setViewportSize({width: 390, height: 844});
   await page.goto("/mobile");
-  await waitForMarkerLayerToSettle(page);
-  await page.waitForTimeout(300);
-  const initialLevel = await page.evaluate(() => window.__kakaoMapMock.map!.getLevel());
-  const before = requests;
-  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level + 1), initialLevel);
-  await expect.poll(() => requests).toBeGreaterThan(before);
-  await page.waitForTimeout(300);
-  const afterZoom = requests;
-  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level), initialLevel);
-  await page.waitForTimeout(400);
-  expect(requests).toBe(afterZoom);
-  failNextScope = true;
-  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level + 2), initialLevel);
   await expect(page.getByText("테스트 조회 실패", {exact: true})).toBeVisible();
-  failNextScope = false;
+  expect(requests).toBe(1);
+  failRequest = false;
   await page.getByRole("button", {name: "주유소 다시 조회", exact: true}).click();
   await expect(page.getByText("테스트 조회 실패", {exact: true})).toHaveCount(0);
-  expect(freshRequests).toBeGreaterThan(0);
+  await waitForMarkerLayerToSettle(page);
+  expect(requests).toBe(2);
+  expect(freshRequests).toBe(1);
+  const initialLevel = await page.evaluate(() => window.__kakaoMapMock.map!.getLevel());
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level + 1), initialLevel);
+  await page.waitForTimeout(300);
+  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level), initialLevel);
+  await page.waitForTimeout(300);
+  expect(requests).toBe(2);
+});
+
+test("노선 선택은 서버 검색을 유지하고 전체 노선 복귀 시 전국 목록을 재사용한다", async ({page, context}) => {
+  const queries: URLSearchParams[] = [];
+  const area = {...restAreaResponse.items[0], routeName: "경부선"};
+  const station = {...gasStationResponse.items[0], routeName: "경부선"};
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
+  await page.route("**/api/gas-stations**", route => {
+    queries.push(new URL(route.request().url()).searchParams);
+    return route.fulfill({json: {...gasStationResponse, items: [station]}});
+  });
+  await page.route("**/api/highway-routes**", route => route.fulfill({status: 404, json: {error: {message: "테스트 경로 없음"}}}));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.5, longitude: 127});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  await waitForMarkerLayerToSettle(page);
+  await page.getByRole("button", {name: "전체 노선", exact: true}).click();
+  await page.locator(".route-options button").filter({hasText: "경부선"}).click();
+  await expect.poll(() => queries.length).toBe(2);
+  expect([...queries[1]]).toEqual([["source", "ex"], ["routeName", "경부선"]]);
+  await expect(page.locator(".map-scope-label")).toContainText("경부선");
+  await waitForMarkerLayerToSettle(page);
+  await page.locator(".mobile-filters button").filter({hasText: "경부선"}).click();
+  await page.locator(".route-options button").filter({hasText: "전체 노선"}).click();
+  await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
+  await page.waitForTimeout(400);
+  expect(queries).toHaveLength(2);
+  expect([...queries[0]]).toEqual([["source", "ex"]]);
 });
 
 test("mobile rest-area details load food menus independently of the map response", async ({page, context}) => {

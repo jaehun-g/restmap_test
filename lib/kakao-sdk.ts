@@ -160,6 +160,10 @@ declare global {
 
 let loading: Promise<KakaoMaps> | null = null;
 
+export function kakaoSdkUrl(appKey: string) {
+  return `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=clusterer`;
+}
+
 export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
   if (window.kakao?.maps.Map && window.kakao.maps.MarkerClusterer)
     return Promise.resolve(window.kakao.maps);
@@ -181,7 +185,7 @@ export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
       );
     }
     script.async = true;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=clusterer`;
+    script.src = kakaoSdkUrl(appKey);
     script.onerror = fail;
     script.onload = () => {
       if (settled) return;

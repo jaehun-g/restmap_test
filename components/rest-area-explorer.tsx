@@ -16,6 +16,7 @@ import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
+import type {InitialMapData} from "@/lib/initial-map-data";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import QueryState from "./query-state";
@@ -25,15 +26,26 @@ import Icon from "./icon";
 import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
 type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities" | "stationServices";
-export default function MobileExplorer() {
-  const {data, areas, loading, error, reload} = useRestAreas();
+export default function MobileExplorer({initialData}: {
+  initialData?: Promise<InitialMapData | undefined>;
+} = {}) {
+  const initialRestAreas = useMemo(() => initialData
+    ? Promise.resolve(initialData).then(data => data?.restAreas, () => undefined)
+    : undefined, [initialData]);
+  const initialStations = useMemo(() => initialData ? {
+    query: "source=ex", result: Promise.resolve(initialData).then(data => data?.stations, () => undefined),
+  } : undefined, [initialData]);
+  const {data, areas, loading, error, reload} = useRestAreas(false, initialRestAreas);
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
+  // 위치·줌 변경은 공통 목록을 필터링하고, 노선 검색만 서버의 근접 조건을 적용한다.
   const gas = useGasStations(
-    stationQueryString(filters.routeName, location.scope, "ex"),
+    stationQueryString(filters.routeName, {kind: "all"}, "ex"),
+    false,
+    initialStations,
   );
   const [panel, setPanel] = useState<Panel>("collapsed");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -110,7 +122,10 @@ export default function MobileExplorer() {
     }, sourceFacilities),
     [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position, sourceFacilities],
   );
-  const visibleAreas = mergedFacilities.facilities.map(({area}) => area);
+  const visibleAreas = useMemo(
+    () => mergedFacilities.facilities.map(({area}) => area),
+    [mergedFacilities.facilities],
+  );
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
     () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
@@ -336,6 +351,7 @@ export default function MobileExplorer() {
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
+            areasLoading={placeView === "ex" ? false : loading}
             stationsLoading={placeView === "rest" ? false : gas.loading}
             stationError={gas.error}
             onRetryStations={() => {

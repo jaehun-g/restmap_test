@@ -50,21 +50,35 @@ export function stationNameDirections(name: string): string[] {
     .filter((value): value is string => value !== null);
 }
 
-function canMatch(area: RestArea, station: GasStation, allowNameDirection = false): boolean {
-  if (station.brand !== "EX" || !area.routeName || !station.routeName) return false;
-  if (canonicalHighwayRouteName(area.routeName) !== canonicalHighwayRouteName(station.routeName))
-    return false;
-  if (isBidirectionalDirection(areaDirection(area)) && verifiedRestAreaStations.some(item =>
-    item.sourceKey === station.siteCode && item.restName === normalizedFacilityName(area.name) &&
-    item.routeName === canonicalHighwayRouteName(area.routeName!),
+type MatchingArea = {
+  area: RestArea;
+  index: number;
+  routeName: string;
+  name: string;
+  direction: string | null;
+  bidirectional: boolean;
+};
+type MatchingStation = {
+  station: GasStation;
+  routeName: string | null;
+  name: string;
+  direction: string | null;
+  nameDirections: string[];
+};
+
+function canMatch(area: MatchingArea, station: MatchingStation, allowNameDirection = false): boolean {
+  if (station.routeName === null || area.routeName !== station.routeName) return false;
+  if (area.bidirectional && verifiedRestAreaStations.some(item =>
+    item.sourceKey === station.station.siteCode && item.restName === area.name &&
+    item.routeName === area.routeName,
   )) return true;
-  if (normalizedFacilityName(area.name) !== normalizedFacilityName(station.name)) return false;
-  const restDirection = areaDirection(area);
-  const stationDirection = normalizedDirection(station.direction);
+  if (area.name !== station.name) return false;
+  const restDirection = area.direction;
+  const stationDirection = station.direction;
   if (restDirection !== null && stationDirection !== null &&
-    (isBidirectionalDirection(restDirection) || restDirection === stationDirection)) return true;
-  return allowNameDirection && restDirection !== null && !isBidirectionalDirection(restDirection) &&
-    stationNameDirections(station.name).includes(restDirection);
+    (area.bidirectional || restDirection === stationDirection)) return true;
+  return allowNameDirection && restDirection !== null && !area.bidirectional &&
+    station.nameDirections.includes(restDirection);
 }
 
 /**
@@ -77,12 +91,33 @@ export function mergeFacilityPlaces<T extends GasStation, A extends RestArea>(
 ): FacilityPlaces<T, A> {
   const candidates = stations.filter(station => station.brand === "EX");
   const facilities = areas.map(area => ({area}));
+  const facilitiesByRoute = new Map<string, MatchingArea[]>();
+  facilities.forEach(({area}, index) => {
+    if (!area.routeName) return;
+    const route = canonicalHighwayRouteName(area.routeName);
+    const group = facilitiesByRoute.get(route) ?? [];
+    const direction = areaDirection(area);
+    group.push({area, index, routeName: route, name: normalizedFacilityName(area.name),
+      direction, bidirectional: isBidirectionalDirection(direction)});
+    facilitiesByRoute.set(route, group);
+  });
   const linkedRestAreaBySiteCode = new Map<string, number>();
   for (const station of candidates) {
-    const findMatch = (allowNameDirection: boolean) => facilities
-      .flatMap((facility, index) => {
-        const {area} = facility;
-        if (!canMatch(area, station, allowNameDirection) || !hasCoordinates(area) || !hasCoordinates(station)) return [];
+    const identity: MatchingStation = {
+      station,
+      routeName: station.routeName ? canonicalHighwayRouteName(station.routeName) : null,
+      name: normalizedFacilityName(station.name),
+      direction: normalizedDirection(station.direction),
+      nameDirections: stationNameDirections(station.name),
+    };
+    // 노선이 다른 휴게소는 연결 대상이 될 수 없으므로 전체 목록을 반복 정규화하지 않는다.
+    const routeFacilities = identity.routeName !== null
+      ? facilitiesByRoute.get(identity.routeName) ?? []
+      : [];
+    const findMatch = (allowNameDirection: boolean) => routeFacilities
+      .flatMap(candidate => {
+        const {area, index} = candidate;
+        if (!canMatch(candidate, identity, allowNameDirection) || !hasCoordinates(area) || !hasCoordinates(station)) return [];
         const distance = distanceMeters(area, station);
         return distance <= REST_AREA_STATION_MATCH_METERS ? [{index, distance}] : [];
       })

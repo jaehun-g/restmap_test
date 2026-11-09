@@ -66,6 +66,15 @@ test("one EX station is assigned to only the nearest duplicate rest-area record"
   assert.deepEqual(result.stations.map(station => station.linkedRestAreaId), [2]);
 });
 
+test("노선 별칭을 같은 후보로 찾고 거리 동률에서는 원본 휴게소 순서를 유지한다", () => {
+  const result = mergeFacilityPlaces([
+    area({id: 99, routeName: "경부선"}),
+    area({id: 2, routeName: "밀양울산선"}),
+    area({id: 1, routeName: "함양울산선"}),
+  ], [station({routeName: "함양울산선", latitude: 37.33})]);
+  assert.equal(result.stations[0].linkedRestAreaId, 2);
+});
+
 test("방향 필드가 다르거나 비어 있어도 이름의 방향이 맞으면 연결한다", () => {
   for (const direction of ["시흥", null]) {
     for (const name of ["죽전(서울)주유소", "죽전（ 서울 방향 ）주유소"]) {
