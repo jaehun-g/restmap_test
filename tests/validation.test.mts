@@ -11,8 +11,13 @@ const parsed=normalizeRestAreas([row]); if(!parsed.ok)throw new Error(parsed.err
 const area=parsed.value[0]; const revision=rowRevision(row);
 const request=(changes:unknown)=>validateUpdateRequest({changes,expectedRevision:revision});
 
+test("노선 진행 방향에는 상행·하행·양방향 또는 미확인만 허용한다", () => {
+  for (const value of ["상행", "하행", "양방향", null, ""]) assert.equal(request({routeDirection: value}).ok, true);
+  for (const value of ["판교", "상", "서울 방향"]) assert.equal(request({routeDirection: value}).ok, false);
+});
+
 test("only the 22 editable columns can be updated; ID, table and arbitrary keys are rejected",()=>{
-  assert.equal(databaseColumns.length,23);
+  assert.equal(databaseColumns.length,25);
   assert.equal(scalarFields.length+12,22);
   for(const changes of [{id:2},{revision:"evil"},{table:"other"},{sql:"DELETE"},{facilities:{other:true}},JSON.parse('{"__proto__": {"admin": true}}')]) assert.equal(request(changes).ok,false);
   assert.equal(validateUpdateRequest({changes:{name:"test"},expectedRevision:revision,table:"other"}).ok,false);

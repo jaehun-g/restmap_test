@@ -55,6 +55,18 @@ test("location scope filters both kinds consistently while route selection bypas
   assert.equal(result.stations.length, 3);
 });
 
+test("검색어가 있으면 반경 밖 휴게소와 주유소를 찾고 검색을 지우면 반경을 복원한다", () => {
+  const scoped = {...options(), scope: {kind: "radius" as const, center: {latitude: 36, longitude: 126}, radiusMeters: 100, referenceLevel: 5}};
+  const rest = filterFacilityPlaces(areas, stations, {...scoped, query: "연결 부산"});
+  assert.deepEqual(rest.facilities.map(({area}) => area.id), [1]);
+  const station = filterFacilityPlaces(areas, stations, {...scoped, query: "독립 주유소"});
+  assert.deepEqual(station.stations.map(item => item.siteCode), ["standalone"]);
+  const bounds = {...scoped, scope: {kind: "bounds" as const, bounds: {south: 35, north: 36, west: 125, east: 126}}};
+  assert.deepEqual(filterFacilityPlaces(areas, stations, {...bounds, query: "연결 부산"}).facilities.map(({area}) => area.id), [1]);
+  assert.equal(filterFacilityPlaces(areas, stations, {...scoped, query: "연결 부산", filters: {...initialFilters(), direction: "서울"}}).facilities.length, 0);
+  assert.deepEqual(filterFacilityPlaces(areas, stations, {...scoped, query: "   "}), {facilities: [], stations: []});
+});
+
 test("no-result searches clear the layer and clearing the query restores every eligible facility", () => {
   assert.deepEqual(filterFacilityPlaces(areas, stations, {...options(), query: "없는 장소"}), {facilities: [], stations: []});
   const result = filterFacilityPlaces(areas, stations, options());
@@ -75,4 +87,15 @@ test("이름의 방향으로 연결한 주유소는 해당 휴게소 방향 필�
   });
   assert.equal(otherDirection.facilities.length, 0);
   assert.equal(otherDirection.stations.length, 0, "원천 방향으로 다른 방향에 재등장하지 않는다");
+});
+
+test("서하남 판교 방향 필터에서 쉼터와 연결 주유소를 함께 유지한다", () => {
+  const rest = {...areas[0], id: 223, name: "서하남행복드림쉼터", routeName: "수도권제1순환선", directionLabel: "판교 방향", routeDirection: "판교", latitude: 37.5258, longitude: 127.193};
+  const fuel = {...stations[0], id: 1400, siteCode: "1000|B00161|판교|S", name: "서하남(판교)주유소", routeName: "수도권제1순환선", direction: "판교", latitude: 37.525914, longitude: 127.1930451};
+  const filtered = filterFacilityPlaces([rest], [fuel], {...options(), filters: {...initialFilters(), routeName: "수도권제1순환선", direction: "판교"}});
+  assert.deepEqual(filtered.facilities.map(({area}) => area.id), [223]);
+  assert.deepEqual(filtered.stations.map(station => station.linkedRestAreaId), [223]);
+  const opposite = filterFacilityPlaces([rest], [fuel], {...options(), filters: {...initialFilters(), routeName: "수도권제1순환선", direction: "일산"}});
+  assert.equal(opposite.facilities.length, 0);
+  assert.equal(opposite.stations.length, 0);
 });

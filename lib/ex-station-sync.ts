@@ -11,7 +11,7 @@ import {
   selectKakaoKeywordPlace,
 } from "./kakao-local.ts";
 import type {Result} from "./rest-areas.ts";
-import {verifiedStationLocations, verifiedStationCoordinates, verifiedStationName} from "./verified-rest-area-stations.ts";
+import {verifiedStationLocations, verifiedStationIndependentLocations, verifiedStationCoordinates, verifiedStationName, verifiedStationStorageDirection, verifiedStationMatchingRoute} from "./verified-rest-area-stations.ts";
 
 type CachedStation = {
   sourceKey: string;
@@ -139,7 +139,7 @@ async function resolveStation(
     >
   >,
 ): Promise<{resolved: ResolvedStation; geocoded: boolean; reused: boolean; unresolved: boolean}> {
-  const verified = verifiedStationLocations.find(item => item.sourceKey === station.sourceKey);
+  const verified = [...verifiedStationLocations, ...verifiedStationIndependentLocations].find(item => item.sourceKey === station.sourceKey);
   if (verified) return {
     resolved: {
       latitude: verified.latitude,
@@ -259,8 +259,8 @@ function stationValues(station: ExStationStatus, resolved: ResolvedStation) {
     station.sourceKey,
     station.routeCode,
     station.serviceAreaCode,
-    station.routeName,
-    station.direction,
+    verifiedStationMatchingRoute(station.sourceKey) ?? station.routeName,
+    verifiedStationStorageDirection(station.sourceKey) ?? station.direction,
     station.serviceAreaName === null ? null : verifiedStationName(station.sourceKey, station.serviceAreaName),
     station.oilCompany,
     station.location,

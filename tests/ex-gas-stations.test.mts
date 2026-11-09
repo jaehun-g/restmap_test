@@ -35,6 +35,10 @@ test("검증된 처인·고삼호수 방향은 원천 코드별로 보완하고 
   for (const [sourceKey, direction] of [
     ["0290|B00244|-|AD", "포천"], ["0290|B00245|-|AD", "세종"],
     ["0290|B00250|-|AD", "포천"], ["0290|B00251|-|AD", "세종"],
+    ["0450|B00102|양평|AD", "창원"], ["0450|B00137|양평|AD", "창원"], ["0450|B00166|양평|AD", "창원"], ["0450|B00101|마산|AD", "양평"], ["0450|B00136|마산|AD", "양평"], ["0450|B00167|마산|AD", "양평"],
+    ["1510|B00156|서천|AD", "공주"], ["1510|B00155|공주|AD", "서천"],
+    ["0650|B00246|속초|AD", "영덕"], ["0650|B00247|동해|AD", "포항"], ["7001|B00248|포항|AD", "전주"], ["7001|B00249|익산|AD", "새만금"],
+    ["1000|B00158|판교|HD", "일산"],
   ]) {
     const result = normalizeExGasStations([{...row(), source_key: sourceKey, direction: null}]);
     assert.ok(result.ok);
@@ -60,6 +64,12 @@ test("밀양영남루 주유소는 원천 이름이 울산이어도 밀양 방�
   const other = normalizeExGasStations([{...row(), service_area_name: "밀양영남루(울산)주유소"}]);
   assert.ok(other.ok);
   assert.equal(other.value[0].name, "밀양영남루(울산)주유소");
+});
+
+test("서하남 주유소의 깨진 원천 이름은 해당 식별자에서만 보정한다", () => {
+  const result = normalizeExGasStations([{...row(), source_key: "1000|B00161|판교|S", service_area_name: "서하남(���교)주유소"}]);
+  assert.ok(result.ok);
+  assert.equal(result.value[0].name, "서하남(판교)주유소");
 });
 
 test("EX rows decode UTF-8, decimal prices, coordinates and source collection time", () => {

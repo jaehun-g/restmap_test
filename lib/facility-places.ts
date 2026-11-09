@@ -2,7 +2,7 @@ import {distanceMeters} from "./geo-search.ts";
 import type {GasStation} from "./gas-stations.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {hasCoordinates, type RestArea} from "./rest-areas.ts";
-import {verifiedRestAreaStations} from "./verified-rest-area-stations.ts";
+import {verifiedRestAreaStations, verifiedStationAreaLinks} from "./verified-rest-area-stations.ts";
 
 /** EX 주유소를 휴게소 정보에 자동 연결할 수 있는 최대 거리입니다. */
 export const REST_AREA_STATION_MATCH_METERS = 300;
@@ -68,6 +68,9 @@ type MatchingStation = {
 
 function canMatch(area: MatchingArea, station: MatchingStation, allowNameDirection = false): boolean {
   if (station.routeName === null || area.routeName !== station.routeName) return false;
+  if (verifiedStationAreaLinks.some(item =>
+    item.sourceKey === station.station.siteCode && item.restAreaId === area.area.id,
+  )) return true;
   if (area.bidirectional && verifiedRestAreaStations.some(item =>
     item.sourceKey === station.station.siteCode && item.restName === area.name &&
     item.routeName === area.routeName,

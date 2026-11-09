@@ -19,7 +19,7 @@ try {
     const area = matches[0];
     assert.equal(area.id, verified.id);
     assert.ok([verified.name, ...verified.sourceNames].includes(area.name), `기존 이름 변경: ${area.name}`);
-    return {id: area.id, code: verified.code, before: area, after: {...area, name: verified.name, direction_label: `${verified.direction} 방향`, route_direction: verified.direction}};
+    return {id: area.id, code: verified.code, before: area, after: {...area, name: verified.name, direction_label: `${verified.direction} 방향`}};
   }).filter(item => item.before.name !== item.after.name || item.before.direction_label !== item.after.direction_label || item.before.route_direction !== item.after.route_direction);
   let backupPath = null;
   if (apply && changes.length) {

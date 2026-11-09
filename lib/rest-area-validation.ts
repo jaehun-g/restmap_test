@@ -35,6 +35,8 @@ export function validateUpdateRequest(input: unknown): Result<UpdateRequest> {
         return invalid(`${field.label}은 문자열이어야 합니다.`);
       const text = typeof value === "string" ? value.trim() : null;
       if ("required" in field && field.required && !text) return invalid("휴게소명은 필수입니다.");
+      if (field.key === "routeDirection" && text && !["상행", "하행", "양방향"].includes(text))
+        return invalid("진행 방향은 상행·하행·양방향 중 하나여야 합니다.");
       if (
         text &&
         (text.length > field.maxLength ||

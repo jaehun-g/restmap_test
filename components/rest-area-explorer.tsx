@@ -412,6 +412,8 @@ export default function MobileExplorer({initialData}: {
                     ? "목록에서 조회 상태를 확인해주세요"
                     : filters.routeName
                       ? `${filters.routeName} 전체 구간`
+                      : search.query.trim()
+                        ? "전체 지역 검색"
                       : location.requesting
                         ? "현재 위치를 확인하고 있어요"
                         : scopeLabel(location.scope)}
@@ -497,7 +499,7 @@ export default function MobileExplorer({initialData}: {
                         <Icon name="search" size={25} />
                         <strong>조건에 맞는 장소가 없습니다</strong>
                         <p>
-                          {filters.routeName
+                          {filters.routeName || search.query.trim()
                             ? "검색어·편의시설·라운지 조건을 변경하거나 필터를 초기화해보세요."
                             : "필터를 초기화하거나 지도를 이동한 뒤 지도 내 재검색을 눌러보세요."}
                         </p>

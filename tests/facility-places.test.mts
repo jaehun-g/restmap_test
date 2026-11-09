@@ -4,6 +4,7 @@ import {linkedStationsByArea, mergeFacilityPlaces, REST_AREA_STATION_MATCH_METER
 import type {GasStationRecord} from "../lib/gas-stations.ts";
 import type {RestArea} from "../lib/rest-areas.ts";
 import {verifiedRestAreaStations} from "../lib/verified-rest-area-stations.ts";
+import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
 
 const area = (overrides: Partial<RestArea> = {}): RestArea => ({
   id: 1,
@@ -37,6 +38,48 @@ const station = (overrides: Partial<GasStationRecord> = {}): GasStationRecord =>
   direction: "서울",
   revision: "",
   ...overrides,
+});
+
+test("선산·문경 창원 주유소는 원천 방향이 양평이어도 창원 휴게소에 연결한다", () => {
+  for (const item of [
+    {name: "선산", code: "0450|B00102|양평|AD", restLat: 36.2742, restLon: 128.251, fuelLat: 36.2738648, fuelLon: 128.2516744},
+    {name: "문경", code: "0450|B00137|양평|AD", restLat: 36.6205, restLon: 128.15, fuelLat: 36.6194935, fuelLon: 128.1509056},
+  ]) {
+    const result = normalizeExGasStations([{id: 10, source_key: item.code, service_area_name: `${item.name}(창원)주유소`, route_name: "중부내륙선", direction: "양평", latitude: item.fuelLat, longitude: item.fuelLon}]);
+    assert.ok(result.ok);
+    const areas = [area({id: 1, name: `${item.name}(창원 방향)`, routeName: "중부내륙선", directionLabel: "창원 방향", latitude: item.restLat, longitude: item.restLon}), area({id: 2, name: `${item.name}(양평 방향)`, routeName: "중부내륙선", directionLabel: "양평 방향", latitude: item.restLat, longitude: item.restLon})];
+    assert.equal(mergeFacilityPlaces(areas, result.value).stations[0].linkedRestAreaId, 1);
+  }
+});
+
+test("영덕·포항·김제 주유소는 검증된 노선과 방향으로 해당 휴게소에 연결한다", () => {
+  for (const item of [
+    {id: 212, name: "영덕", direction: "영덕", route: "포항영덕선", sourceRoute: "동해선", code: "0650|B00246|속초|AD", restLat: 36.2807, restLon: 129.364, lat: 36.2806002, lon: 129.3639097},
+    {id: 213, name: "포항", direction: "포항", route: "포항영덕선", sourceRoute: "동해선", code: "0650|B00247|동해|AD", restLat: 36.2633, restLon: 129.372, lat: 36.2616071, lon: 129.3720864},
+    {id: 214, name: "김제", direction: "전주", route: "새만금포항선", sourceRoute: null, code: "7001|B00248|포항|AD", restLat: 35.8394, restLon: 126.898, lat: 35.8400648, lon: 126.899561},
+    {id: 215, name: "김제", direction: "새만금", route: "새만금포항선", sourceRoute: null, code: "7001|B00249|익산|AD", restLat: 35.8421, restLon: 126.903, lat: 35.8412714, lon: 126.9014655},
+  ]) {
+    const result = normalizeExGasStations([{id: 10, source_key: item.code, service_area_name: `${item.name}(${item.direction})주유소`, route_name: item.sourceRoute, direction: "다른 방향", latitude: item.lat, longitude: item.lon}]);
+    assert.ok(result.ok);
+    const rest = area({id: item.id, name: `${item.name}(${item.direction} 방향)`, routeName: item.route, directionLabel: `${item.direction} 방향`, latitude: item.restLat, longitude: item.restLon});
+    assert.equal(mergeFacilityPlaces([rest], result.value).stations[0].linkedRestAreaId, item.id);
+  }
+});
+
+test("의왕청계 일산 주유소는 보정한 위치와 방향으로 의왕청계 휴게소에 연결한다", () => {
+  const result = normalizeExGasStations([{id: 1399, source_key: "1000|B00158|판교|HD", service_area_name: "의왕청계(일산)주유소", route_name: "수도권제1순환선", direction: "판교", latitude: 37.3932302, longitude: 127.0221883}]);
+  assert.ok(result.ok);
+  const rest = area({id: 222, name: "의왕청계(일산 방향)", routeName: "수도권제1순환선", directionLabel: "일산 방향", latitude: 37.3934, longitude: 127.023});
+  assert.equal(mergeFacilityPlaces([rest], result.value).stations[0].linkedRestAreaId, 222);
+});
+
+test("서하남 주유소는 이름·방향이 다른 쉼터에만 연결하고 노선과 거리 검증을 유지한다", () => {
+  const rest = area({id: 223, name: "서하남행복드림쉼터", routeName: "수도권제1순환선", directionLabel: null, routeDirection: null, latitude: 37.5258, longitude: 127.193});
+  const fuel = station({siteCode: "1000|B00161|판교|S", name: "서하남(판교)주유소", routeName: "수도권제1순환선", direction: "판교", latitude: 37.525914, longitude: 127.1930451});
+  assert.equal(mergeFacilityPlaces([rest], [fuel]).stations[0].linkedRestAreaId, 223);
+  assert.equal(mergeFacilityPlaces([{...rest, id: 224}], [fuel]).stations[0].linkedRestAreaId, null);
+  assert.equal(mergeFacilityPlaces([{...rest, routeName: "경부선"}], [fuel]).stations[0].linkedRestAreaId, null);
+  assert.equal(mergeFacilityPlaces([{...rest, latitude: 37.6}], [fuel]).stations[0].linkedRestAreaId, null);
 });
 
 test("same route, service area, direction, and a 300m coordinate match become one facility", () => {

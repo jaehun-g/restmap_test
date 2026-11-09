@@ -29,7 +29,7 @@ export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(
     if (linkedDirection !== null && !isBidirectionalDirection(linkedDirection)) return linkedDirection === filters.direction;
     return isBidirectionalDirection(station.direction) || normalizedDirection(station.direction) === filters.direction;
   };
-  const searchScope = filters.routeName ? {kind: "all" as const} : scope;
+  const searchScope = filters.routeName || query.trim() ? {kind: "all" as const} : scope;
   const eligible = new Set(filterByGeoScope(filterRestAreas(areas, filters, ""), searchScope, position).map(area => area.id));
   const terms = query.trim().toLocaleLowerCase("ko-KR").split(/\s+/).filter(Boolean);
   const stationText = (station: T) =>

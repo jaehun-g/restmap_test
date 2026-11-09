@@ -81,7 +81,7 @@ export function directionOptions(areas: RestArea[], routeName: string | null) {
   return [...directions].sort(([, left], [, right]) => collator.compare(left, right)).map(([key, label]) => ({key, label}));
 }
 
-/** 노선 선택 시 위치 조건만 건너뛰고 거리순 정렬과 나머지 조건은 유지합니다. */
+/** 노선 선택 또는 검색 시 위치 조건만 건너뛰고 거리순 정렬과 나머지 조건은 유지합니다. */
 export function filterMobileRestAreas<T extends RestArea>(
   areas: T[],
   filters: RestAreaFilters,
@@ -91,7 +91,7 @@ export function filterMobileRestAreas<T extends RestArea>(
 ): T[] {
   return filterByGeoScope(
     filterRestAreas(areas, filters, query),
-    filters.routeName ? {kind: "all"} : scope,
+    filters.routeName || query.trim() ? {kind: "all"} : scope,
     position,
   );
 }

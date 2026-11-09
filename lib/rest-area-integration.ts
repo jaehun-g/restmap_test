@@ -18,6 +18,12 @@ export type IntegrationEntry = {
 };
 export type IntegrationPlan = {entries: IntegrationEntry[]; csvRows: LoungeRow[]; csvReviews: string[]; retainedIds: number[]};
 const text = (value: unknown): string | null => typeof value === "string" && value.trim() ? value.trim() : null;
+const routeDirection = (value: unknown): string | null => {
+  const direction = text(value);
+  if (direction === "상" || direction === "상행") return "상행";
+  if (direction === "하" || direction === "하행") return "하행";
+  return direction === "양방향" || direction === "양방" ? "양방향" : null;
+};
 const numeric = (value: unknown): number | null => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : null;
 const yesNo = (value: unknown): number | null => ["Y", "O", "1", 1].includes(value as string) ? 1 : ["N", "X", "0", 0].includes(value as string) ? 0 : null;
 export function validRestCoordinates(latitude: unknown, longitude: unknown): boolean {
@@ -93,7 +99,7 @@ export function integrateRestAreaSources(sources: RestAreaSources): IntegratedAr
       })(),
       route_number: routeCodes[0] ? routeNumberKey(routeCodes[0]) : null,
       direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
-      route_direction: verified?.direction ?? (direction === "양방" ? "양방향" : text(usableService[0]?.direction)), phone: usableService[0]?.telNo ?? null,
+      route_direction: direction === "양방" ? "양방향" : routeDirection(usableService[0]?.direction), phone: usableService[0]?.telNo ?? null,
       latitude: null, longitude: null,
     };
     if (location && validRestCoordinates(location.yValue, location.xValue)) { fields.latitude = Number(location.yValue); fields.longitude = Number(location.xValue); }
@@ -113,7 +119,7 @@ function csvFields(row: Record<string, string>, id: number): LoungeRow {
   const direction = restNameDirection(row["휴게소명"]) ?? normalizedDirection(row["기준정보_도로노선방향"]);
   const values: LoungeRow = {id, name: restDisplayName(row["휴게소명"], direction), phone: text(row["전화번호"]),
     route_name: text(row["기준정보_도로노선명"]) ? canonicalHighwayRouteName(row["기준정보_도로노선명"]) : null, route_number: text(row["기준정보_도로노선번호"]),
-    route_direction: text(row["기준정보_도로노선방향"]), direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
+    route_direction: routeDirection(row["기준정보_도로노선방향"]), direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
     rest_area_type: text(row["기준정보_휴게소종류"]), parking_count: numeric(row["기준정보_주차면수"]),
     latitude: numeric(row.latitude), longitude: numeric(row.longitude)};
   if (!validRestCoordinates(values.latitude, values.longitude)) { values.latitude = null; values.longitude = null; }

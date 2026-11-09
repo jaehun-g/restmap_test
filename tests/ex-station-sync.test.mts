@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {synchronizeExStations, type ExStationSyncDependencies} from "../lib/ex-station-sync.ts";
 import type {ExStationStatus} from "../lib/ex-station-status.ts";
-import {verifiedStationLocations, verifiedStationCoordinates} from "../lib/verified-rest-area-stations.ts";
+import {verifiedStationLocations, verifiedStationIndependentLocations, verifiedStationCoordinates} from "../lib/verified-rest-area-stations.ts";
 
 const station = (sourceKey: string, location: string | null = "서울시 도로 1"): ExStationStatus => ({
   sourceKey,
@@ -60,6 +60,76 @@ test("거리 보정 좌표는 캐시·원천 주소 변경이나 캐시 누락�
   });
 });
 
+test("선산 창원 주유소는 휴게소 좌표가 아닌 실제 주유소 좌표를 유지한다", async () => {
+  const verified = verifiedStationIndependentLocations.find(item => item.sourceKey === "0450|B00102|양평|AD")!;
+  const {pool, writes} = fakePool();
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: [station(verified.sourceKey)]}),
+    geocodeAddress: async () => {throw new Error("검증된 주유소 위치는 재지오코딩하지 않습니다.");},
+  });
+  assert.ok(result.ok);
+  assert.deepEqual(writes[0].slice(13, 19), [verified.latitude, verified.longitude, verified.roadAddress, "ROAD_ADDR", verified.parcelAddress, verified.roadAddress]);
+});
+
+test("의왕청계 일산 주유소의 실제 위치와 보정 방향을 동기화 후에도 유지한다", async () => {
+  const verified = verifiedStationIndependentLocations.find(item => item.sourceKey === "1000|B00158|판교|HD")!;
+  const {pool, writes} = fakePool();
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: [{...station(verified.sourceKey), direction: "판교"}]}), geocodeAddress: async () => {throw new Error("검증된 위치는 재지오코딩하지 않습니다.");}});
+  assert.ok(result.ok);
+  assert.equal(writes[0][4], "일산");
+  assert.deepEqual(writes[0].slice(13, 19), [verified.latitude, verified.longitude, verified.roadAddress, "ROAD_ADDR", verified.parcelAddress, verified.roadAddress]);
+});
+
+test("선산·문경·서여주 창원 주유소는 원천 방향이 양평이어도 DB 방향을 창원으로 유지한다", async () => {
+  const sourceKeys = ["0450|B00102|양평|AD", "0450|B00137|양평|AD", "0450|B00166|양평|AD"];
+  const {pool, writes} = fakePool({cached: sourceKeys.slice(1).map(source_key => ({source_key, source_location: "서울시 도로 1", latitude: 36.6194935, longitude: 128.1509056, geocode_status: "SUCCESS"}))});
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: sourceKeys.map(sourceKey => ({...station(sourceKey), direction: "양평"}))}),
+    geocodeAddress: async () => {throw new Error("기존 좌표를 유지해야 합니다.");},
+  });
+  assert.ok(result.ok);
+  assert.deepEqual(writes.map(row => row[4]), ["창원", "창원", "창원"]);
+});
+
+test("선산·문경·서여주 양평 주유소는 원천 방향이 마산이어도 DB 방향을 양평으로 유지한다", async () => {
+  const sourceKeys = ["0450|B00101|마산|AD", "0450|B00136|마산|AD", "0450|B00167|마산|AD"];
+  const {pool, writes} = fakePool({cached: sourceKeys.map(source_key => ({source_key, source_location: "서울시 도로 1", latitude: 36.2784348, longitude: 128.2479158, geocode_status: "SUCCESS"}))});
+  const result = await synchronizeExStations({
+    pool,
+    fetchStations: async () => ({ok: true, value: sourceKeys.map(sourceKey => ({...station(sourceKey), direction: "마산"}))}),
+    geocodeAddress: async () => {throw new Error("기존 좌표를 유지해야 합니다.");},
+  });
+  assert.ok(result.ok);
+  assert.deepEqual(writes.map(row => row[4]), ["양평", "양평", "양평"]);
+});
+
+test("부여백제 공주 주유소는 동기화 시 원천 방향 대신 공주를 저장한다", async () => {
+  const sourceKey = "1510|B00156|서천|AD";
+  const {pool, writes} = fakePool({cached: [{source_key: sourceKey, source_location: "서울시 도로 1", latitude: 36.3, longitude: 127, geocode_status: "SUCCESS"}]});
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: [{...station(sourceKey), direction: "서천"}]})});
+  assert.ok(result.ok);
+  assert.equal(writes[0][4], "공주");
+});
+
+test("부여백제 서천 주유소는 동기화 시 원천 방향 대신 서천을 저장한다", async () => {
+  const sourceKey = "1510|B00155|공주|AD";
+  const {pool, writes} = fakePool({cached: [{source_key: sourceKey, source_location: "서울시 도로 1", latitude: 36.3, longitude: 127, geocode_status: "SUCCESS"}]});
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: [{...station(sourceKey), direction: "공주"}]})});
+  assert.ok(result.ok);
+  assert.equal(writes[0][4], "서천");
+});
+
+test("영덕·포항·김제 주유소의 확인된 노선과 방향은 동기화 후에도 유지한다", async () => {
+  const sourceKeys = ["0650|B00246|속초|AD", "0650|B00247|동해|AD", "7001|B00248|포항|AD", "7001|B00249|익산|AD"];
+  const {pool, writes} = fakePool({cached: sourceKeys.map(source_key => ({source_key, source_location: "서울시 도로 1", latitude: 36.3, longitude: 127, geocode_status: "SUCCESS"}))});
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: sourceKeys.map(sourceKey => ({...station(sourceKey), direction: "원천방향"}))})});
+  assert.ok(result.ok);
+  assert.deepEqual(writes.map(row => row[4]), ["영덕", "포항", "전주", "새만금"]);
+  assert.deepEqual(writes.map(row => row[3]), ["포항영덕선", "포항영덕선", "새만금포항선", "새만금포항선"]);
+});
+
 test("동기화해도 밀양영남루 주유소의 보정된 이름을 유지한다", async () => {
   const sourceKey = "0140|B00243|밀양|AD";
   const {pool, writes} = fakePool();
@@ -70,6 +140,14 @@ test("동기화해도 밀양영남루 주유소의 보정된 이름을 유지한
   assert.ok(result.ok);
   assert.equal(writes[0][5], "밀양영남루(밀양)주유소");
   assert.equal(writes[0][0], sourceKey);
+});
+
+test("서하남 주유소 원천 이름이 깨져도 동기화 시 보정된 이름을 저장한다", async () => {
+  const sourceKey = "1000|B00161|판교|S";
+  const {pool, writes} = fakePool({cached: [{source_key: sourceKey, source_location: "서울시 도로 1", latitude: 37.525914, longitude: 127.1930451, geocode_status: "SUCCESS"}]});
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: [{...station(sourceKey), serviceAreaName: "서하남(���교)주유소"}]})});
+  assert.ok(result.ok);
+  assert.equal(writes[0][5], "서하남(판교)주유소");
 });
 
 test("원천 주유소 이름이 없으면 동기화 시 null을 유지한다", async () => {

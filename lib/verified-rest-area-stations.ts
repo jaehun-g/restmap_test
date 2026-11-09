@@ -7,6 +7,42 @@ export const verifiedRestAreaStations = [
   {sourceKey: "0290|B00245|-|AD", restName: "처인", routeName: "세종포천선", direction: "세종"},
   {sourceKey: "0290|B00250|-|AD", restName: "고삼호수", routeName: "세종포천선", direction: "포천"},
   {sourceKey: "0290|B00251|-|AD", restName: "고삼호수", routeName: "세종포천선", direction: "세종"},
+  {sourceKey: "0450|B00102|양평|AD", restName: "선산", routeName: "중부내륙선", direction: "창원"},
+  {sourceKey: "0450|B00101|마산|AD", restName: "선산", routeName: "중부내륙선", direction: "양평"},
+  {sourceKey: "0450|B00137|양평|AD", restName: "문경", routeName: "중부내륙선", direction: "창원"},
+  {sourceKey: "0450|B00136|마산|AD", restName: "문경", routeName: "중부내륙선", direction: "양평"},
+  {sourceKey: "0450|B00167|마산|AD", restName: "서여주", routeName: "중부내륙선", direction: "양평"},
+  {sourceKey: "0450|B00166|양평|AD", restName: "서여주", routeName: "중부내륙선", direction: "창원"},
+  {sourceKey: "1510|B00156|서천|AD", restName: "부여백제", routeName: "서천공주선", direction: "공주"},
+  {sourceKey: "1510|B00155|공주|AD", restName: "부여백제", routeName: "서천공주선", direction: "서천"},
+  {sourceKey: "0650|B00246|속초|AD", restName: "영덕", routeName: "포항영덕선", direction: "영덕"},
+  {sourceKey: "0650|B00247|동해|AD", restName: "포항", routeName: "포항영덕선", direction: "포항"},
+  {sourceKey: "7001|B00248|포항|AD", restName: "김제", routeName: "새만금포항선", direction: "전주"},
+  {sourceKey: "7001|B00249|익산|AD", restName: "김제", routeName: "새만금포항선", direction: "새만금"},
+  {sourceKey: "1000|B00158|판교|HD", restName: "의왕청계", routeName: "수도권제1순환선", direction: "일산"},
+] as const;
+
+export const verifiedStationIndependentLocations = [
+  {
+    sourceKey: "1000|B00158|판교|HD",
+    restAreaId: 222,
+    latitude: 37.3932302,
+    longitude: 127.0221883,
+    roadAddress: "경기 의왕시 안양판교로 476",
+    parcelAddress: "경기 의왕시 청계동 산 8-18",
+  },
+  {
+    sourceKey: "0450|B00102|양평|AD",
+    restAreaId: 103,
+    latitude: 36.2738648,
+    longitude: 128.2516744,
+    roadAddress: "경북 구미시 옥성면 중부내륙고속도로 129-1",
+    parcelAddress: "경북 구미시 옥성면 덕촌리 64-2",
+  },
+] as const;
+
+export const verifiedStationAreaLinks = [
+  {sourceKey: "1000|B00161|판교|S", restAreaId: 223},
 ] as const;
 
 export const verifiedStationLocations = [
@@ -33,7 +69,28 @@ export function verifiedStationDirection(sourceKey: string): string | undefined 
   return verified && "direction" in verified ? verified.direction : undefined;
 }
 
+export function verifiedStationStorageDirection(sourceKey: string): string | undefined {
+  if (sourceKey === "1000|B00158|판교|HD") return "일산";
+  if (sourceKey === "0650|B00246|속초|AD") return "영덕";
+  if (sourceKey === "0650|B00247|동해|AD") return "포항";
+  if (sourceKey === "7001|B00248|포항|AD") return "전주";
+  if (sourceKey === "7001|B00249|익산|AD") return "새만금";
+  if (sourceKey === "1510|B00156|서천|AD") return "공주";
+  if (sourceKey === "1510|B00155|공주|AD") return "서천";
+  if (["0450|B00101|마산|AD", "0450|B00136|마산|AD", "0450|B00167|마산|AD"].includes(sourceKey)) return "양평";
+  return ["0450|B00102|양평|AD", "0450|B00137|양평|AD", "0450|B00166|양평|AD"].includes(sourceKey)
+    ? "창원"
+    : undefined;
+}
+
+export function verifiedStationMatchingRoute(sourceKey: string): string | undefined {
+  if (["0650|B00246|속초|AD", "0650|B00247|동해|AD"].includes(sourceKey)) return "포항영덕선";
+  if (["7001|B00248|포항|AD", "7001|B00249|익산|AD"].includes(sourceKey)) return "새만금포항선";
+  return undefined;
+}
+
 export function verifiedStationName(sourceKey: string, name: string): string {
+  if (sourceKey === "1000|B00161|판교|S") return "서하남(판교)주유소";
   return sourceKey === "0140|B00243|밀양|AD" ? "밀양영남루(밀양)주유소" : name;
 }
 

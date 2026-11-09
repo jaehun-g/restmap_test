@@ -25,13 +25,24 @@ test("양북임시·부안의 사용자 확인 방향은 API·CSV 재수집에�
       const area = integrateRestAreaSources(input)[0];
       assert.equal(area.fields.name, verified.name);
       assert.equal(area.fields.direction_label, `${verified.direction} 방향`);
-      assert.equal(area.fields.route_direction, verified.direction);
+      assert.equal(area.fields.route_direction, null);
       assert.equal(area.direction, verified.direction);
       const plan = planRestAreaIntegration(input, [{휴게소명: name, 기준정보_도로노선명: "동해선"}], []);
       assert.equal(plan.csvRows[0].name, verified.name);
       assert.equal(plan.csvRows[0].direction_label, `${verified.direction} 방향`);
     }
   }
+});
+
+test("원천의 지명은 route_direction에 저장하지 않고 상행·하행만 정규화한다", () => {
+  const input = sources();
+  assert.equal(integrateRestAreaSources(input)[0].fields.route_direction, null);
+  input.services[0].direction = "상";
+  assert.equal(integrateRestAreaSources(input)[0].fields.route_direction, "상행");
+  input.services[0].direction = "하행";
+  assert.equal(integrateRestAreaSources(input)[0].fields.route_direction, "하행");
+  const plan = planRestAreaIntegration(sources(), [{휴게소명: "서하남행복드림쉼터", 기준정보_도로노선방향: "판교"}], []);
+  assert.equal(plan.csvRows[0].route_direction, null);
 });
 
 test("동해선 구간명은 API·CSV 통합 시 동해선으로 저장한다", () => {
