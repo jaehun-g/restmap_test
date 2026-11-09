@@ -6,6 +6,7 @@ import {normalizedDirection, isBidirectionalDirection} from "../lib/facility-pla
 import {resolveRestAreaCoordinates, selectRestAreaKeywordPlace} from "../lib/rest-area-geocode.ts";
 import type {KakaoKeywordPlace} from "../lib/kakao-local.ts";
 import {excludedPrivateRestAreas} from "../lib/excluded-private-rest-areas.ts";
+import {verifiedRestAreaDirections} from "../lib/verified-rest-area-directions.ts";
 
 const sources = (): RestAreaSources => ({fetchedAt: new Date().toISOString(), locations: [
   {stdRestCd: "000119", serviceAreaCode: "A00045", unitName: "익산미륵사지(순천)휴게소", routeName: "호남선", routeNo: "0251", yValue: "36.048719", xValue: "127.103033"},
@@ -13,6 +14,25 @@ const sources = (): RestAreaSources => ({fetchedAt: new Date().toISOString(), lo
   {serviceAreaCode: "A00045", serviceAreaCode2: "000119", serviceAreaName: "익산미륵사지(순천)휴게소", direction: "순천", routeCode: "0251", routeName: "호남선", telNo: "063-836-5280"},
 ], serviceExpectedCount: 1, serviceComplete: true, recovery: []});
 const existing: LoungeRow[] = [{id: 38, name: "여산(순천 방향)", route_name: "호남선", route_number: "25", direction_label: "순천 방향", phone: "063-836-5280", latitude: 36.0486, longitude: 127.102, has_store: 1}];
+
+test("양북임시·부안의 사용자 확인 방향은 API·CSV 재수집에서도 유지한다", () => {
+  for (const verified of verifiedRestAreaDirections) {
+    for (const name of verified.sourceNames) {
+      const input = sources();
+      input.locations = [];
+      input.services = [];
+      input.facilities = [{stdRestCd: verified.code, stdRestNm: name, routeNm: "동해선", psName: "편의점", psCode: "01"}];
+      const area = integrateRestAreaSources(input)[0];
+      assert.equal(area.fields.name, verified.name);
+      assert.equal(area.fields.direction_label, `${verified.direction} 방향`);
+      assert.equal(area.fields.route_direction, verified.direction);
+      assert.equal(area.direction, verified.direction);
+      const plan = planRestAreaIntegration(input, [{휴게소명: name, 기준정보_도로노선명: "동해선"}], []);
+      assert.equal(plan.csvRows[0].name, verified.name);
+      assert.equal(plan.csvRows[0].direction_label, `${verified.direction} 방향`);
+    }
+  }
+});
 
 test("동해선 구간명은 API·CSV 통합 시 동해선으로 저장한다", () => {
   for (const route of ["동해선(부산-포항)", "동해선(삼척-속초)"]) {

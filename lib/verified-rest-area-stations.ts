@@ -44,7 +44,7 @@ export const verifiedStationCoordinates = [
   {sourceKey: "0122|B00195|무안|AD", restAreaId: 179, latitude: 35.3657, longitude: 127.105},
   {sourceKey: "0122|B00198|대구|AD", restAreaId: 173, latitude: 35.765, longitude: 128.403},
   {sourceKey: "0122|B00199|무안|AD", restAreaId: 170, latitude: 35.7674, longitude: 128.403},
-  {sourceKey: "0140|B00243|밀양|AD", restAreaId: 209, latitude: 35.4929, longitude: 128.664},
+  {sourceKey: "0140|B00243|밀양|AD", restAreaId: 209, latitude: 35.4894626, longitude: 128.6643041},
   {sourceKey: "0150|B00097|시흥|AD", restAreaId: 101, latitude: 36.0188, longitude: 126.798},
   {sourceKey: "0150|B00128|시흥|AD", restAreaId: 121, latitude: 36.5524, longitude: 126.582},
   {sourceKey: "0150|B00129|목포|AD", restAreaId: 122, latitude: 36.5526, longitude: 126.58},

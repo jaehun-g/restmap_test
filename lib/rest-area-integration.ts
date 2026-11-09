@@ -2,6 +2,7 @@ import {normalizedFacilityName, normalizedDirection} from "./facility-places.ts"
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {distanceMeters} from "./geo-search.ts";
 import {excludedPrivateRestAreas, excludedPrivateRestAreaCodes} from "./excluded-private-rest-areas.ts";
+import {verifiedRestAreaDirections, verifiedRestAreaDirectionByName} from "./verified-rest-area-directions.ts";
 import type {RestAreaSources, SourceRow} from "./rest-area-sources.ts";
 
 export type LoungeRow = Record<string, string | number | null> & {id: number; name: string};
@@ -24,10 +25,14 @@ export function validRestCoordinates(latitude: unknown, longitude: unknown): boo
   return lat !== null && lon !== null && lat >= 33 && lat <= 39 && lon >= 124 && lon <= 132;
 }
 export function restNameDirection(name: string): string | null {
+  const verified = verifiedRestAreaDirectionByName(name);
+  if (verified) return verified.direction;
   const raw = name.match(/\(([^)]*)\)/)?.[1];
   return normalizedDirection(raw);
 }
 export function restDisplayName(name: string, direction?: string | null): string {
+  const verified = verifiedRestAreaDirectionByName(name);
+  if (verified) return verified.name;
   const base = name.replace(/\([^)]*\)/g, "").replace(/휴게소/g, "").trim();
   const label = normalizedDirection(direction ?? restNameDirection(name));
   return label ? `${base}(${label === "양방" ? "양방향" : `${label} 방향`})` : base;
@@ -65,7 +70,8 @@ export function integrateRestAreaSources(sources: RestAreaSources): IntegratedAr
   return [...codes].sort().map(code => {
     const location = locations.get(code), service = services.get(code) ?? [], detail = facilities.get(code) ?? [];
     const names = [...new Set([location?.unitName, ...service.map(row => row.serviceAreaName), ...detail.map(row => row.stdRestNm)].filter((name): name is string => Boolean(name)))];
-    const name = names[0] ?? `이름 미제공 [${code}]`, direction = restNameDirection(name) ?? normalizedDirection(service[0]?.direction);
+    const verified = verifiedRestAreaDirections.find(item => item.code === code);
+    const name = names[0] ?? `이름 미제공 [${code}]`, direction = verified?.direction ?? restNameDirection(name) ?? normalizedDirection(service[0]?.direction);
     const warnings: string[] = [];
     const usableService = service.filter(row => {
       const label = normalizedDirection(row.direction);
@@ -80,14 +86,14 @@ export function integrateRestAreaSources(sources: RestAreaSources): IntegratedAr
     const serviceCodes = [...new Set([location?.serviceAreaCode, ...service.map(row => row.serviceAreaCode)].filter(Boolean))];
     if (serviceCodes.length > 1) throw new Error(`${code}에 여러 serviceAreaCode가 있습니다.`);
     const fields: IntegratedArea["fields"] = {
-      name: restDisplayName(name, direction), std_rest_cd: code, service_area_code: serviceCodes[0] ?? null,
+      name: verified?.name ?? restDisplayName(name, direction), std_rest_cd: code, service_area_code: serviceCodes[0] ?? null,
       route_name: (() => {
         const route = location?.routeName ?? service[0]?.routeName ?? detail[0]?.routeNm;
         return route ? canonicalHighwayRouteName(route) : null;
       })(),
       route_number: routeCodes[0] ? routeNumberKey(routeCodes[0]) : null,
       direction_label: direction === "양방" ? "양방향" : direction ? `${direction} 방향` : null,
-      route_direction: direction === "양방" ? "양방향" : text(usableService[0]?.direction), phone: usableService[0]?.telNo ?? null,
+      route_direction: verified?.direction ?? (direction === "양방" ? "양방향" : text(usableService[0]?.direction)), phone: usableService[0]?.telNo ?? null,
       latitude: null, longitude: null,
     };
     if (location && validRestCoordinates(location.yValue, location.xValue)) { fields.latitude = Number(location.yValue); fields.longitude = Number(location.xValue); }
