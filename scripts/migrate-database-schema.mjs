@@ -26,6 +26,7 @@ const sql = await fs.readFile(
   new URL("../sql/migrate_test_tables_to_tb_prefixes.sql", import.meta.url),
   "utf8",
 );
+const triggerSql = await fs.readFile(new URL("../sql/fix_station_update_triggers.sql", import.meta.url), "utf8");
 const client = new Client({
   connectionString,
   ssl: {rejectUnauthorized: false},
@@ -36,6 +37,7 @@ try {
   await client.connect();
   await client.query("BEGIN");
   await client.query(sql);
+  await client.query(triggerSql);
 
   const summary = [];
   for (const [, table, prefix] of tables) {
