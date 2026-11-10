@@ -81,7 +81,7 @@ export function createMapCard(
     });
     if (otherCount) {
       const more = document.createElement("span");
-      more.textContent = `+${otherCount}개`;
+      more.textContent = highlights.length ? `+${otherCount}개` : `편의시설 ${otherCount}개`;
       facilities.append(more);
     }
     body.append(facilities);

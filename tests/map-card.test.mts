@@ -134,6 +134,12 @@ test("휴게소 인포윈도우는 주요 시설을 우선 표시하고 다른 �
   item.facilities.has_shower = null;
   const partial = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
   assert.deepEqual(partial.all().find(element => element.className.includes("map-card-facilities"))!.children.map(child => child.textContent), ["화물차 라운지", "+4개"]);
+  item.facilities.has_truck_lounge = false;
+  const withoutHighlights = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+  assert.deepEqual(withoutHighlights.all().find(element => element.className.includes("map-card-facilities"))!.children.map(child => child.textContent), ["편의시설 4개"]);
+  for (const key of ["has_gas_station", "has_lpg_station", "has_ev_charger", "has_restroom"] as const) item.facilities[key] = false;
+  const withoutFacilities = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+  assert.equal(withoutFacilities.all().some(element => element.className.includes("map-card-facilities")), false);
 });
 
 test("mobile cards hide missing routes and unknown lounges while administrator cards expose them", t => {
