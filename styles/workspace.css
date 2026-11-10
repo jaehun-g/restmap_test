@@ -582,13 +582,6 @@ input[type="checkbox"] {
 .cluster-popover-list li small {
   @apply w-full whitespace-nowrap overflow-hidden [text-overflow:ellipsis];
 }
-.cluster-composition,
-.cluster-list-progress {
-  @apply shrink-0 text-[10px] leading-[1.6] text-[#637995];
-}
-.cluster-list-progress {
-  @apply mb-[6px];
-}
 .cluster-list-more {
   @apply shrink-0 w-full min-h-[34px] m-[1px_0_9px] [border:1px_solid_#d7e4f4] rounded-[8px] bg-[#f6f9fd] text-[#336da9] text-[11px] font-[700] cursor-pointer;
 }

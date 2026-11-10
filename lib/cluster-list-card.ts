@@ -1,4 +1,4 @@
-import {placeSummary, type MapPlace} from "./map-places.ts";
+import type {MapPlace} from "./map-places.ts";
 import {routeDescription} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import {stationLabel} from "./gas-stations.ts";
@@ -37,11 +37,11 @@ export function createClusterListCard(
   const card = document.createElement("section");
   card.className = "map-info-card cluster-popover";
   card.setAttribute("role", "dialog");
-  card.setAttribute("aria-label", `주변 장소 ${places.length}개`);
+  card.setAttribute("aria-label", "장소 목록");
   const heading = document.createElement("div");
   heading.className = "map-card-heading";
   const title = document.createElement("strong");
-  title.textContent = `주변 장소 ${places.length}개`;
+  title.textContent = "장소 목록";
   const close = document.createElement("button");
   close.type = "button";
   close.className = "map-card-close";
@@ -52,10 +52,6 @@ export function createClusterListCard(
     handlers.onClose();
   });
   heading.append(title, close);
-  const summary = placeSummary(places);
-  const composition = document.createElement("p");
-  composition.className = "cluster-composition";
-  composition.textContent = `휴게소 ${summary.rest} · 주유소 ${summary.station}`;
   const list = document.createElement("ul");
   list.className = "cluster-popover-list";
   let state = {...saved, shownCount: Math.min(places.length, Math.max(5, saved.shownCount))};
@@ -94,14 +90,7 @@ export function createClusterListCard(
     appendPlace(place);
   }
   if (state.shownCount > 5) list.classList.add("is-expanded");
-  const progress = document.createElement("p");
-  progress.className = "cluster-list-progress";
-  progress.setAttribute("role", "status");
-  const updateProgress = () => {
-    progress.textContent = `${state.shownCount} / ${places.length}개 표시`;
-  };
-  updateProgress();
-  card.append(heading, composition, list, progress);
+  card.append(heading, list);
   if (places.length > state.shownCount) {
     const more = document.createElement("button");
     more.type = "button";
@@ -120,7 +109,6 @@ export function createClusterListCard(
       if (firstNew)
         list.scrollTop = firstNew.offsetTop - (list.children[0] as HTMLElement).offsetTop;
       updateState({scrollTop: list.scrollTop});
-      updateProgress();
       if (state.shownCount === places.length) {
         list.tabIndex = -1;
         more.remove();

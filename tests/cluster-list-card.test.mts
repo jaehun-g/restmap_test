@@ -53,7 +53,7 @@ test("actual 더보기 clicks add 5 then the final 2, retain scroll and restore 
   more.dispatch("click");
   assert.equal(list.children.length, 10);
   assert.equal(more.textContent, "더보기 (2개)");
-  assert.equal(card.querySelector(".cluster-list-progress")?.textContent, "10 / 12개 표시");
+  assert.equal(card.querySelector(".cluster-list-progress"), null);
   assert.equal(list.scrollTop, 240);
   list.scrollTop = 144;
   list.dispatch("scroll");
@@ -84,11 +84,8 @@ test("small lists, last single item and new-cluster state preserve boundaries an
     }) as unknown as CardElement;
     const list = card.querySelector(".cluster-popover-list")!;
     assert.equal(list.children.length, Math.min(5, count));
-    assert.equal(card.querySelector("strong")?.textContent, `주변 장소 ${count}개`);
-    assert.equal(
-      card.querySelector(".cluster-composition")?.textContent,
-      `휴게소 ${count} · 주유소 0`,
-    );
+    assert.equal(card.querySelector("strong")?.textContent, "장소 목록");
+    assert.equal(card.querySelector(".cluster-composition"), null);
     if (count === 6) {
       assert.equal(card.querySelector(".cluster-list-more")?.textContent, "더보기 (1개)");
       card.querySelector(".cluster-list-more")!.dispatch("click");
