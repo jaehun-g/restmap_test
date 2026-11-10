@@ -3,7 +3,7 @@
 import {useState} from "react";
 import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton} from "@/components/ui/button";
-import {facilityDefinitions, type RestArea, routeDescription} from "@/lib/rest-areas";
+import {facilityDefinitions, highlightedFacilities, type RestArea, routeDescription} from "@/lib/rest-areas";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import FoodMenuSection from "@/components/food-menu-section";
@@ -54,13 +54,14 @@ export default function RestAreaDetails({
               {routeDescription(area, audience) || "노선 정보 없음"}
             </p>
             <div className="detail-overview-tags">
-              <span>
-                주차{" "}
-                {area.parkingCount === null
-                  ? "정보 없음"
-                  : `${area.parkingCount.toLocaleString("ko-KR")}대`}
-              </span>
-              {area.restAreaType && <span>{area.restAreaType}</span>}
+              {audience === "mobile" ? highlightedFacilities(area).map(([key, label]) => (
+                <span key={key} className={`facility-highlight-${key}`}>{label}</span>
+              )) : (
+                <>
+                  <span>주차 {area.parkingCount === null ? "정보 없음" : `${area.parkingCount.toLocaleString("ko-KR")}대`}</span>
+                  {area.restAreaType && <span>{area.restAreaType}</span>}
+                </>
+              )}
             </div>
           </div>
         </div>

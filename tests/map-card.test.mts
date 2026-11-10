@@ -108,8 +108,7 @@ test("map card keeps database strings as literal text and links its close/detail
   assert.equal(card.all().filter(element => element.tag === "img").length, 1);
   assert.ok(card.all().some(element => element.textContent === "화물차 라운지"));
   const tags = card.all().find(element => element.className.includes("map-card-facilities"))!;
-  assert.equal(tags.children.length, 4);
-  assert.equal(tags.children.at(-1)?.textContent, "+1");
+  assert.deepEqual(tags.children.map(child => child.textContent), ["화물차 라운지", "+4개"]);
   for (const name of ["map-card-close", "map-card-details"])
     card
       .all()
@@ -120,6 +119,21 @@ test("map card keeps database strings as literal text and links its close/detail
   assert.equal(closed, 1);
   assert.equal(opened, 1);
   assert.equal(stopped, 2);
+});
+
+test("휴게소 인포윈도우는 주요 시설을 우선 표시하고 다른 시설만 개수로 묶는다", t => {
+  installDocument(t);
+  const item = area(true, "경부선");
+  item.facilities.has_sleeping_room = true;
+  item.facilities.has_shower = true;
+  const card = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+  const tags = card.all().find(element => element.className.includes("map-card-facilities"))!;
+  assert.deepEqual(tags.children.map(child => child.textContent), ["화물차 라운지", "수면실", "샤워실", "+4개"]);
+  assert.deepEqual(tags.children.slice(0, 3).map(child => child.className), ["facility-highlight-has_truck_lounge", "facility-highlight-has_sleeping_room", "facility-highlight-has_shower"]);
+  item.facilities.has_sleeping_room = false;
+  item.facilities.has_shower = null;
+  const partial = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+  assert.deepEqual(partial.all().find(element => element.className.includes("map-card-facilities"))!.children.map(child => child.textContent), ["화물차 라운지", "+4개"]);
 });
 
 test("mobile cards hide missing routes and unknown lounges while administrator cards expose them", t => {

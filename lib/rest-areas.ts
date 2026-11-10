@@ -50,6 +50,14 @@ export type RestAreasResponse = {
 
 export type RestAreaRecord = RestArea & {revision: string};
 
+export function highlightedFacilities(area: RestArea) {
+  return ([
+    ["has_truck_lounge", "화물차 라운지"],
+    ["has_sleeping_room", "수면실"],
+    ["has_shower", "샤워실"],
+  ] as const).filter(([key]) => area.facilities[key] === true);
+}
+
 export function visibleFacilities(area: RestArea, audience: "admin" | "mobile") {
   return facilityDefinitions.filter(
     ([key]) => audience === "admin" || key !== "has_truck_lounge" || area.facilities[key] !== null,

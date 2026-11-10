@@ -1,4 +1,4 @@
-import {facilityDefinitions, routeDescription, type RestArea} from "./rest-areas.ts";
+import {facilityDefinitions, highlightedFacilities, routeDescription, type RestArea} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import type {GasStation} from "./gas-stations.ts";
 import {restAreaPriceSummary} from "./rest-area-prices.ts";
@@ -60,27 +60,28 @@ export function createMapCard(
     body.append(text);
   }
   const lounge = area.facilities.has_truck_lounge;
-  if (lounge === true || audience === "admin") {
+  if (lounge !== true && audience === "admin") {
     const badge = document.createElement("span");
-    badge.className = lounge === true ? "lounge-badge" : "map-card-muted";
-    badge.textContent =
-      lounge === true ? "화물차 라운지" : lounge === false ? "라운지 없음" : "라운지 미확인";
+    badge.className = "map-card-muted";
+    badge.textContent = lounge === false ? "라운지 없음" : "라운지 미확인";
     body.append(badge);
   }
-  const available = facilityDefinitions.filter(
-    ([key]) => key !== "has_truck_lounge" && area.facilities[key] === true,
-  );
-  if (available.length) {
+  const highlights = highlightedFacilities(area);
+  const otherCount = facilityDefinitions.filter(
+    ([key]) => key !== "has_truck_lounge" && key !== "has_sleeping_room" && key !== "has_shower" && area.facilities[key] === true,
+  ).length;
+  if (highlights.length || otherCount) {
     const facilities = document.createElement("div");
     facilities.className = "facility-tags map-card-facilities";
-    available.slice(0, 3).forEach(([, label]) => {
+    highlights.forEach(([key, label]) => {
       const badge = document.createElement("span");
+      badge.className = `facility-highlight-${key}`;
       badge.textContent = label;
       facilities.append(badge);
     });
-    if (available.length > 3) {
+    if (otherCount) {
       const more = document.createElement("span");
-      more.textContent = `+${available.length - 3}`;
+      more.textContent = `+${otherCount}개`;
       facilities.append(more);
     }
     body.append(facilities);

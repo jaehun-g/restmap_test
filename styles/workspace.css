@@ -289,6 +289,12 @@ input[type="checkbox"] {
 .detail-overview-prices strong { color: #24589d; font-size: 12px; }
 .detail-overview-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .detail-overview-tags span { padding: 4px 7px; border-radius: 20px; background: #f3f5f8; color: #68778b; font-size: 9px; }
+.detail-overview-tags .facility-highlight-has_truck_lounge,
+.map-card-facilities .facility-highlight-has_truck_lounge { background: #fff1db; color: #92500b; }
+.detail-overview-tags .facility-highlight-has_sleeping_room,
+.map-card-facilities .facility-highlight-has_sleeping_room { background: #f0ebff; color: #5a36a3; }
+.detail-overview-tags .facility-highlight-has_shower,
+.map-card-facilities .facility-highlight-has_shower { background: #e2f4fb; color: #116381; }
 .detail-route-line { margin-top: 3px; color: #60738c; font-size: 11px; }
 .detail-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 12px; }
 .detail-meta-row .detail-overview-tags { justify-content: flex-start; }

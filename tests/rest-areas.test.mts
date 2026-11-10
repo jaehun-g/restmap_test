@@ -1,8 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { facilityDefinitions, hasCoordinates, normalizeRestAreas, nullableBoolean } from "../lib/rest-areas.ts";
+import { facilityDefinitions, hasCoordinates, highlightedFacilities, normalizeRestAreas, nullableBoolean } from "../lib/rest-areas.ts";
 
 const row = { id: 1, name: "테스트 휴게소", latitude: "37.1234567", longitude: "127.7654321" };
+
+test("주요 시설 배지는 제공이 확인된 라운지, 수면실, 샤워실만 표시한다", () => {
+  const result = normalizeRestAreas([{...row, has_truck_lounge: 1, has_sleeping_room: 1, has_shower: 1, has_store: 1},
+    {...row, id: 2, has_truck_lounge: 0, has_sleeping_room: null, has_shower: 1}]);
+  if (!result.ok) assert.fail(result.error.message);
+  assert.deepEqual(highlightedFacilities(result.value[0]).map(([, label]) => label), ["화물차 라운지", "수면실", "샤워실"]);
+  assert.deepEqual(highlightedFacilities(result.value[1]).map(([, label]) => label), ["샤워실"]);
+});
 
 test("Cafe24 binary-collation UTF-8 text fields decode to Korean strings", () => {
   const result = normalizeRestAreas([{ ...row, name: Buffer.from("테스트 휴게소"), route_name: Buffer.from("경부고속도로"), direction_label: Buffer.from("서울 방향"), phone: Buffer.from("02-123-4567") }]);
