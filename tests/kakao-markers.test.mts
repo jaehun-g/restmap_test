@@ -273,6 +273,25 @@ test("opening an info card centers the card within the available map viewport", 
   layer.dispose();
 });
 
+test("state synchronization and card refresh preserve a pending placement adjustment", t => {
+  const dom = installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const item = restPlace(areas()[0]);
+  const layer = createPlaceMarkers(
+    sdk, map, [item], () => {},
+    () => new CardElement("section") as unknown as HTMLElement,
+    () => ({left: 0, top: 100, right: 320, bottom: 500, width: 320, height: 400}) as DOMRect,
+  );
+
+  layer.select(item.key);
+  layer.select(item.key, true, false);
+  layer.select(item.key, true, false, true);
+  dom.flush();
+
+  assert.deepEqual(state.offsets, [[-4, -120]]);
+  layer.dispose();
+});
+
 test("cluster popover wheel events stay inside its scrollable list", t => {
   installCardDOM(t);
   const {sdk, map, state} = mockKakao();

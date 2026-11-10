@@ -404,7 +404,9 @@ export function createPlaceMarkers(
     showList(sortPlacesForList(unit.places), center, bounds);
   }
   function select(key: string | null, showCard = true, move = true, refresh = false) {
-    allowAdjustment = move;
+    const pendingAdjustment = key !== null && key === activeKey && allowAdjustment && frame !== null;
+    const pendingCenter = pendingAdjustment && centerCardOnOpen;
+    allowAdjustment = move || pendingAdjustment;
     if (key === activeKey && card && showCard && !refresh) {
       scheduleAdjustment();
       return;
@@ -424,7 +426,7 @@ export function createPlaceMarkers(
     }
     activeKey = key;
     clearCard();
-    centerCardOnOpen = move && showCard;
+    centerCardOnOpen = showCard && (move || pendingCenter);
     if (key === null) {
       if (!listOpen) closeList();
     } else if (listItems && !listItems.some(item => item.key === key)) closeList();
