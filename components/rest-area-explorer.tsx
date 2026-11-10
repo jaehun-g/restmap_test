@@ -8,6 +8,9 @@ import {useSearchQuery} from "@/hooks/use-search-query";
 import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
+import {useMobileDetails} from "@/hooks/use-mobile-details";
+import type {RestAreaRecord} from "@/lib/rest-areas";
+import type {GasStationRecord} from "@/lib/gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
 import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
@@ -28,13 +31,11 @@ import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
 type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities";
 export default function MobileExplorer({initialData}: {
-  initialData?: Promise<InitialMapData | undefined>;
+  initialData?: InitialMapData;
 } = {}) {
-  const initialRestAreas = useMemo(() => initialData
-    ? Promise.resolve(initialData).then(data => data?.restAreas, () => undefined)
-    : undefined, [initialData]);
+  const initialRestAreas = initialData?.restAreas;
   const initialStations = useMemo(() => initialData ? {
-    query: "source=ex", result: Promise.resolve(initialData).then(data => data?.stations, () => undefined),
+    query: "source=ex", result: initialData.stations,
   } : undefined, [initialData]);
   const {data, areas: allAreas, loading, error, reload} = useRestAreas(false, initialRestAreas);
   const areas = useMemo(() => allAreas.filter(area => area.operationStatus !== "closed"), [allAreas]);
@@ -124,15 +125,26 @@ export default function MobileExplorer({initialData}: {
     }, sourceFacilities),
     [areas, gas.stations, filters, search.query, location.scope, location.position, sourceFacilities],
   );
-  const visibleAreas = useMemo(
+  const baseVisibleAreas = useMemo(
     () => mergedFacilities.facilities.map(({area}) => area),
     [mergedFacilities.facilities],
   );
-  const stationResults = mergedFacilities.stations;
-  const linkedStationsByRestId = useMemo(
+  const baseStations = mergedFacilities.stations;
+  const baseLinkedStations = useMemo(
     () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
     [mergedFacilities.facilities, sourceFacilities],
   );
+  const selectedBaseArea = baseVisibleAreas.find(area => area.id === selectedId);
+  const selectedBaseStation = baseStations.find(station => stationKey(station) === selectedStationId) ??
+    [...baseLinkedStations.values()].flat().find(station => stationKey(station) === selectedStationId);
+  const restDetails = useMobileDetails("rest", selectedBaseArea && !selectedBaseArea.revision ? [selectedBaseArea.id] : []);
+  const detailStations = selectedBaseArea ? baseLinkedStations.get(selectedBaseArea.id) ?? [] : selectedBaseStation ? [selectedBaseStation] : [];
+  const stationDetailsData = useMobileDetails("station", detailStations.filter(station => station.brand === "EX" && !station.revision).map(station => station.id));
+  const detailLoading = !!(selectedBaseArea && !selectedBaseArea.revision && !restDetails.items[selectedBaseArea.id]) || detailStations.some(station => station.brand === "EX" && !station.revision && !stationDetailsData.items[station.id]);
+  const detailError = restDetails.error ?? stationDetailsData.error;
+  const visibleAreas = useMemo(() => baseVisibleAreas.map(area => (restDetails.items[area.id] as RestAreaRecord | undefined) ?? area), [baseVisibleAreas, restDetails.items]);
+  const stationResults = useMemo(() => baseStations.map(station => ({...station, ...((stationDetailsData.items[station.id] as GasStationRecord | undefined) ?? {})})), [baseStations, stationDetailsData.items]);
+  const linkedStationsByRestId = useMemo(() => new Map([...baseLinkedStations].map(([id, stations]) => [id, stations.map(station => ({...station, ...((stationDetailsData.items[station.id] as GasStationRecord | undefined) ?? {})}))])), [baseLinkedStations, stationDetailsData.items]);
   const selectedDirectionLabel = useMemo(
     () =>
       directionOptions(areas, filters.routeName).find(option => option.key === filters.direction)
@@ -430,6 +442,11 @@ export default function MobileExplorer({initialData}: {
                   }}
                   onClose={collapse}
                 />
+              ) : effectivePanel === "detail" && (selected || selectedStation) && (detailLoading || detailError) ? (
+                <div role="status" className="p-5">
+                  {detailError ? <>{detailError} <Button onClick={() => { restDetails.retry(); stationDetailsData.retry(); }}>다시 조회</Button></> : "상세 정보를 불러오고 있어요"}
+                  <Button variant="secondary" onClick={collapse}>닫기</Button>
+                </div>
               ) : effectivePanel === "detail" && selectedStation ? (
                 <GasStationDetails
                   key={stationKey(selectedStation)}

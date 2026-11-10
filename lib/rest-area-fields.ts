@@ -103,6 +103,12 @@ export const selectRestAreaColumns = `SELECT ${databaseColumns
   .map(column => optionalColumns.has(column) ? `to_jsonb(tb_lounge)->>'lg_${column}' AS "${column}"` : `${restAreaDbColumn(column)} AS "${column}"`)
   .join(", ")} FROM tb_lounge`;
 
+// 모바일 지도에는 관리자 검토용 출처와 식별 코드가 필요하지 않다.
+export const selectMobileRestAreaColumns = `SELECT ${databaseColumns
+  .filter(column => !["std_rest_cd", "service_area_code", "operation_source", "operation_review_date", "operation_start_date", "operation_note", "phone", "rest_area_type", "parking_count"].includes(column))
+  .map(column => optionalColumns.has(column) ? `to_jsonb(tb_lounge)->>'lg_${column}' AS "${column}"` : `${restAreaDbColumn(column)} AS "${column}"`)
+  .join(", ")} FROM tb_lounge`;
+
 export type RestAreaChanges = Partial<Pick<RestArea, ScalarKey>> & {
   facilities?: Partial<RestArea["facilities"]>;
 };

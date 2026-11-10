@@ -8,7 +8,7 @@ import {
   type RestAreasResponse,
 } from "./rest-areas";
 import {rowRevision} from "./rest-area-revision";
-import {selectRestAreaColumns} from "./rest-area-fields";
+import {selectRestAreaColumns, selectMobileRestAreaColumns} from "./rest-area-fields";
 import {saveRestArea} from "./rest-area-save";
 import type {UpdateRequest} from "./rest-area-validation";
 import type {RestAreaRecord} from "./rest-areas";
@@ -29,7 +29,7 @@ import {compileRouteProximity, expandedBounds, routeStationRadiusMeters} from ".
 import {filterByGeoScope} from "./geo-search";
 import {saveGasStation} from "./gas-station-save";
 import type {StationUpdateRequest} from "./gas-station-validation";
-import {normalizeExGasStations, selectExStationColumns} from "./ex-gas-stations";
+import {normalizeExGasStations, selectExStationColumns, selectMobileExStationColumns} from "./ex-gas-stations";
 import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-sync";
 import {synchronizeExStationPrices, type ExStationPriceSyncSummary} from "./ex-station-price-sync";
 import {fetchFoodMenus} from "./food-menu-source";
@@ -57,11 +57,11 @@ function getPool(): Result<Pool> {
   return {ok: true, value: databaseGlobal.restAreaPool};
 }
 
-export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
+export async function queryRestAreas(mobile = false): Promise<Result<RestAreasResponse>> {
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} ORDER BY name, id`);
+    const {rows} = await pool.value.query<QueryResultRow>(`${mobile ? selectMobileRestAreaColumns : selectRestAreaColumns} ORDER BY name, id`);
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
     return {
@@ -69,7 +69,7 @@ export async function queryRestAreas(): Promise<Result<RestAreasResponse>> {
       value: {
         items: parsed.value.map((area, index) => ({
           ...area,
-          revision: rowRevision(rows[index]),
+          revision: mobile ? "" : rowRevision(rows[index]),
         })),
         unmappedCount: parsed.value.filter(area => !hasCoordinates(area)).length,
         fetchedAt: new Date().toISOString(),
@@ -110,6 +110,7 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
 
 export async function queryGasStations(
   query: GasStationQuery,
+  mobile = false,
 ): Promise<Result<GasStationsResponse>> {
   try {
     const pool = getPool();
@@ -144,7 +145,7 @@ export async function queryGasStations(
       }
     const exWhere = where.replace(/\bgs_lat\b/g, "ex_latitude").replace(/\bgs_longi\b/g, "ex_longitude");
     const {rows: exRows} = await pool.value.query<QueryResultRow>(
-      `${selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,
+      `${mobile ? selectMobileExStationColumns : selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,
       values,
     );
     const exStations = normalizeExGasStations(exRows);
@@ -167,6 +168,23 @@ export async function queryGasStations(
       error.message = "주유소 테이블(tb_gscargo, tb_ex_station_geocodes)을 확인해주세요.";
     return {ok: false, error};
   }
+}
+
+export async function queryMobileDetail(kind: "rest" | "station", id: number) {
+  try {
+    const pool = getPool();
+    if (!pool.ok) return pool;
+    if (kind === "rest") {
+      const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} WHERE lg_id = $1`, [id]);
+      if (!rows.length) return {ok: false as const, error: {code: "NOT_FOUND", message: "휴게소를 찾을 수 없습니다."}};
+      const parsed = normalizeRestAreas(rows);
+      return parsed.ok ? {ok: true as const, value: {...parsed.value[0], revision: rowRevision(rows[0])}} : parsed;
+    }
+    const {rows} = await pool.value.query<QueryResultRow>(`${selectExStationColumns} WHERE ex_id = $1`, [id]);
+    if (!rows.length) return {ok: false as const, error: {code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다."}};
+    const parsed = normalizeExGasStations(rows);
+    return parsed.ok ? {ok: true as const, value: parsed.value[0]} : parsed;
+  } catch (error) { return {ok: false as const, error: databaseError(error)}; }
 }
 
 /** Updates the read-only EX station snapshot from the Korea Expressway Corporation API. */

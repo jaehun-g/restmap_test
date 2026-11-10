@@ -21,6 +21,30 @@ async function cachedRestAreas() {
   return result.value;
 }
 
+async function cachedMobileRestAreas() {
+  "use cache";
+  cacheLife({stale: 0, revalidate: 60, expire: 120});
+  cacheTag(MAP_REST_AREAS_TAG);
+  const result = await queryRestAreas(true);
+  if (!result.ok) throw new MapQueryFailure(result.error);
+  return result.value;
+}
+
+export function queryMobileRestAreas() {
+  return readCached(cachedMobileRestAreas);
+}
+
+async function cachedMobileStations() {
+  "use cache";
+  cacheLife({stale: 0, revalidate: 60, expire: 120});
+  cacheTag(MAP_STATIONS_TAG, MAP_REST_AREAS_TAG);
+  const result = await queryGasStations({source: "ex", routeName: null, scope: {kind: "all"}}, true);
+  if (!result.ok) throw new MapQueryFailure(result.error);
+  return result.value;
+}
+
+export function queryMobileStations() { return readCached(cachedMobileStations); }
+
 async function cachedStations(query: GasStationQuery) {
   "use cache";
   cacheLife({stale: 0, revalidate: 60, expire: 120});

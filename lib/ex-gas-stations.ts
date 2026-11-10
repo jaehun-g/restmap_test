@@ -8,6 +8,8 @@ const exColumns = ["id", "source_key", "service_area_name", "route_name", "direc
   "latitude", "longitude", "kakao_address_name", "kakao_road_address_name", "source_fetched_at", "updated_at"];
 export const selectExStationColumns = `SELECT ${exColumns.map(column => `"ex_${column}" AS "${column}"`).join(", ")}
   FROM tb_ex_station_geocodes`;
+export const selectMobileExStationColumns = `SELECT ${exColumns.filter(column => !["tel_no", "lpg_available", "gasoline_price", "diesel_price", "lpg_price", "source_fetched_at", "updated_at", "oil_company"].includes(column)).map(column => `"ex_${column}" AS "${column}"`).join(", ")}
+  FROM tb_ex_station_geocodes`;
 
 function timestamp(value: unknown): string | null {
   if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : null;
