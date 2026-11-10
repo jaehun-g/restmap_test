@@ -30,8 +30,15 @@ async function cachedMobileRestAreas() {
   return result.value;
 }
 
+async function timedMobileRead<T>(kind: "rest" | "station", read: () => Promise<Result<T>>): Promise<Result<T>> {
+  const start = performance.now();
+  const result = await read();
+  console.info("[mobile-map-read]", JSON.stringify({kind, durationMs: Math.round((performance.now() - start) * 10) / 10, ok: result.ok, cacheStatus: "unknown"}));
+  return result;
+}
+
 export function queryMobileRestAreas() {
-  return readCached(cachedMobileRestAreas);
+  return timedMobileRead("rest", () => readCached(cachedMobileRestAreas));
 }
 
 async function cachedMobileStations() {
@@ -43,7 +50,7 @@ async function cachedMobileStations() {
   return result.value;
 }
 
-export function queryMobileStations() { return readCached(cachedMobileStations); }
+export function queryMobileStations() { return timedMobileRead("station", () => readCached(cachedMobileStations)); }
 
 async function cachedStations(query: GasStationQuery) {
   "use cache";

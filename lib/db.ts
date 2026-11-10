@@ -1,5 +1,5 @@
 import "server-only";
-import {Pool, type QueryResultRow} from "pg";
+import {Pool, type QueryResult, type QueryResultRow} from "pg";
 import {databaseError, readDatabaseConfig} from "./db-config";
 import {
   hasCoordinates,
@@ -36,6 +36,7 @@ import {fetchFoodMenus} from "./food-menu-source";
 import {synchronizeFoodMenus, type FoodMenuSyncSummary} from "./food-menu-sync";
 import type {FoodMenusResponse} from "./food-menus";
 import {invalidateMapData} from "./map-cache-tags";
+import {logMapQueryTiming, timedMapQuery, type MapQueryTiming} from "./map-query-timing";
 
 const databaseGlobal = globalThis as typeof globalThis & {
   restAreaPool?: Pool;
@@ -58,12 +59,18 @@ function getPool(): Result<Pool> {
 }
 
 export async function queryRestAreas(mobile = false): Promise<Result<RestAreasResponse>> {
+  const timing: MapQueryTiming = {connectionMs: null, queryMs: null};
+  let processingStart: number | null = null;
+  let ok = false;
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
-    const {rows} = await pool.value.query<QueryResultRow>(`${mobile ? selectMobileRestAreaColumns : selectRestAreaColumns} ORDER BY name, id`);
+    const sql = `${mobile ? selectMobileRestAreaColumns : selectRestAreaColumns} ORDER BY name, id`;
+    const {rows} = mobile ? await timedMapQuery<QueryResult<QueryResultRow>>(() => pool.value.connect(), sql, [], timing) : await pool.value.query<QueryResultRow>(sql);
+    processingStart = performance.now();
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
+    ok = true;
     return {
       ok: true,
       value: {
@@ -77,6 +84,8 @@ export async function queryRestAreas(mobile = false): Promise<Result<RestAreasRe
     };
   } catch (error) {
     return {ok: false, error: databaseError(error)};
+  } finally {
+    if (mobile) logMapQueryTiming("rest", timing, processingStart === null ? null : performance.now() - processingStart, ok);
   }
 }
 
@@ -112,6 +121,9 @@ export async function queryGasStations(
   query: GasStationQuery,
   mobile = false,
 ): Promise<Result<GasStationsResponse>> {
+  const timing: MapQueryTiming = {connectionMs: null, queryMs: null};
+  let processingStart: number | null = null;
+  let ok = false;
   try {
     const pool = getPool();
     if (!pool.ok) return pool;
@@ -144,16 +156,16 @@ export async function queryGasStations(
         }
       }
     const exWhere = where.replace(/\bgs_lat\b/g, "ex_latitude").replace(/\bgs_longi\b/g, "ex_longitude");
-    const {rows: exRows} = await pool.value.query<QueryResultRow>(
-      `${mobile ? selectMobileExStationColumns : selectExStationColumns}${exWhere} ORDER BY service_area_name, id`,
-      values,
-    );
+    const sql = `${mobile ? selectMobileExStationColumns : selectExStationColumns}${exWhere} ORDER BY service_area_name, id`;
+    const {rows: exRows} = mobile ? await timedMapQuery<QueryResult<QueryResultRow>>(() => pool.value.connect(), sql, values, timing) : await pool.value.query<QueryResultRow>(sql, values);
+    processingStart = performance.now();
     const exStations = normalizeExGasStations(exRows);
     if (!exStations.ok) return exStations;
     records.push(...exStations.value);
     const items = nearRoute
       ? records.filter(station => positioned(station) && nearRoute(station))
       : filterByGeoScope(records, query.scope, null);
+    ok = true;
     return {
       ok: true,
       value: {
@@ -167,6 +179,8 @@ export async function queryGasStations(
     if (error.code === "DB_SCHEMA_ERROR")
       error.message = "주유소 테이블(tb_gscargo, tb_ex_station_geocodes)을 확인해주세요.";
     return {ok: false, error};
+  } finally {
+    if (mobile) logMapQueryTiming("station", timing, processingStart === null ? null : performance.now() - processingStart, ok);
   }
 }
 
