@@ -60,6 +60,14 @@ test("거리 보정 좌표는 캐시·원천 주소 변경이나 캐시 누락�
   });
 });
 
+test("김해금관가야 기장 주유소의 검증 좌표는 동기화 후에도 유지한다", async () => {
+  const verified = verifiedStationIndependentLocations.find(item => item.sourceKey === "6000|B00216|기장|AD")!;
+  const {pool, writes} = fakePool();
+  const result = await synchronizeExStations({pool, fetchStations: async () => ({ok: true, value: [station(verified.sourceKey)]}), geocodeAddress: async () => {throw new Error("검증된 위치는 재지오코딩하지 않습니다.");}});
+  assert.ok(result.ok);
+  assert.deepEqual(writes[0].slice(13, 19), [verified.latitude, verified.longitude, verified.roadAddress, "ROAD_ADDR", verified.parcelAddress, verified.roadAddress]);
+});
+
 test("선산 창원 주유소는 휴게소 좌표가 아닌 실제 주유소 좌표를 유지한다", async () => {
   const verified = verifiedStationIndependentLocations.find(item => item.sourceKey === "0450|B00102|양평|AD")!;
   const {pool, writes} = fakePool();

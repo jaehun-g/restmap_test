@@ -24,6 +24,14 @@ export const verifiedRestAreaStations = [
 
 export const verifiedStationIndependentLocations = [
   {
+    sourceKey: "6000|B00216|기장|AD",
+    restAreaId: 192,
+    latitude: 35.2695894,
+    longitude: 129.0030215,
+    roadAddress: "경남 김해시 대동면 동남로 400",
+    parcelAddress: "경남 김해시 대동면 월촌리 770",
+  },
+  {
     sourceKey: "1000|B00158|판교|HD",
     restAreaId: 222,
     latitude: 37.3932302,
@@ -42,6 +50,7 @@ export const verifiedStationIndependentLocations = [
 ] as const;
 
 export const verifiedStationAreaLinks = [
+  {sourceKey: "6000|B00216|기장|AD", restAreaId: 192},
   {sourceKey: "1000|B00161|판교|S", restAreaId: 223},
 ] as const;
 

@@ -40,6 +40,13 @@ const station = (overrides: Partial<GasStationRecord> = {}): GasStationRecord =>
   ...overrides,
 });
 
+test("김해금관가야 기장 주유소를 양방향 휴게소에 연결한다", () => {
+  const rest = area({id: 192, name: "김해금관가야(양방향)", routeName: "부산외곽순환선", directionLabel: "양방향", latitude: 35.2699, longitude: 129.003});
+  const fuel = station({siteCode: "6000|B00216|기장|AD", name: "김해금관가야(기장)주유소", routeName: "부산외곽순환선", direction: "기장", latitude: 35.2695894, longitude: 129.0030215});
+  assert.equal(mergeFacilityPlaces([rest], [fuel]).stations[0].linkedRestAreaId, 192);
+  assert.equal(mergeFacilityPlaces([rest], [{...fuel, latitude: 35.28}]).stations[0].linkedRestAreaId, null);
+});
+
 test("선산·문경 창원 주유소는 원천 방향이 양평이어도 창원 휴게소에 연결한다", () => {
   for (const item of [
     {name: "선산", code: "0450|B00102|양평|AD", restLat: 36.2742, restLon: 128.251, fuelLat: 36.2738648, fuelLon: 128.2516744},
