@@ -275,16 +275,16 @@ export default function MobileExplorer({initialData}: {
           휴게소·주유소 찾기
         </h1>
         <SearchBox search={search} includeStations />
-        <PlaceControls
-          view={placeView}
-          onView={next => {
-            setPlaceView(next);
-            setSelectedId(null);
-            setSelectedStationId(null);
-            setPanel("collapsed");
-          }}
-        />
         <div className="mobile-filters flex items-center flex-nowrap gap-[6px] m-[8px_-18px_0] p-[2px_18px_6px] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [scroll-padding:0_18px]">
+          <PlaceControls
+            view={placeView}
+            onView={next => {
+              setPlaceView(next);
+              setSelectedId(null);
+              setSelectedStationId(null);
+              setPanel("collapsed");
+            }}
+          />
           <FilterChip
             active={Boolean(filters.routeName)}
             onClick={event => open("routes", event.currentTarget)}

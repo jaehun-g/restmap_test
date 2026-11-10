@@ -18,7 +18,7 @@ export default function PlaceControls({
       className={
         audience === "admin"
           ? "place-controls flex items-center justify-start m-[14px_0_10px] relative z-[12]"
-          : "place-controls flex items-center justify-start m-[8px_0_0] relative z-[12]"
+          : "place-controls flex shrink-0 items-center justify-start relative z-[12]"
       }
     >
       <nav

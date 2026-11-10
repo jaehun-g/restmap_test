@@ -15,6 +15,29 @@ async function mockMapData(page: Page) {
   await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
 }
 
+test("모바일 장소 보기와 필터가 한 줄에서 가로 스크롤로 동작한다", async ({page}) => {
+  await mockMapData(page);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  const row = page.locator(".mobile-filters");
+  const tabs = row.getByRole("navigation", {name: "장소 보기"});
+  const route = row.getByRole("button", {name: "전체 노선", exact: true});
+  const lounge = row.getByRole("button", {name: /라운지 OFF/});
+  await expect(route).toBeEnabled();
+  const geometry = await row.evaluate(element => {
+    const tabs = element.querySelector(".place-tabs")!.getBoundingClientRect();
+    const route = element.querySelector(".filter-chip")!.getBoundingClientRect();
+    return {overflow: element.scrollWidth > element.clientWidth, sameRow: tabs.top < route.bottom && route.top < tabs.bottom};
+  });
+  expect(geometry).toEqual({overflow: true, sameRow: true});
+  await lounge.scrollIntoViewIfNeeded();
+  await expect.poll(() => row.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+  await lounge.click();
+  await expect(row.getByRole("button", {name: /라운지 ON/})).toHaveAttribute("aria-pressed", "true");
+  await tabs.getByRole("button", {name: "주유소"}).click();
+  await expect(row.getByRole("button", {name: /라운지/})).toHaveCount(0);
+});
+
 test("관리자 검색은 현재 검색 결과 전체로 지도를 맞춘다", async ({page}) => {
   await mockMapData(page);
   await page.route("**/api/admin/session", route => route.fulfill({json: {configured: false, authenticated: false, expiresAt: null}}));
