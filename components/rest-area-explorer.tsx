@@ -188,8 +188,6 @@ export default function MobileExplorer({initialData}: {
   }, []);
   const collapse = useCallback(() => {
     setPanel("collapsed");
-    setSelectedId(null);
-    setSelectedStationId(null);
   }, []);
   const selectStation = useCallback((id: string | null) => {
     setSelectedId(null);
@@ -246,8 +244,6 @@ export default function MobileExplorer({initialData}: {
   }, [expanded, effectivePanel, selectedId, collapse]);
   const open = (next: Panel, element: HTMLElement) => {
     returnFocus.current = element;
-    setSelectedId(null);
-    setSelectedStationId(null);
     setPanel(next);
   };
   const reset = () => {
@@ -367,7 +363,7 @@ export default function MobileExplorer({initialData}: {
             onSelect={select}
             onDetails={details}
             audience="mobile"
-            showCard
+            showCard={!expanded}
             dataVersion={data?.fetchedAt ?? gas.data?.fetchedAt}
             cardViewport={cardViewport}
             viewportVersion={`${effectivePanel}:${viewportRevision}`}

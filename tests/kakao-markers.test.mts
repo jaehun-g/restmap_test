@@ -372,6 +372,22 @@ test("hiding a card can retain marker selection for administrator editing", () =
   assert.equal(state.shown, 0);
   assert.equal(state.panned, 1);
 });
+
+test("hiding cards temporarily closes and restores an open group list", t => {
+  const dom = installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const items = areas().slice(0, 2).map(area => restPlace({...area, latitude: 37, longitude: 127}));
+  const layer = createPlaceMarkers(sdk, map, items, () => {}, label);
+  state.clicks[0]();
+  dom.flush();
+  assert.ok(state.content.at(-1) instanceof CardElement);
+  layer.select(null, false, false);
+  assert.equal(state.content.at(-1), "");
+  layer.select(null, true, false);
+  dom.flush();
+  assert.ok(state.content.at(-1) instanceof CardElement);
+  layer.dispose();
+});
 test("clicking an empty map area closes an open single-place card and clears its selection", () => {
   const {sdk, map, state} = mockKakao();
   let cleared = 0;

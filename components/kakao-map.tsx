@@ -462,7 +462,7 @@ export default function KakaoMap({
     return () => window.clearTimeout(timer);
   }, [map, fullscreen]);
   useEffect(() => {
-    if (selectedKey === null) return;
+    if (selectedKey === null || !showCard) return;
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !event.defaultPrevented) {
         event.preventDefault();
@@ -471,7 +471,7 @@ export default function KakaoMap({
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [selectedKey, clearSelection]);
+  }, [selectedKey, showCard, clearSelection]);
   const ready = !!map && !error;
   return (
     <section

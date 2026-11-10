@@ -89,6 +89,7 @@ export function createPlaceMarkers(
     listBounds: KakaoBounds | null = null,
     listOpen = false;
   let listCard: HTMLElement | null = null;
+  let listSuspended = false;
   let centerCardOnOpen = false;
   let listState: ClusterListState = initialClusterListState();
   let focusFrame: number | null = null;
@@ -161,6 +162,7 @@ export function createPlaceMarkers(
   }
   function closeList() {
     closeListOverlay();
+    listSuspended = false;
     listItems = null;
     listCenter = null;
     listBounds = null;
@@ -428,7 +430,13 @@ export function createPlaceMarkers(
     clearCard();
     centerCardOnOpen = showCard && (move || pendingCenter);
     if (key === null) {
-      if (!listOpen) closeList();
+      if (!showCard && listOpen) {
+        listSuspended = true;
+        closeListOverlay();
+      } else if (showCard && listSuspended && listItems && listCenter && listBounds) {
+        listSuspended = false;
+        showList(listItems, listCenter, listBounds);
+      } else if (!listOpen && !listSuspended) closeList();
     } else if (listItems && !listItems.some(item => item.key === key)) closeList();
     else if (listOpen) closeListOverlay();
     units.forEach(unit => {
