@@ -17,8 +17,8 @@ test("노선 진행 방향에는 상행·하행·양방향 또는 미확인만 �
 });
 
 test("only allowed columns can be updated; ID, table and arbitrary keys are rejected",()=>{
-  assert.equal(databaseColumns.length,29);
-  assert.equal(scalarFields.length+12,26);
+  assert.equal(databaseColumns.length,30);
+  assert.equal(scalarFields.length+12,27);
   for(const changes of [{id:2},{revision:"evil"},{table:"other"},{sql:"DELETE"},{facilities:{other:true}},JSON.parse('{"__proto__": {"admin": true}}')]) assert.equal(request(changes).ok,false);
   assert.equal(validateUpdateRequest({changes:{name:"test"},expectedRevision:revision,table:"other"}).ok,false);
 });
@@ -27,6 +27,8 @@ test("운영 상태와 재확인 날짜를 검증한다", () => {
   for (const status of ["unknown", 1]) assert.equal(request({operationStatus: status}).ok, false);
   for (const date of [null, "2028-02-29"]) assert.equal(request({operationReviewDate: date}).ok, true);
   for (const date of ["2027-02-29", "2027-1-01", "invalid"]) assert.equal(request({operationReviewDate: date}).ok, false);
+  assert.equal(request({operationStartDate: "2026-11-09"}).ok, true);
+  assert.equal(request({operationStartDate: "2026-02-29"}).ok, false);
 });
 test("text respects schema lengths, required name and legacy utf8 character limits",()=>{
   for(const changes of [{name:" "},{name:"x".repeat(101)},{phone:"x".repeat(31)},{routeName:"x".repeat(101)},{routeNumber:"x".repeat(21)},{routeDirection:"x".repeat(21)},{directionLabel:"x".repeat(101)},{restAreaType:"x".repeat(31)},{name:"emoji 🚚"},{name:"bad\u0000"}]) assert.equal(request(changes).ok,false);

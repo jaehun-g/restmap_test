@@ -230,6 +230,9 @@ input[type="checkbox"] {
 .map-card-body {
   @apply [flex:0_1_auto] min-h-[24px] overflow-y-auto overscroll-contain text-[11px] leading-[1.6] [overflow-wrap:anywhere];
 }
+.map-card-operation-status {
+  @apply text-[#a54b12] font-semibold;
+}
 .station-fuel-prices {
   display: grid;
   gap: 6px;

@@ -60,6 +60,26 @@ function area(lounge: boolean | null, route: string | null): RestArea {
   return normalized.value[0];
 }
 
+test("운영 상태는 휴게소 이름과 별도 줄에 표시한다", t => {
+  installDocument(t);
+  for (const [state, label] of [["suspended", "일시 운영중지"], ["review", "운영 확인 필요"]] as const) {
+    const item = {...area(false, null), operationStatus: state};
+    const card = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+    const heading = card.children[0];
+    const body = card.children[1];
+    assert.equal(heading.children.find(element => element.tag === "strong")?.textContent, item.name);
+    assert.equal(body.children[0].className, "map-card-operation-status");
+    assert.equal(body.children[0].textContent, label);
+  }
+});
+
+test("운영중지 시작일이 있으면 상태 옆에 표시한다", t => {
+  installDocument(t);
+  const item = {...area(false, null), operationStatus: "suspended", operationStartDate: "2026-11-09"};
+  const card = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+  assert.equal(card.children[1].children[0].textContent, "일시 운영중지 (2026.11.09부터)");
+});
+
 test("휴게소 요약은 방향별 주유소의 유가 범위와 일부 가격 미확인을 표시한다", t => {
   installDocument(t);
   const stations = normalizeExGasStations([

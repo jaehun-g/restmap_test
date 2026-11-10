@@ -11,7 +11,7 @@ const groups: {
   label: string;
   fields: ScalarKey[];
 }[] = [
-  {label: "운영 상태", fields: ["operationStatus", "operationNote", "operationSource", "operationReviewDate"]},
+  {label: "운영 상태", fields: ["operationStatus", "operationStartDate", "operationNote", "operationSource", "operationReviewDate"]},
   {label: "기본정보", fields: ["name", "phone", "restAreaType"]},
   {
     label: "노선정보",

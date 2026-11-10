@@ -2,6 +2,7 @@ import {facilityDefinitions, type FacilityKey, type RestArea} from "./rest-areas
 
 export const scalarFields = [
   {key: "operationStatus", column: "operation_status", label: "운영 상태", kind: "text", maxLength: 20},
+  {key: "operationStartDate", column: "operation_start_date", label: "운영중지 시작일", kind: "text", maxLength: 10},
   {key: "operationNote", column: "operation_note", label: "운영 안내", kind: "text", maxLength: 200},
   {key: "operationSource", column: "operation_source", label: "확인 출처", kind: "text", maxLength: 200},
   {key: "operationReviewDate", column: "operation_review_date", label: "재확인 예정일", kind: "text", maxLength: 10},
@@ -97,7 +98,7 @@ export const databaseColumns = [
   ...facilityDefinitions.map(([key]) => key),
 ];
 export const restAreaDbColumn = (column: string) => `"lg_${column}"`;
-const optionalColumns = new Set(["operation_status", "operation_note", "operation_source", "operation_review_date"]);
+const optionalColumns = new Set(["operation_status", "operation_start_date", "operation_note", "operation_source", "operation_review_date"]);
 export const selectRestAreaColumns = `SELECT ${databaseColumns
   .map(column => optionalColumns.has(column) ? `to_jsonb(tb_lounge)->>'lg_${column}' AS "${column}"` : `${restAreaDbColumn(column)} AS "${column}"`)
   .join(", ")} FROM tb_lounge`;

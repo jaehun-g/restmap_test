@@ -36,8 +36,8 @@ export function validateUpdateRequest(input: unknown): Result<UpdateRequest> {
       const text = typeof value === "string" ? value.trim() : null;
       if (field.key === "operationStatus" && text && !["open", "suspended", "closed", "review"].includes(text))
         return invalid("운영 상태가 올바르지 않습니다.");
-      if (field.key === "operationReviewDate" && text && (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(text)) || new Date(text).toISOString().slice(0, 10) !== text))
-        return invalid("재확인 예정일은 올바른 날짜여야 합니다.");
+      if ((field.key === "operationReviewDate" || field.key === "operationStartDate") && text && (!/^\d{4}-\d{2}-\d{2}$/.test(text) || Number.isNaN(Date.parse(text)) || new Date(text).toISOString().slice(0, 10) !== text))
+        return invalid(`${field.label}은 올바른 날짜여야 합니다.`);
       if ("required" in field && field.required && !text) return invalid("휴게소명은 필수입니다.");
       if (field.key === "routeDirection" && text && !["상행", "하행", "양방향"].includes(text))
         return invalid("진행 방향은 상행·하행·양방향 중 하나여야 합니다.");
