@@ -37,6 +37,7 @@ import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
+import AdminRestAreaReview from "./admin-rest-area-review";
 export default function AdminExplorer() {
   const location = useMobileLocation(false);
   const {data, areas, loading, error, reload, replaceItem} = useRestAreas(true);
@@ -311,6 +312,7 @@ export default function AdminExplorer() {
   };
   return (
     <main className="admin-shell min-w-[1080px] h-[100dvh] overflow-hidden p-[0_24px_18px] flex flex-col">
+      <AdminRestAreaReview authenticated={auth.authenticated} />
       <header className="admin-header h-[86px] flex items-center justify-between [border-bottom:1px_solid_#e3e8ef] gap-[25px]">
         <div className="admin-brand flex items-center gap-[11px]">
           <span className="brand-icon flex items-center justify-center w-[43px] h-[43px] rounded-[12px] bg-primary text-[#fff]">

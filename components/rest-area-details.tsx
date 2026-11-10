@@ -38,6 +38,9 @@ export default function RestAreaDetails({
         <div className="min-w-0">
           <span className={sharedClasses.eyebrow}>휴게소 상세정보</span>
           <h2 id="detail-title">{area.name}</h2>
+          {area.operationStatus && area.operationStatus !== "open" && <p role="status" className="my-2 rounded bg-amber-50 p-2 text-sm text-amber-900">
+            {area.operationStatus === "suspended" ? "일시 운영중지" : area.operationStatus === "closed" ? "운영 종료" : "운영 상태 확인 필요"}{area.operationNote ? ` · ${area.operationNote}` : ""}
+          </p>}
           <div className="detail-meta-row">
             <p className="detail-route-line">
               {routeDescription(area, audience) || "노선 정보 없음"}

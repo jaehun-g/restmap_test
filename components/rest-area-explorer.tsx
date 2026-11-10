@@ -35,7 +35,8 @@ export default function MobileExplorer({initialData}: {
   const initialStations = useMemo(() => initialData ? {
     query: "source=ex", result: Promise.resolve(initialData).then(data => data?.stations, () => undefined),
   } : undefined, [initialData]);
-  const {data, areas, loading, error, reload} = useRestAreas(false, initialRestAreas);
+  const {data, areas: allAreas, loading, error, reload} = useRestAreas(false, initialRestAreas);
+  const areas = useMemo(() => allAreas.filter(area => area.operationStatus !== "closed"), [allAreas]);
   const location = useMobileLocation();
   const search = useSearchQuery();
   const [filters, setFilters] = useState(initialFilters);
@@ -572,6 +573,8 @@ export default function MobileExplorer({initialData}: {
                                   <strong>
                                     <span className="mobile-area-name flex-1 min-w-0">
                                       {area.name}
+                                      {area.operationStatus === "suspended" && " · 일시 운영중지"}
+                                      {area.operationStatus === "review" && " · 운영 확인 필요"}
                                     </span>
                                     {distance !== null && (
                                       <small

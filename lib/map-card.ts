@@ -20,6 +20,8 @@ export function createMapCard(
   icon.alt = "";
   const title = document.createElement("strong");
   title.textContent = area.name;
+  if (area.operationStatus === "suspended") title.textContent += " · 일시 운영중지";
+  if (area.operationStatus === "review") title.textContent += " · 운영 확인 필요";
   const close = document.createElement("button");
   close.className = "map-card-close";
   close.type = "button";

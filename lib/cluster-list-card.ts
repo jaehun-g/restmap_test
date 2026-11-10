@@ -71,6 +71,8 @@ export function createClusterListCard(
     button.setAttribute("data-place-key", place.key);
     const name = document.createElement("span");
     name.textContent = place.record.name;
+    if (place.kind === "rest" && place.record.operationStatus === "suspended") name.textContent += " · 일시 운영중지";
+    if (place.kind === "rest" && place.record.operationStatus === "review") name.textContent += " · 운영 확인 필요";
     const kind = document.createElement("small");
     const extra =
       place.kind === "rest"

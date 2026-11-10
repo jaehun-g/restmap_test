@@ -13,7 +13,7 @@ export type EditorDraft = {
 export function createEditorDraft(area: RestArea): EditorDraft {
   return {
     values: Object.fromEntries(
-      scalarFields.map(({key}) => [key, area[key] === null ? "" : String(area[key])]),
+      scalarFields.map(({key}) => [key, area[key] == null ? "" : String(area[key])]),
     ) as EditorDraft["values"],
     facilities: {...area.facilities},
   };

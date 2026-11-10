@@ -11,6 +11,7 @@ const groups: {
   label: string;
   fields: ScalarKey[];
 }[] = [
+  {label: "운영 상태", fields: ["operationStatus", "operationNote", "operationSource", "operationReviewDate"]},
   {label: "기본정보", fields: ["name", "phone", "restAreaType"]},
   {
     label: "노선정보",
@@ -111,7 +112,7 @@ export default function RestAreaEditor({
             <div className={sharedClasses.editorGrid}>
               {group.fields.map(key => {
                 const field = scalarFields.find(entry => entry.key === key)!;
-                const before = original[key] === null ? "" : String(original[key]);
+                const before = original[key] == null ? "" : String(original[key]);
                 const changed = draft.values[key] !== before;
                 return (
                   <label
@@ -128,7 +129,9 @@ export default function RestAreaEditor({
                       {field.label}
                       {changed && <small>수정됨</small>}
                     </span>
-                    <Input
+                    {key === "operationStatus" ? <Select value={draft.values[key]} onChange={event => onChange({...draft, values: {...draft.values, [key]: event.target.value}})}>
+                      <option value="">미확인</option><option value="open">정상</option><option value="suspended">일시 운영중지</option><option value="closed">운영 종료</option><option value="review">확인 필요</option>
+                    </Select> : <Input
                       value={draft.values[key]}
                       onChange={event =>
                         onChange({
@@ -148,7 +151,7 @@ export default function RestAreaEditor({
                       }
                       maxLength={field.kind === "text" ? field.maxLength : 24}
                       placeholder={"required" in field ? "필수" : "미등록"}
-                    />
+                    />}
                     {changed && (
                       <small className="previous-value block text-[#a2adbd] text-[8px] mt-[3px] [overflow-wrap:anywhere]">
                         기존: {before || "미등록"}

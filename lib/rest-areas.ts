@@ -23,6 +23,10 @@ export type RestArea = {
   id: number;
   stdRestCd?: string | null;
   serviceAreaCode?: string | null;
+  operationStatus?: string | null;
+  operationNote?: string | null;
+  operationSource?: string | null;
+  operationReviewDate?: string | null;
   name: string;
   latitude: number | null;
   longitude: number | null;
@@ -127,6 +131,10 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
       id,
       stdRestCd: nullableText(row.std_rest_cd),
       serviceAreaCode: nullableText(row.service_area_code),
+      operationStatus: nullableText(row.operation_status),
+      operationNote: nullableText(row.operation_note),
+      operationSource: nullableText(row.operation_source),
+      operationReviewDate: nullableText(row.operation_review_date),
       name,
       latitude,
       longitude,
