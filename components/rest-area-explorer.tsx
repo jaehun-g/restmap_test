@@ -2,7 +2,7 @@
 import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton, Button} from "@/components/ui/button";
 import {FilterChip} from "@/components/ui/filter-chip";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {useRestAreas} from "@/hooks/use-rest-areas";
 import {useSearchQuery} from "@/hooks/use-search-query";
 import {useMapFitRequest} from "@/hooks/use-map-fit-request";
@@ -60,10 +60,43 @@ export default function MobileExplorer({initialData}: {
   const shellRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
+  const sheetHeight = useRef<number | null>(null);
+  const sheetAnimation = useRef<Animation | null>(null);
   const summaryRef = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const wasOpen = useRef(false);
   const [viewportRevision, setViewportRevision] = useState(0);
+  useLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const height = sheet.offsetHeight;
+    const previous = sheetHeight.current;
+    sheetHeight.current = height;
+    if (previous === null || Math.abs(previous - height) < 1 ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches || !sheet.animate) return;
+    const maxHeight = `${Math.max(previous, height)}px`;
+    const animation = sheet.animate(
+      [{height: `${previous}px`, maxHeight}, {height: `${height}px`, maxHeight}],
+      {duration: 260, easing: "cubic-bezier(0.2, 0, 0, 1)"},
+    );
+    sheetAnimation.current = animation;
+    animation.onfinish = () => {
+      if (sheetAnimation.current === animation) sheetAnimation.current = null;
+    };
+    return () => {
+      if (sheetAnimation.current === animation) sheetAnimation.current = null;
+      animation.cancel();
+    };
+  }, [panel, detailExpanded]);
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    const observer = new ResizeObserver(() => {
+      if (!sheetAnimation.current) sheetHeight.current = sheet.offsetHeight;
+    });
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     const header = headerRef.current;
     const shell = shellRef.current;

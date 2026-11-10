@@ -36,6 +36,9 @@
 .mobile-map .map-placeholder .placeholder-hint {
   @apply hidden;
 }
+.mobile-sheet {
+  overflow: hidden;
+}
 .mobile-sheet.is-open {
   @apply h-[min(50dvh,_540px)];
 }
