@@ -15,6 +15,32 @@ async function mockMapData(page: Page) {
   await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
 }
 
+test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와이프하면 확장된다", async ({page}) => {
+  await mockMapData(page);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile", {waitUntil: "domcontentloaded"});
+  await page.locator(".sheet-summary").click();
+  await page.locator(".mobile-area-card").first().click();
+  const sheet = page.locator(".mobile-sheet");
+  await expect(sheet).toHaveClass(/is-detail-preview/);
+  await expect(page.getByRole("tab", {name: "시설"})).toBeVisible();
+  await expect(page.locator("#detail-tabpanel")).toBeHidden();
+  await page.getByRole("tab", {name: "시설"}).click();
+  await expect(sheet).toHaveClass(/is-detail-full/);
+  await expect(page.locator("#detail-tabpanel")).toBeVisible();
+  await page.getByRole("button", {name: "상세정보 닫기"}).click();
+  await page.locator(".sheet-summary").click();
+  await page.locator(".mobile-area-card").first().click();
+  await expect(sheet).toHaveClass(/is-detail-preview/);
+  await sheet.dispatchEvent("touchstart", {touches: [{identifier: 1, clientX: 100, clientY: 600}]});
+  await sheet.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: 500}]});
+  await expect(sheet).toHaveClass(/is-detail-full/);
+  await sheet.dispatchEvent("touchstart", {touches: [{identifier: 1, clientX: 100, clientY: 300}]});
+  await sheet.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: 400}]});
+  await expect(sheet).toHaveClass(/is-detail-preview/);
+  await expect(page.locator("#detail-tabpanel")).toBeHidden();
+});
+
 test("모바일 장소 보기와 필터가 한 줄에서 가로 스크롤로 동작한다", async ({page}) => {
   await mockMapData(page);
   await page.setViewportSize({width: 390, height: 844});

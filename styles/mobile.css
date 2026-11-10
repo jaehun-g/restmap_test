@@ -39,6 +39,17 @@
 .mobile-sheet.is-open {
   @apply h-[min(50dvh,_540px)];
 }
+.mobile-sheet.is-detail-preview {
+  height: auto;
+  max-height: calc(100% - env(safe-area-inset-top, 0px));
+}
+.mobile-sheet.is-detail-full {
+  height: 100%;
+  max-height: 100%;
+  z-index: 10;
+  padding-top: env(safe-area-inset-top, 0px);
+  border-radius: 0;
+}
 .mobile-map .location-control {
   @apply bottom-[calc(105px_+_env(safe-area-inset-bottom,_0px))];
 }

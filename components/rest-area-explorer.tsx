@@ -19,6 +19,7 @@ import {filterFacilityPlaces} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
+import {detailSheetSwipe} from "@/lib/mobile-sheet-gesture";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
 import type {InitialMapData} from "@/lib/initial-map-data";
 import KakaoMap from "./kakao-map";
@@ -51,6 +52,8 @@ export default function MobileExplorer({initialData}: {
     initialStations,
   );
   const [panel, setPanel] = useState<Panel>("collapsed");
+  const [detailExpanded, setDetailExpanded] = useState(false);
+  const touchStart = useRef<{x: number; y: number; canCollapse: boolean} | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -182,12 +185,14 @@ export default function MobileExplorer({initialData}: {
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
+    setDetailExpanded(false);
     setSelectedStationId(null);
     setSelectedId(id);
     setPanel("detail");
   }, []);
   const collapse = useCallback(() => {
     setPanel("collapsed");
+    setDetailExpanded(false);
   }, []);
   const selectStation = useCallback((id: string | null) => {
     setSelectedId(null);
@@ -195,6 +200,7 @@ export default function MobileExplorer({initialData}: {
     setPanel("collapsed");
   }, []);
   const stationDetails = useCallback((id: string) => {
+    setDetailExpanded(false);
     setSelectedId(null);
     setSelectedStationId(id);
     setPanel("detail");
@@ -372,7 +378,22 @@ export default function MobileExplorer({initialData}: {
         </div>
         <section
           ref={sheetRef}
-          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""}`}
+          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : selected ? "is-detail-preview" : "") : ""}`}
+          onTouchStart={event => {
+            const touch = event.touches[0];
+            const scroll = (event.target as HTMLElement).closest<HTMLElement>(".detail-scroll");
+            touchStart.current = effectivePanel === "detail" && touch
+              ? {x: touch.clientX, y: touch.clientY, canCollapse: !scroll || scroll.scrollTop <= 0}
+              : null;
+          }}
+          onTouchEnd={event => {
+            const start = touchStart.current;
+            const touch = event.changedTouches[0];
+            touchStart.current = null;
+            if (!start || !touch) return;
+            const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY});
+            if (action) setDetailExpanded(action === "expand");
+          }}
           aria-label={
             effectivePanel === "detail"
               ? "휴게소 상세정보"
@@ -462,7 +483,7 @@ export default function MobileExplorer({initialData}: {
                     <Icon name="arrow" size={16} style={{transform: "rotate(180deg)"}} />
                     휴게소 목록
                   </button>
-                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => selectStation(stationKey(station))} />
+                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => selectStation(stationKey(station))} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
                 </>
               ) : (
                 <>

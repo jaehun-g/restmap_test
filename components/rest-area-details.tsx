@@ -17,14 +17,22 @@ export default function RestAreaDetails({
   audience = "admin",
   stations = [],
   onStationMap,
+  preview = false,
+  onExpand,
 }: {
   area: RestArea;
   onClose: () => void;
   audience?: "admin" | "mobile";
   stations?: GasStation[];
   onStationMap?: (station: GasStation) => void;
+  preview?: boolean;
+  onExpand?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("시설");
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    onExpand?.();
+  };
   const provided = facilityDefinitions.filter(([key]) => area.facilities[key] === true);
   const unavailable = facilityDefinitions.filter(([key]) => area.facilities[key] === false);
   const linkedStations = stations.filter(station => station.brand === "EX");
@@ -75,7 +83,7 @@ export default function RestAreaDetails({
           </span>
         </div>
         {linkedStations.length > 0 && (
-          <button type="button" className="detail-station-link" onClick={() => setTab("주유")}>
+          <button type="button" className="detail-station-link" onClick={() => selectTab("주유")}>
             주유소 {linkedStations.length}곳 · 방향별 가격 확인 →
           </button>
         )}
@@ -91,7 +99,7 @@ export default function RestAreaDetails({
             aria-selected={tab === item}
             aria-controls="detail-tabpanel"
             className={tab === item ? "active" : ""}
-            onClick={() => setTab(item)}
+            onClick={() => selectTab(item)}
           >
             {item}
           </button>
@@ -102,6 +110,7 @@ export default function RestAreaDetails({
         id="detail-tabpanel"
         role="tabpanel"
         aria-labelledby={`detail-tab-${tab}`}
+        hidden={preview}
         className={`${sharedClasses.detailScroll} detail-tab-content`}
       >
         {tab === "시설" && (
