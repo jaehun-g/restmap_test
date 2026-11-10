@@ -125,6 +125,10 @@ export function createLocationMapLayer(
   },
 ) {
   let circle: KakaoCircle | null = null;
+  let satellite = false;
+  const circleStyle = () => satellite
+    ? {strokeWeight: 3, strokeColor: "#a8d8ff", strokeOpacity: 1, fillColor: "#55aaff", fillOpacity: 0.2}
+    : {strokeWeight: 2, strokeColor: "#397af0", strokeOpacity: 0.5, fillColor: "#397af0", fillOpacity: 0.07};
   let disposed = false;
   let programmaticDepth = 0;
   let programmaticZoomObserved = false;
@@ -246,6 +250,11 @@ export function createLocationMapLayer(
         radiusLabel.setMap(null);
       }
     },
+    setSatellite(enabled: boolean) {
+      if (satellite === enabled) return;
+      satellite = enabled;
+      circle?.setOptions(circleStyle());
+    },
     update(
       position: GeoPoint | null,
       scope: GeoSearchScope,
@@ -265,11 +274,7 @@ export function createLocationMapLayer(
         circle ??= new sdk.Circle({
           center,
           radius: locationRadius.radiusMeters,
-          strokeWeight: 2,
-          strokeColor: "#397af0",
-          strokeOpacity: 0.5,
-          fillColor: "#397af0",
-          fillOpacity: 0.07,
+          ...circleStyle(),
           zIndex: 0,
         });
         circle.setPosition(center);

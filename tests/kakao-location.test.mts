@@ -72,10 +72,15 @@ function mockKakao() {
     position: LatLng;
     radius: number;
     visible = false;
+    options: Record<string, unknown>;
     constructor(options: { center: LatLng; radius: number }) {
+      this.options = {...options};
       this.position = options.center;
       this.radius = options.radius;
       state.circles.push(this);
+    }
+    setOptions(options: Record<string, unknown>) {
+      Object.assign(this.options, options);
     }
     setPosition(position: LatLng) {
       this.position = position;
@@ -472,6 +477,26 @@ test("SDK recreation retains camera memory and disposal removes overlays and all
   assert.equal(current.state.circles.at(-1)?.visible, true);
   assert.equal(current.state.circles.at(-1)?.radius, 30000);
   layer.dispose();
+});
+
+test("위성 보기 전환은 반경 원의 가시성을 높이고 일반 지도에서 원래 스타일을 복원한다", async () => {
+  const current = connected();
+  current.layer.setSatellite(true);
+  await current.locate();
+  const circle = current.state.circles[0];
+  assert.equal(circle.options.strokeColor, "#a8d8ff");
+  assert.equal(circle.options.strokeOpacity, 1);
+  assert.equal(circle.options.fillOpacity, 0.2);
+  const position = circle.position;
+  const radius = circle.radius;
+  current.layer.setSatellite(false);
+  assert.equal(circle.options.strokeColor, "#397af0");
+  assert.equal(circle.options.fillOpacity, 0.07);
+  assert.equal(circle.position, position);
+  assert.equal(circle.radius, radius);
+  current.layer.setSatellite(true);
+  assert.equal(circle.options.strokeColor, "#a8d8ff");
+  current.layer.dispose();
 });
 
 test("route mode hides the radius and preserves geographic scope across route fitting and user zoom", async () => {

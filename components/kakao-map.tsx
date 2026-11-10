@@ -155,8 +155,13 @@ export default function KakaoMap({
   const mobileEnabled = locationEnabled && audience === "mobile";
   const {cameraReady, radiusReady, zoomChanged, mapMoved, research} = mobileLocation ?? {};
   const [map, setMap] = useState<MapInstance | null>(null);
+  const [satellite, setSatellite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const types = window.kakao?.maps.MapTypeId;
+    if (map && types) map.setMapTypeId(satellite ? types.HYBRID : types.ROADMAP);
+  }, [map, satellite]);
   useEffect(() => {
     placeSelected.current = selectedId !== null || selectedStationId !== null;
   }, [selectedId, selectedStationId]);
@@ -338,6 +343,7 @@ export default function KakaoMap({
   const cameraRequest = mobileLocation?.cameraRequest;
   const locationRadius = mobileLocation?.locationRadius;
   useEffect(() => {
+    locationLayer.current?.setSatellite(satellite);
     locationLayer.current?.setRouteMode(!!selectedRouteName);
     if (scope)
       locationLayer.current?.update(
@@ -352,6 +358,7 @@ export default function KakaoMap({
     scope,
     cameraRequest,
     locationRadius,
+    satellite,
     selectedRouteName,
     cameraReady,
     radiusReady,
@@ -653,8 +660,19 @@ export default function KakaoMap({
           {mobileLocation && (
             <div className="location-control absolute z-[3] right-[14px] bottom-[38px] flex flex-col [border:1px_solid_#e1e7ee] rounded-[8px] [box-shadow:0_2px_8px_#26374d12] overflow-hidden">
               <button
-                className="map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-[12px] font-[600] [box-shadow:0_2px_8px_#26374d10]"
+                type="button"
+                aria-label="위성 보기"
+                aria-pressed={satellite}
+                title={satellite ? "일반 지도로 전환" : "위성 지도로 전환"}
+                onClick={() => setSatellite(value => !value)}
+              >
+                <Icon name="layers" size={20} />
+              </button>
+              <button
+                className={`map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-[12px] font-[600] [box-shadow:0_2px_8px_#26374d10] ${mobileLocation.requesting && !locationDisabled ? "is-locating" : ""}`}
                 aria-label="내 위치로 이동"
+                aria-busy={mobileLocation.requesting}
+                title={mobileLocation.requesting ? "위치 확인 중" : "내 위치로 이동"}
                 disabled={mobileLocation.requesting || locationDisabled}
                 onClick={() => {
                   clearSelection();
@@ -662,8 +680,7 @@ export default function KakaoMap({
                   mobileLocation.locate();
                 }}
               >
-                <Icon name="locate" size={20} />
-                <span>{mobileLocation.requesting ? "확인 중" : "내 위치"}</span>
+                <Icon name={mobileLocation.requesting ? "refresh" : "locate"} size={20} />
               </button>
             </div>
           )}

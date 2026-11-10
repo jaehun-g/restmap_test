@@ -15,6 +15,24 @@ async function mockMapData(page: Page) {
   await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
 }
 
+for (const audience of ["mobile", "admin"] as const) test(`${audience} 지도에서 위성 보기를 전환하고 내 위치는 아이콘으로 표시한다`, async ({page}) => {
+  await mockMapData(page);
+  await page.route("**/api/admin/session", route => route.fulfill({json: {configured: false, authenticated: false, expiresAt: null}}));
+  await page.setViewportSize(audience === "mobile" ? {width: 390, height: 844} : {width: 1440, height: 960});
+  await page.goto(`/${audience}`, {waitUntil: "domcontentloaded"});
+  const satellite = page.getByRole("button", {name: "위성 보기"});
+  const location = page.getByRole("button", {name: "내 위치로 이동"});
+  await expect(satellite).toBeVisible();
+  await expect(location).toBeVisible();
+  await expect(location).toHaveText("");
+  await satellite.click();
+  await expect(satellite).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.map?.getMapTypeId())).toBe(3);
+  await satellite.click();
+  await expect(satellite).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.map?.getMapTypeId())).toBe(1);
+});
+
 test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와이프하면 확장된다", async ({page}) => {
   await mockMapData(page);
   await page.setViewportSize({width: 390, height: 844});

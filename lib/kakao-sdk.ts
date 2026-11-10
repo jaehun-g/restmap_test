@@ -20,6 +20,7 @@ export interface KakaoProjection {
 }
 
 export interface KakaoMap {
+  setMapTypeId(type: number): void;
   setCenter(position: KakaoLatLng): void;
   panTo(position: KakaoLatLng): void;
   panBy(x: number, y: number): void;
@@ -61,6 +62,7 @@ export interface KakaoOverlay {
 }
 
 export interface KakaoCircle {
+  setOptions(options: {strokeWeight: number; strokeColor: string; strokeOpacity: number; fillColor: string; fillOpacity: number}): void;
   setMap(map: KakaoMap | null): void;
   setPosition(position: KakaoLatLng): void;
   setRadius(radius: number): void;
@@ -86,6 +88,7 @@ export interface KakaoClusterer {
 }
 
 export interface KakaoMaps {
+  MapTypeId: {ROADMAP: number; HYBRID: number};
   MarkerClusterer?: new (options: {
     map: KakaoMap;
     gridSize: number;

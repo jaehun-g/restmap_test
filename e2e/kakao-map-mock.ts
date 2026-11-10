@@ -1,5 +1,5 @@
 type KakaoMapMockMetrics = {
-  map: {getLevel(): number; setLevel(level: number): void; moveBounds(south: number, west: number, north: number, east: number): void} | null;
+  map: {getLevel(): number; setLevel(level: number): void; getMapTypeId(): number; moveBounds(south: number, west: number, north: number, east: number): void} | null;
   mapCreates: number;
   markerCreates: number;
   clusterers: number;
@@ -38,6 +38,7 @@ export const installKakaoMapsMock = `
       constructor(_container, options) {
         this.center = options.center;
         this.level = options.level;
+        this.mapType = 1;
         this.bounds = new LatLngBounds();
         this.bounds.extend(new LatLng(35, 126));
         this.bounds.extend(new LatLng(38, 128));
@@ -51,6 +52,8 @@ export const installKakaoMapsMock = `
       getBounds() { return this.bounds; }
       setLevel(level) { this.level = level; emit(this, "zoom_changed"); emit(this, "idle"); }
       getLevel() { return this.level; }
+      setMapTypeId(type) { this.mapType = type; }
+      getMapTypeId() { return this.mapType; }
       setBounds(bounds) { this.bounds = bounds; window.__kakaoMapMock.boundsFits.push(bounds.points.map(point => [point.getLat(), point.getLng()])); emit(this, "idle"); }
       moveBounds(south, west, north, east) {
         emit(this, "dragstart");
@@ -76,6 +79,7 @@ export const installKakaoMapsMock = `
     }
     class Circle extends Overlay {
       constructor(options) { super(); this.center = options.center; this.radius = options.radius; }
+      setOptions(options) { this.options = {...this.options, ...options}; }
       setPosition(position) { this.center = position; }
       setRadius(radius) { this.radius = radius; }
       getBounds() { const bounds = new LatLngBounds(); bounds.extend(this.center); return bounds; }
@@ -91,6 +95,7 @@ export const installKakaoMapsMock = `
     }
     window.__kakaoMapMock = {map: null, mapCreates: 0, markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
     window.kakao = {maps: {
+      MapTypeId: {ROADMAP: 1, HYBRID: 3},
       Map: MapView,
       LatLng,
       LatLngBounds,
