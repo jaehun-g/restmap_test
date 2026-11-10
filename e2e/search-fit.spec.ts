@@ -39,6 +39,9 @@ test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와
   await sheet.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: 400}]});
   await expect(sheet).toHaveClass(/is-detail-preview/);
   await expect(page.locator("#detail-tabpanel")).toBeHidden();
+  await sheet.dispatchEvent("touchstart", {touches: [{identifier: 1, clientX: 100, clientY: 300}]});
+  await sheet.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: 400}]});
+  await expect(page.locator(".sheet-summary")).toBeVisible();
 });
 
 test("모바일 장소 보기와 필터가 한 줄에서 가로 스크롤로 동작한다", async ({page}) => {

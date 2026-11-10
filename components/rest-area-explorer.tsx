@@ -391,8 +391,9 @@ export default function MobileExplorer({initialData}: {
             const touch = event.changedTouches[0];
             touchStart.current = null;
             if (!start || !touch) return;
-            const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY});
-            if (action) setDetailExpanded(action === "expand");
+            const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY}, detailExpanded);
+            if (action === "close") collapse();
+            else if (action) setDetailExpanded(action === "expand");
           }}
           aria-label={
             effectivePanel === "detail"
