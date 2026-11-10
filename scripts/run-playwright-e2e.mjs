@@ -7,7 +7,8 @@ if (!/^\d{1,5}$/.test(port) || Number(port) < 1024 || Number(port) > 65535)
   throw new Error("E2E_PORT must be an available TCP port from 1024 to 65535.");
 const baseURL = `http://127.0.0.1:${port}`;
 // 브라우저 API fixture 회귀와 실제 DB를 읽는 서버 초기 데이터 검증을 분리한다.
-const clientMap = process.argv.includes("e2e/kakao-map-zoom.spec.ts") || process.argv.length === 2;
+const clientMap = process.argv.includes("e2e/kakao-map-zoom.spec.ts") ||
+  process.argv.some(argument => argument === "e2e/search-fit.spec.ts") || process.argv.length === 2;
 await new Promise((resolve, reject) => {
   const probe = net.createServer();
   probe.once("error", reject);
