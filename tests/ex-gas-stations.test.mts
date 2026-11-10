@@ -187,7 +187,6 @@ test("EX info card shows fuel prices, route and source while close/detail button
   ) as unknown as CardElement;
   const texts = card.all().map(element => element.textContent);
   for (const text of [
-    "고속도로 주유소",
     "경부선 · 부산 방향",
     "휘발유",
     "1,700원/L",
@@ -197,6 +196,7 @@ test("EX info card shows fuel prices, route and source while close/detail button
     "999원/L",
   ])
     assert.ok(texts.includes(text), text);
+  assert.ok(!texts.includes("고속도로 주유소"));
   card.querySelector(".map-card-close")!.dispatch("click");
   card.querySelector(".map-card-details")!.dispatch("click");
   assert.equal(closed, 1);

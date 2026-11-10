@@ -28,10 +28,14 @@ export function createStationMapCard(
   card.append(heading);
   const body = document.createElement("div");
   body.className = "map-card-body";
-  const source = document.createElement("p");
-  source.className = "map-card-route";
-  source.textContent = `${stationLabel(station)}${station.services.cargo ? " · 화물 특화" : ""}`;
-  body.append(source);
+  const sourceText = [station.brand === "EX" ? null : stationLabel(station), station.services.cargo ? "화물 특화" : null]
+    .filter(Boolean).join(" · ");
+  if (sourceText) {
+    const source = document.createElement("p");
+    source.className = "map-card-route";
+    source.textContent = sourceText;
+    body.append(source);
+  }
   if (station.routeName || station.direction) {
     const route = document.createElement("p");
     route.className = "map-card-route";
