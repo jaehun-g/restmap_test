@@ -40,6 +40,7 @@ export default function KakaoMap({
   selectedRouteName = null,
   onClearRoute,
   stations = emptyStations,
+  searchFitPlaces,
   selectedStationId = null,
   onStationSelect,
   onStationDetails,
@@ -68,6 +69,7 @@ export default function KakaoMap({
   selectedRouteName?: string | null;
   onClearRoute?: () => void;
   stations?: GasStation[];
+  searchFitPlaces?: MapPlace[];
   selectedStationId?: string | null;
   onStationSelect?: (id: string | null) => void;
   onStationDetails?: (id: string) => void;
@@ -362,7 +364,16 @@ export default function KakaoMap({
   const fitSource = fitRequest ? dataVersion : areas;
   useEffect(() => {
     if (!map) return;
+    if (fitPolicy.current?.map !== map) fitPolicy.current = {map, policy: new MapFitPolicy()};
+    const shouldFit = fitPolicy.current.policy.update(fitSource, fitRequest, deferFit);
     if (mobileEnabled) {
+      if (shouldFit && fitRequest?.search) {
+        locationLayer.current?.runProgrammaticMapAction(
+          () => layer.current?.fit(searchFitPlaces),
+          true,
+        );
+        return;
+      }
       if (
         !selectedRouteName &&
         scope?.kind === "all" &&
@@ -373,13 +384,10 @@ export default function KakaoMap({
         locationLayer.current?.fitInitialResults(() => layer.current?.fit());
       return;
     }
-    if (fitPolicy.current?.map !== map) fitPolicy.current = {map, policy: new MapFitPolicy()};
     if (
-      fitPolicy.current.policy.update(fitSource, fitRequest, deferFit) &&
-      !selectedRouteName &&
-      (!scope || scope.kind === "all")
-    )
-      layer.current?.fit();
+      shouldFit &&
+      (fitRequest?.search || (!selectedRouteName && (!scope || scope.kind === "all")))
+    ) layer.current?.fit(fitRequest?.search ? searchFitPlaces : undefined);
   }, [
     map,
     fitSource,
@@ -390,6 +398,7 @@ export default function KakaoMap({
     dataVersion,
     areas,
     positionedItems,
+    searchFitPlaces,
     stationsLoading,
     selectedRouteName,
   ]);
@@ -553,9 +562,6 @@ export default function KakaoMap({
             </>
           ) : (
             <>
-              <span className="map-hint p-[8px_11px] rounded-[6px] bg-[#fffffff0] [box-shadow:0_2px_8px_#26374d12] text-[11px] text-[#5d6f87]">
-                마커를 눌러 장소 정보 보기
-              </span>
               <button
                 className={sharedClasses.mapButton}
                 onClick={() => {

@@ -7,7 +7,7 @@ import {
   restoreClusterListCard,
   type ClusterListState,
 } from "./cluster-list-card.ts";
-import {cardPanOffset, cardSizeLimit} from "./map-card-layout.ts";
+import {cardCenterPanOffset, cardPanOffset, cardSizeLimit} from "./map-card-layout.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import {markerLayerSignature} from "./marker-layer.ts";
 import {
@@ -89,6 +89,7 @@ export function createPlaceMarkers(
     listBounds: KakaoBounds | null = null,
     listOpen = false;
   let listCard: HTMLElement | null = null;
+  let centerCardOnOpen = false;
   let listState: ClusterListState = initialClusterListState();
   let focusFrame: number | null = null;
   let disposed = false;
@@ -324,10 +325,16 @@ export function createPlaceMarkers(
     if (!allowAdjustment || target.style.visibility === "hidden") return;
     const box = target.getBoundingClientRect();
     if (!box.width || !box.height || !view.width || !view.height) return;
-    const {x, y} = cardPanOffset(box, cardArea(view));
+    const visibleArea = cardArea(view);
+    const center = centerCardOnOpen && target === card;
+    const {x, y} = center
+      ? cardCenterPanOffset(box, visibleArea)
+      : cardPanOffset(box, visibleArea);
+    if (center) centerCardOnOpen = false;
     if (Math.abs(x) > 1 || Math.abs(y) > 1) map.panBy(x, y);
   }
   function clearCard() {
+    centerCardOnOpen = false;
     if (frame !== null) {
       cancelAnimationFrame(frame);
       frame = null;
@@ -417,6 +424,7 @@ export function createPlaceMarkers(
     }
     activeKey = key;
     clearCard();
+    centerCardOnOpen = move && showCard;
     if (key === null) {
       if (!listOpen) closeList();
     } else if (listItems && !listItems.some(item => item.key === key)) closeList();
@@ -637,8 +645,8 @@ export function createPlaceMarkers(
       allowAdjustment = true;
       scheduleAdjustment();
     },
-    fit() {
-      const positioned = places.map(place => place.record).filter(hasCoordinates);
+    fit(fitPlaces?: readonly MapPlace[]) {
+      const positioned = (fitPlaces ?? places).map(place => place.record).filter(hasCoordinates);
       if (positioned.length === 1) {
         map.setCenter(new sdk.LatLng(positioned[0].latitude, positioned[0].longitude));
         map.setLevel(6);

@@ -55,3 +55,11 @@ export function cardPanOffset(box: ScreenRect, view: ScreenRect) {
   const y = box.top < top ? box.top - top : box.bottom > bottom ? box.bottom - bottom : 0;
   return {x, y};
 }
+
+/** Places a newly opened card at the center of the usable map area. */
+export function cardCenterPanOffset(box: ScreenRect, view: ScreenRect) {
+  return {
+    x: box.left + box.width / 2 - (view.left + view.width / 2),
+    y: box.top + box.height / 2 - (view.top + view.height / 2),
+  };
+}

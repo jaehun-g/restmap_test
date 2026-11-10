@@ -8,9 +8,11 @@ const emptySubscribe = () => () => {};
 export default function AdminDetailModal({
   children,
   onClose,
+  wide = false,
 }: {
   children: ReactNode;
   onClose: () => void;
+  wide?: boolean;
 }) {
   const dialog = useRef<HTMLDivElement>(null);
   const isClient = useSyncExternalStore(
@@ -41,7 +43,7 @@ export default function AdminDetailModal({
       <div
         ref={dialog}
         aria-modal="true"
-        className="admin-detail-modal flex min-h-0 h-[min(760px,_calc(100dvh_-_56px))] w-[min(660px,_calc(100vw_-_56px))] flex-col overflow-hidden rounded-[14px] bg-white [box-shadow:0_22px_70px_#07142666]"
+        className={`admin-detail-modal flex min-h-0 h-[min(760px,_calc(100dvh_-_56px))] ${wide ? "w-[min(1240px,_calc(100vw_-_32px))]" : "w-[min(660px,_calc(100vw_-_56px))]"} flex-col overflow-hidden rounded-[14px] bg-white [box-shadow:0_22px_70px_#07142666]`}
         role="dialog"
         tabIndex={-1}
         onMouseDown={event => event.stopPropagation()}

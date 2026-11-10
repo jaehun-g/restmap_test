@@ -16,7 +16,7 @@ import {
 } from "@/lib/rest-area-filters";
 import type {SortField} from "@/lib/rest-area-fields";
 import {createEditorDraft, editorIsDirty, type EditorDraft} from "@/lib/rest-area-editor";
-import {hasCoordinates, type RestAreaRecord} from "@/lib/rest-areas";
+import type {RestAreaRecord} from "@/lib/rest-areas";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import RestAreaEditor from "./rest-area-editor";
@@ -26,8 +26,8 @@ import AdminAuthControl from "./admin-auth-control";
 import Icon from "./icon";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import type {PlaceView} from "@/lib/map-places";
-import type {GasStationRecord, StationServiceKey} from "@/lib/gas-stations";
+import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
+import type {GasStationRecord} from "@/lib/gas-stations";
 import {stationKey} from "@/lib/gas-stations";
 import PlaceControls from "./place-controls";
 import GasStationTable from "./gas-station-table";
@@ -42,11 +42,10 @@ export default function AdminExplorer() {
   const location = useMobileLocation(false);
   const {data, areas, loading, error, reload, replaceItem} = useRestAreas(true);
   const view = useMapFitRequest();
-  const search = useSearchQuery(view.requestFit);
+  const search = useSearchQuery(view.requestSearchFit);
   const auth = useAdminSession();
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
-  const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   const gas = useGasStations(
     stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"), true,
   );
@@ -65,6 +64,7 @@ export default function AdminExplorer() {
   const [syncingExStations, setSyncingExStations] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [detailModal, setDetailModal] = useState(false);
+  const [listModal, setListModal] = useState<"rest" | "stations" | null>(null);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
   const mapPanelRef = useRef<HTMLElement>(null);
@@ -78,10 +78,10 @@ export default function AdminExplorer() {
   const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
-      filters, query: search.query, stationServices: stationFilters,
+      filters, query: search.query, stationServices: [],
       scope: location.scope, position: location.position,
     }, sourceFacilities),
-    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position, sourceFacilities],
+    [areas, gas.stations, filters, search.query, location.scope, location.position, sourceFacilities],
   );
   const results = useMemo(() => mergedFacilities.facilities.map(({area}) => area), [mergedFacilities]);
   const sorted = useMemo(
@@ -169,7 +169,6 @@ export default function AdminExplorer() {
     },
     [mayLeave],
   );
-  const stationDetails = useCallback((id: string) => selectStation(id), [selectStation]);
   const openStationDetails = useCallback(
     (id: string) => {
       if (!mayLeave()) return;
@@ -242,7 +241,6 @@ export default function AdminExplorer() {
   const mapStations = placeView === "rest" ? [] : stationResults;
   const selectedMapStations = selectedStation && !mapStations.some(station => stationKey(station) === stationKey(selectedStation))
     ? [...mapStations, selectedStation] : mapStations;
-  const mapped = mapAreas.filter(hasCoordinates).length + mapStations.filter(hasCoordinates).length;
   const changeSort = (field: SortField, next: "asc" | "desc") => {
     setSortField(field);
     setDirection(next);
@@ -259,7 +257,6 @@ export default function AdminExplorer() {
   const reset = () => {
     search.clear(false);
     setFilters(initialFilters());
-    setStationFilters([]);
     setPlaceView("all");
     setSelectedStationId(null);
     view.preserveView();
@@ -327,6 +324,8 @@ export default function AdminExplorer() {
           </span>
         </div>
         <div className="admin-actions flex items-center gap-[9px]">
+          <Button variant="secondary" onClick={() => setListModal("rest")}>휴게소 목록 <span className="ml-1">{areas.length}</span></Button>
+          <Button variant="secondary" onClick={() => setListModal("stations")}>주유·충전소 목록 <span className="ml-1">{gas.stations.length}</span></Button>
           <AdminAuthControl
             auth={auth}
             onLogout={() => {
@@ -362,7 +361,6 @@ export default function AdminExplorer() {
         onView={next => {
           if (!mayLeave()) return;
           setPlaceView(next);
-          setStationFilters([]);
           setFilters(current => ({...current, missingRoute: false}));
           setSelectedId(null);
           setSelectedStationId(null);
@@ -380,12 +378,6 @@ export default function AdminExplorer() {
         disabled={anyEditing}
         includeStations={placeView !== "rest"}
         hideRestFilters={placeView === "ex"}
-        stationFilters={stationFilters}
-        stationServiceOptions={placeView === "ex" ? ["lpg"] : undefined}
-        onStationFilters={next => {
-          setStationFilters(next);
-          view.preserveView();
-        }}
       />
       {notice && (
         <div
@@ -410,63 +402,13 @@ export default function AdminExplorer() {
           </IconButton>
         </div>
       )}
-      <div className="admin-workspace grid grid-cols-[minmax(340px,_30%)_minmax(640px,_1fr)] gap-[16px] flex-1 min-h-0">
-        <section className="admin-table-panel" aria-labelledby="table-heading">
-          {placeView !== "ex" && (
-            <AdminRestAreaTable
-              rows={sorted}
-              selectedId={selectedId}
-              sortField={sortField}
-              direction={direction}
-              onSort={changeSort}
-              onSelect={select}
-              loading={loading}
-              error={error}
-              hasData={!!areas.length}
-              onRetry={reloadData}
-              onReset={reset}
-            />
-          )}
-          {placeView !== "rest" && (
-            <GasStationTable
-              rows={stationResults}
-              selectedId={selectedStationId}
-              onSelect={stationDetails}
-              loading={gas.loading}
-              error={gas.error}
-              onReset={reset}
-              onRetry={() => {
-                void gas.reload();
-              }}
-            />
-          )}
-          <div className="panel-footer flex justify-between gap-[12px] p-[12px_20px] [border-top:1px_solid_var(--line)] text-[#97a4b5] text-[9px] shrink-0">
-            <span>
-              지도 {mapped}개 · 좌표 확인 필요{" "}
-              {visibleAreas.length + stationResults.length - mapped}개
-            </span>
-            {data && (
-              <time dateTime={data.fetchedAt}>
-                최근 조회{" "}
-                {new Date(data.fetchedAt).toLocaleTimeString("ko-KR", {
-                  hour12: false,
-                  timeZone: "Asia/Seoul",
-                })}
-              </time>
-            )}
-          </div>
-        </section>
+      <div className="admin-workspace grid grid-cols-[minmax(0,_1fr)] gap-[16px] flex-1 min-h-0">
         <section ref={mapPanelRef} className="admin-map-panel" aria-label="지도">
-          <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
-            <h3>휴게소·주유소 위치</h3>
-            <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
-              KAKAO MAP
-            </span>
-          </div>
           <div className="admin-map h-full min-h-0">
             <KakaoMap
               areas={mapAreas}
               stations={selectedMapStations}
+              searchFitPlaces={[...mapAreas.map(restPlace), ...mapStations.map(stationPlace)]}
               linkedStationsByRestId={linkedStationsByRestId}
               selectedDirection={selectedDirectionLabel}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
@@ -494,6 +436,41 @@ export default function AdminExplorer() {
           </div>
         </section>
       </div>
+      {listModal && (
+        <AdminDetailModal wide onClose={() => setListModal(null)}>
+          <section className="admin-table-panel flex-1 min-h-0" aria-label={listModal === "rest" ? "휴게소 목록" : "주유·충전소 목록"}>
+            <div className="flex items-center justify-between p-3 border-b border-slate-200">
+              <h2 className="font-semibold">{listModal === "rest" ? "휴게소 목록" : "주유·충전소 목록"}</h2>
+              <Button onClick={() => setListModal(null)}>닫기</Button>
+            </div>
+            {listModal === "rest" ? (
+              <AdminRestAreaTable
+                rows={sorted}
+                selectedId={selectedId}
+                sortField={sortField}
+                direction={direction}
+                onSort={changeSort}
+                onSelect={id => { setListModal(null); details(id); }}
+                loading={loading}
+                error={error}
+                hasData={!!areas.length}
+                onRetry={reloadData}
+                onReset={reset}
+              />
+            ) : (
+              <GasStationTable
+                rows={stationResults}
+                selectedId={selectedStationId}
+                onSelect={id => { setListModal(null); openStationDetails(id); }}
+                loading={gas.loading}
+                error={gas.error}
+                onReset={reset}
+                onRetry={() => { void gas.reload(); }}
+              />
+            )}
+          </section>
+        </AdminDetailModal>
+      )}
       {detailModal && (
         <AdminDetailModal onClose={close}>
           <div

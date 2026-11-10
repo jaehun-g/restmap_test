@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   cardDisplayArea,
+  cardCenterPanOffset,
   cardPanOffset,
   cardSizeLimit,
   mapCardOverlayArea,
@@ -44,6 +45,10 @@ test("only overflowing card edges request minimal camera translation", () => {
   assert.deepEqual(cardPanOffset(rect(20, 180, 280, 240), area), {x: 0, y: 0});
   assert.deepEqual(cardPanOffset(rect(-10, 100, 280, 240), area), {x: -26, y: -68});
   assert.deepEqual(cardPanOffset(rect(110, 350, 280, 230), area), {x: 31, y: 28});
+});
+
+test("newly opened card centers within the unobstructed map area", () => {
+  assert.deepEqual(cardCenterPanOffset(rect(30, 150, 280, 220), rect(0, 100, 400, 500)), {x: -30, y: -90});
 });
 
 test("administrator card viewport excludes map notices and bottom legend, retaining scrollable space", () => {

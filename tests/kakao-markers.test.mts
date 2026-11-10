@@ -26,6 +26,8 @@ function mockKakao() {
     fitted: 0,
     panned: 0,
     centered: 0,
+    centerCoordinates: [] as number[][],
+    levels: [] as number[],
     images: [] as string[],
     sizes: [] as number[][],
     ids: [] as string[],
@@ -136,10 +138,11 @@ function mockKakao() {
     panBy(dx: number, dy: number) {
       state.offsets.push([dx, dy]);
     },
-    setCenter() {
+    setCenter(position: {getLat(): number; getLng(): number}) {
       state.centered++;
+      state.centerCoordinates.push([position.getLat(), position.getLng()]);
     },
-    setLevel() {},
+    setLevel(level: number) { state.levels.push(level); },
     getLevel() {
       return 6;
     },
@@ -247,6 +250,26 @@ test("marker clicks do not bubble into map-close and EX selections keep their di
   state.clicks[1]();
   assert.equal(selected, places[1].key);
   assert.equal(cleared, 0);
+  layer.dispose();
+});
+
+test("opening an info card centers the card within the available map viewport", t => {
+  const dom = installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const item = restPlace(areas()[0]);
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    [item],
+    () => {},
+    () => new CardElement("section") as unknown as HTMLElement,
+    () => ({left: 0, top: 100, right: 320, bottom: 500, width: 320, height: 400}) as DOMRect,
+  );
+
+  layer.select(item.key);
+  dom.flush();
+
+  assert.deepEqual(state.offsets, [[-4, -120]], "card center aligns with the unobstructed viewport center");
   layer.dispose();
 });
 
@@ -360,6 +383,16 @@ test("fit handles multiple markers, a single marker and empty results", () => {
   createRestAreaMarkers(sdk, map, [], () => {}, label).fit();
   assert.equal(state.fitted, 1);
 });
+
+test("검색 fit은 검색 결과 목록만 사용해 지도 범위를 맞춘다", () => {
+  const {sdk, map, state} = mockKakao();
+  const candidates = areas().filter(area => area.latitude !== null);
+  const layer = createPlaceMarkers(sdk, map, candidates.map(restPlace), () => {}, label);
+  layer.fit([restPlace(candidates[1])]);
+  assert.deepEqual(state.centerCoordinates, [[36, 128]]);
+  assert.deepEqual(state.levels, [6]);
+  assert.equal(state.fitted, 0, "검색 결과 하나만 중심에 맞춤");
+});
 test("disposal removes marker listeners, the map idle listener, card contents and all markers", () => {
   const {sdk, map, state} = mockKakao();
   const markers = createRestAreaMarkers(sdk, map, areas(), () => {}, label);
@@ -369,7 +402,7 @@ test("disposal removes marker listeners, the map idle listener, card contents an
   assert.equal(state.content.at(-1), "");
 });
 
-test("summary cards fit viewport width and height and adjust only overflowing edges", t => {
+test("opening centers summary cards and later adjustments only correct overflowing edges", t => {
   const animation = Object.getOwnPropertyDescriptor(globalThis, "requestAnimationFrame");
   const cancellation = Object.getOwnPropertyDescriptor(globalThis, "cancelAnimationFrame");
   let scheduled: (() => void) | null = null;
@@ -411,7 +444,7 @@ test("summary cards fit viewport width and height and adjust only overflowing ed
   assert.equal(style.maxHeight, "384px");
   assert.ok(scheduled);
   (scheduled as () => void)();
-  assert.deepEqual(state.offsets, [[-24, 0]]);
+  assert.deepEqual(state.offsets, [[-49, -115]]);
   box = {...box, left: 16, right: 254, top: 55, bottom: 205};
   state.idle[0]();
   assert.equal(state.offsets.length, 1);

@@ -5,26 +5,18 @@ import {Input} from "@/components/ui/field";
 import {useMemo, useState} from "react";
 import {directionOptions, routeOptions, selectableFacilities, type RestAreaFilters} from "@/lib/rest-area-filters";
 import type {RestArea} from "@/lib/rest-areas";
-import {
-  stationServices as stationServiceDefinitions,
-  type StationServiceKey,
-} from "@/lib/gas-stations";
 import Icon from "./icon";
 export default function MobileFilterSheet({
   kind,
   areas,
   filters,
-  stationServices,
   onChange,
-  onStationServices,
   onClose,
 }: {
-  kind: "routes" | "directions" | "facilities" | "stationServices";
+  kind: "routes" | "directions" | "facilities";
   areas: RestArea[];
   filters: RestAreaFilters;
-  stationServices: StationServiceKey[];
   onChange: (filters: RestAreaFilters) => void;
-  onStationServices: (services: StationServiceKey[]) => void;
   onClose: () => void;
 }) {
   const [routeQuery, setRouteQuery] = useState("");
@@ -41,18 +33,14 @@ export default function MobileFilterSheet({
               ? "노선 선택"
               : kind === "facilities"
                 ? "편의시설 선택"
-                : kind === "directions"
-                  ? "방향 선택"
-                  : "주유소 조건"}
+              : "방향 선택"}
           </h2>
           <p>
             {kind === "routes"
               ? "원하는 노선을 검색하거나 선택하세요."
               : kind === "facilities"
                 ? "선택한 시설을 모두 갖춘 휴게소를 보여드려요."
-                : kind === "directions"
-                  ? "선택한 노선에서 진행 방향을 골라 보세요."
-                  : "선택한 조건이 모두 확인된 주유소를 보여드려요."}
+              : "선택한 노선에서 진행 방향을 골라 보세요."}
           </p>
         </div>
         <IconButton aria-label="필터 선택창 닫기" onClick={onClose}>
@@ -150,7 +138,7 @@ export default function MobileFilterSheet({
             ))}
           </ul>
         </div>
-      ) : kind === "facilities" ? (
+      ) : (
         <>
           <div className={sharedClasses.facilitySheetTop}>
             <span>{filters.facilities.length}개 선택</span>
@@ -175,40 +163,6 @@ export default function MobileFilterSheet({
                           ? [...filters.facilities, key]
                           : filters.facilities.filter(value => value !== key),
                       })
-                    }
-                  />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className={sharedClasses.sheetFilterFooter}>
-            <Button onClick={onClose} variant="primary">
-              선택 완료
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className={sharedClasses.facilitySheetTop}>
-            <span>{stationServices.length}개 선택</span>
-            <button onClick={() => onStationServices([])} disabled={!stationServices.length}>
-              전체 해제
-            </button>
-          </div>
-          <div className={sharedClasses.filterSheetScroll}>
-            <div className={sharedClasses.facilityCheckboxes}>
-              {stationServiceDefinitions.map(({key, label}) => (
-                <label key={key} className={stationServices.includes(key) ? "selected" : ""}>
-                  <input
-                    type="checkbox"
-                    checked={stationServices.includes(key)}
-                    onChange={event =>
-                      onStationServices(
-                        event.target.checked
-                          ? [...stationServices, key]
-                          : stationServices.filter(value => value !== key),
-                      )
                     }
                   />
                   <span>{label}</span>

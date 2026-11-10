@@ -10,7 +10,6 @@ import {
   type RestAreaFilters,
 } from "@/lib/rest-area-filters";
 import type {useSearchQuery} from "@/hooks/use-search-query";
-import {stationServices, type StationServiceKey} from "@/lib/gas-stations";
 import SearchBox from "./search-box";
 import Icon from "./icon";
 export default function AdminFilterBar({
@@ -22,9 +21,6 @@ export default function AdminFilterBar({
   disabled,
   includeStations = false,
   hideRestFilters = false,
-  stationFilters = [],
-  stationServiceOptions,
-  onStationFilters,
 }: {
   areas: RestArea[];
   filters: RestAreaFilters;
@@ -34,9 +30,6 @@ export default function AdminFilterBar({
   disabled: boolean;
   includeStations?: boolean;
   hideRestFilters?: boolean;
-  stationFilters?: StationServiceKey[];
-  stationServiceOptions?: StationServiceKey[];
-  onStationFilters?: (filters: StationServiceKey[]) => void;
 }) {
   const routeValue = filters.missingRoute
     ? "missing"
@@ -125,39 +118,6 @@ export default function AdminFilterBar({
             </div>
           </details>
         )}
-        {includeStations && onStationFilters && (
-          <details className="facility-picker station-service-picker relative">
-            <summary
-              onClick={event => {
-                if (disabled) event.preventDefault();
-              }}
-            >
-              주유소 조건 {stationFilters.length ? `(${stationFilters.length})` : "전체"} ▾
-            </summary>
-            <div className="facility-picker-options absolute z-[10] top-[42px] left-[0] w-[230px] grid grid-cols-[1fr_1fr] gap-[12px_8px] p-[15px] [border:1px_solid_#dde6f2] rounded-[9px] bg-white [box-shadow:0_4px_18px_#23416a1c]">
-              <p>선택한 조건이 모두 확인된 장소</p>
-              {stationServices
-                .filter(({key}) => !stationServiceOptions || stationServiceOptions.includes(key))
-                .map(({key, label}) => (
-                  <label key={key}>
-                    <input
-                      type="checkbox"
-                      disabled={disabled}
-                      checked={stationFilters.includes(key)}
-                      onChange={event =>
-                        onStationFilters(
-                          event.target.checked
-                            ? [...stationFilters, key]
-                            : stationFilters.filter(value => value !== key),
-                        )
-                      }
-                    />
-                    {label}
-                  </label>
-                ))}
-            </div>
-          </details>
-        )}
         {!hideRestFilters && (
           <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
             휴게소 라운지
@@ -234,24 +194,13 @@ export default function AdminFilterBar({
             <Icon name="close" size={12} />
           </button>
         )}
-        {includeStations &&
-          stationFilters.map(key => (
-            <button
-              key={key}
-              disabled={disabled}
-              onClick={() => onStationFilters?.(stationFilters.filter(value => value !== key))}
-            >
-              {stationServices.find(service => service.key === key)?.label}
-              <Icon name="close" size={12} />
-            </button>
-          ))}
         {!search.query &&
           !filters.routeName &&
           !filters.missingRoute &&
           !filters.direction &&
           !filters.facilities.length &&
           filters.lounge === "all" &&
-          !(includeStations && stationFilters.length) && (
+          (
             <span>{includeStations ? "모든 장소 표시" : "모든 휴게소 표시"}</span>
           )}
         {disabled && <span>수정 중에는 저장 또는 취소 후 조건을 변경할 수 있습니다.</span>}

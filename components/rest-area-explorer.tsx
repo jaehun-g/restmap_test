@@ -5,10 +5,11 @@ import {FilterChip} from "@/components/ui/filter-chip";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useRestAreas} from "@/hooks/use-rest-areas";
 import {useSearchQuery} from "@/hooks/use-search-query";
+import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
-import {stationHours, stationKey, stationLabel, type StationServiceKey} from "@/lib/gas-stations";
+import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
 import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
@@ -25,7 +26,7 @@ import MobileFilterSheet from "./mobile-filter-sheet";
 import Icon from "./icon";
 import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
-type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities" | "stationServices";
+type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities";
 export default function MobileExplorer({initialData}: {
   initialData?: Promise<InitialMapData | undefined>;
 } = {}) {
@@ -38,10 +39,10 @@ export default function MobileExplorer({initialData}: {
   const {data, areas: allAreas, loading, error, reload} = useRestAreas(false, initialRestAreas);
   const areas = useMemo(() => allAreas.filter(area => area.operationStatus !== "closed"), [allAreas]);
   const location = useMobileLocation();
-  const search = useSearchQuery();
+  const view = useMapFitRequest();
+  const search = useSearchQuery(view.requestSearchFit);
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
-  const [stationFilters, setStationFilters] = useState<StationServiceKey[]>([]);
   // 위치·줌 변경은 공통 목록을 필터링하고, 노선 검색만 서버의 근접 조건을 적용한다.
   const gas = useGasStations(
     stationQueryString(filters.routeName, {kind: "all"}, "ex"),
@@ -118,10 +119,10 @@ export default function MobileExplorer({initialData}: {
   const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
-      filters, query: search.query, stationServices: stationFilters,
+      filters, query: search.query, stationServices: [],
       scope: location.scope, position: location.position,
     }, sourceFacilities),
-    [areas, gas.stations, filters, search.query, stationFilters, location.scope, location.position, sourceFacilities],
+    [areas, gas.stations, filters, search.query, location.scope, location.position, sourceFacilities],
   );
   const visibleAreas = useMemo(
     () => mergedFacilities.facilities.map(({area}) => area),
@@ -242,7 +243,6 @@ export default function MobileExplorer({initialData}: {
     setFilters(initialFilters());
     setSelectedId(null);
     setSelectedStationId(null);
-    setStationFilters([]);
     setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
@@ -303,17 +303,6 @@ export default function MobileExplorer({initialData}: {
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </FilterChip>
           )}
-          {placeView !== "rest" && (
-            <FilterChip
-              active={stationFilters.length > 0}
-              onClick={event => open("stationServices", event.currentTarget)}
-              aria-expanded={panel === "stationServices"}
-            >
-              주유소 조건
-              {stationFilters.length > 0 && <b>{stationFilters.length}</b>}
-              <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
-            </FilterChip>
-          )}
           {placeView !== "ex" && (
             <FilterChip
               variant="lounge"
@@ -349,6 +338,8 @@ export default function MobileExplorer({initialData}: {
             stations={selectedMapStations}
             linkedStationsByRestId={linkedStationsByRestId}
             selectedDirection={selectedDirectionLabel}
+            fitRequest={view.fitRequest}
+            searchFitPlaces={listPlaces}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
@@ -381,9 +372,7 @@ export default function MobileExplorer({initialData}: {
                 ? "노선 필터"
                 : effectivePanel === "facilities"
                   ? "편의시설 필터"
-                  : effectivePanel === "stationServices"
-                    ? "주유소 조건 필터"
-                    : "휴게소 목록"
+                  : "휴게소 목록"
           }
         >
           <div
@@ -430,18 +419,15 @@ export default function MobileExplorer({initialData}: {
             >
               {effectivePanel === "routes" ||
               effectivePanel === "directions" ||
-              effectivePanel === "facilities" ||
-              effectivePanel === "stationServices" ? (
+              effectivePanel === "facilities" ? (
                 <MobileFilterSheet
                   key={effectivePanel}
                   kind={effectivePanel}
                   areas={areas}
                   filters={filters}
-                  stationServices={stationFilters}
                   onChange={next => {
                     setFilters(next);
                   }}
-                  onStationServices={setStationFilters}
                   onClose={collapse}
                 />
               ) : effectivePanel === "detail" && selectedStation ? (

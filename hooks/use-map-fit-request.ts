@@ -8,7 +8,10 @@ export function useMapFitRequest() {
     fit: true,
   });
   const requestFit = useCallback(() => {
-    setFitRequest(current => ({sequence: current.sequence + 1, fit: true}));
+    setFitRequest(current => ({sequence: current.sequence + 1, fit: true, search: false}));
+  }, []);
+  const requestSearchFit = useCallback(() => {
+    setFitRequest(current => ({sequence: current.sequence + 1, fit: true, search: true}));
   }, []);
   const preserveView = useCallback(() => {
     setFitRequest(current => ({
@@ -16,5 +19,5 @@ export function useMapFitRequest() {
       fit: false,
     }));
   }, []);
-  return {fitRequest, requestFit, preserveView};
+  return {fitRequest, requestFit, requestSearchFit, preserveView};
 }
