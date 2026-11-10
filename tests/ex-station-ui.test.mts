@@ -89,6 +89,29 @@ test("detail views omit the fuel price section if every price is missing", () =>
   assert.doesNotMatch(html, /원\/L/);
 });
 
+test("주유소 요약에는 기본 정보만 표시하고 확장하면 유가와 서비스를 표시한다", () => {
+  const render = (preview: boolean) => renderToStaticMarkup(
+    createElement(Details, {station: station(), audience: "mobile", preview, onClose() {}}),
+  );
+  const preview = render(true);
+  const expanded = render(false);
+  for (const label of ["노선 · 방향", "주소", "영업시간", "전화번호"]) {
+    assert.ok(preview.indexOf(label) < preview.indexOf('<div hidden="">'));
+  }
+  assert.match(preview, /<div hidden="">.*aria-label="유가 정보"/);
+  assert.match(preview, /주유소 시설·서비스/);
+  assert.doesNotMatch(expanded, /<div hidden="">/);
+  assert.match(expanded, /aria-label="유가 정보"/);
+});
+
+test("주유소 좌표는 관리자 상세에만 표시한다", () => {
+  const record = {...station(), latitude: 37.5, longitude: 127};
+  const mobile = renderToStaticMarkup(createElement(Details, {station: record, audience: "mobile", onClose() {}}));
+  const admin = renderToStaticMarkup(createElement(Details, {station: record, audience: "admin", onClose() {}}));
+  assert.doesNotMatch(mobile, /위도|경도|좌표 정보/);
+  assert.match(admin, /위도 37\.5000000000 · 경도 127\.0000000000/);
+});
+
 test("administrator and mobile controls expose only rest areas and highway stations", () => {
   const admin = renderToStaticMarkup(
     createElement(Controls, {view: "ex", audience: "admin", onView() {}}),

@@ -16,11 +16,13 @@ export default function GasStationDetails({
   onClose,
   audience = "mobile",
   routeName,
+  preview = false,
 }: {
   station: GasStationRecord;
   onClose: () => void;
   audience?: "mobile" | "admin";
   routeName?: string | null;
+  preview?: boolean;
 }) {
   const [detail, setDetail] = useState<GasStationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,10 +75,10 @@ export default function GasStationDetails({
           </p>
         )}
         <dl className={sharedClasses.detailFacts}>
-          {(station.routeName || station.direction) && (
+          {(station.routeName || station.direction || preview) && (
             <div className="wide">
               <dt>노선 · 방향</dt>
-              <dd>{[station.routeName, station.direction].filter(Boolean).join(" · ")}</dd>
+              <dd>{[station.routeName, station.direction].filter(Boolean).join(" · ") || "정보 없음"}</dd>
             </div>
           )}
           <div className="wide">
@@ -103,6 +105,7 @@ export default function GasStationDetails({
             </dd>
           </div>
         </dl>
+        <div hidden={preview}>
         {prices.length > 0 && (
           <section aria-label="유가 정보" className="station-price-section">
             <h3>유가 정보</h3>
@@ -146,11 +149,13 @@ export default function GasStationDetails({
             );
           })}
         </ul>
-        <p className={sharedClasses.coordinateNote}>
-          {hasCoordinates(station)
-            ? `위도 ${station.latitude.toFixed(10)} · 경도 ${station.longitude.toFixed(10)}`
-            : "좌표 정보가 없어 지도에 표시되지 않습니다."}
-        </p>
+        {audience === "admin" && (
+          <p className={sharedClasses.coordinateNote}>
+            {hasCoordinates(station)
+              ? `위도 ${station.latitude.toFixed(10)} · 경도 ${station.longitude.toFixed(10)}`
+              : "좌표 정보가 없어 지도에 표시되지 않습니다."}
+          </p>
+        )}
         {audience === "admin" && station.brand === "GS" && (
           <details className="station-source-details p-[10px_0] text-[11px]">
             <summary>읽기 전용 원본 정보 · GS 코드 {station.siteCode}</summary>
@@ -175,6 +180,7 @@ export default function GasStationDetails({
             )}
           </details>
         )}
+        </div>
       </div>
     </section>
   );

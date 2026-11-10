@@ -378,7 +378,7 @@ export default function MobileExplorer({initialData}: {
         </div>
         <section
           ref={sheetRef}
-          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : selected ? "is-detail-preview" : "") : ""}`}
+          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : ""}`}
           onTouchStart={event => {
             const touch = event.touches[0];
             const scroll = (event.target as HTMLElement).closest<HTMLElement>(".detail-scroll");
@@ -470,6 +470,7 @@ export default function MobileExplorer({initialData}: {
                   station={selectedStation}
                   onClose={collapse}
                   routeName={filters.routeName}
+                  preview={!detailExpanded}
                 />
               ) : effectivePanel === "detail" && selected ? (
                 <>
