@@ -65,9 +65,11 @@ export default function RestAreaDetails({
             </div>
           </div>
         </div>
-        <IconButton onClick={onClose} aria-label="상세정보 닫기">
-          <Icon name="close" />
-        </IconButton>
+        {audience === "admin" && (
+          <IconButton onClick={onClose} aria-label="상세정보 닫기">
+            <Icon name="close" />
+          </IconButton>
+        )}
       </div>
 
       <div className="detail-overview shrink-0">

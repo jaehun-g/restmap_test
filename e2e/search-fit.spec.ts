@@ -23,6 +23,8 @@ test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와
   await page.locator(".mobile-area-card").first().click();
   const sheet = page.locator(".mobile-sheet");
   await expect(sheet).toHaveClass(/is-detail-preview/);
+  const headerActions = sheet.locator(".back-to-list").locator("..");
+  await expect(headerActions.getByRole("button", {name: "상세정보 닫기"})).toBeVisible();
   await expect(page.getByRole("tab", {name: "시설"})).toBeVisible();
   await expect(page.locator("#detail-tabpanel")).toBeHidden();
   await page.getByRole("tab", {name: "시설"}).click();

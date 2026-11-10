@@ -508,16 +508,21 @@ export default function MobileExplorer({initialData}: {
                 />
               ) : effectivePanel === "detail" && selected ? (
                 <>
-                  <button
-                    className="back-to-list [align-self:flex-start] flex items-center gap-[5px] min-h-[36px] p-[7px_20px_0] [border:0] bg-[transparent] text-[#7b8aa0] text-[11px] shrink-0"
-                    onClick={() => {
-                      setSelectedId(null);
-                      setPanel("list");
-                    }}
-                  >
-                    <Icon name="arrow" size={16} style={{transform: "rotate(180deg)"}} />
-                    휴게소 목록
-                  </button>
+                  <div className="flex shrink-0 items-center justify-between px-[20px]">
+                    <button
+                      className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-[#7b8aa0] text-[11px]"
+                      onClick={() => {
+                        setSelectedId(null);
+                        setPanel("list");
+                      }}
+                    >
+                      <Icon name="arrow" size={16} style={{transform: "rotate(180deg)"}} />
+                      휴게소 목록
+                    </button>
+                    <IconButton onClick={collapse} aria-label="상세정보 닫기">
+                      <Icon name="close" />
+                    </IconButton>
+                  </div>
                   <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => selectStation(stationKey(station))} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
                 </>
               ) : (
