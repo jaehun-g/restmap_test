@@ -22,7 +22,10 @@ export default function AdminDetailModal({
   );
 
   useEffect(() => {
-    dialog.current?.focus({preventScroll: true});
+    if (isClient) dialog.current?.focus({preventScroll: true});
+  }, [isClient]);
+
+  useEffect(() => {
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };

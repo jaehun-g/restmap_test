@@ -2,7 +2,8 @@
 
 import {Button} from "@/components/ui/button";
 import {sharedClasses} from "@/lib/shared-classes";
-import {pageForIndex, pageItems, tablePageSize} from "@/lib/pagination";
+import {useInfiniteTableRows} from "@/hooks/use-infinite-table-rows";
+import {Input} from "@/components/ui/field";
 import {hasCoordinates} from "@/lib/rest-areas";
 import {
   stationServices,
@@ -12,10 +13,9 @@ import {
   type StationScalarKey,
   type StationServiceKey,
 } from "@/lib/gas-stations";
-import {useEffect, useMemo, useState} from "react";
+import {useMemo, useState} from "react";
 import QueryState from "./query-state";
 import StationServiceSummary from "./station-service-summary";
-import TablePagination from "./table-pagination";
 
 type StationColumnKey = "id" | "siteCode" | StationScalarKey | StationServiceKey;
 type StationColumn = {key: StationColumnKey; label: string};
@@ -72,6 +72,9 @@ export default function GasStationTable({
   error,
   onRetry,
   onReset,
+  searchValue,
+  onSearchChange,
+  onClose,
 }: {
   rows: GasStationRecord[];
   selectedId: string | null;
@@ -80,14 +83,19 @@ export default function GasStationTable({
   error: string | null;
   onRetry: () => void;
   onReset: () => void;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  onClose: () => void;
 }) {
-  const [page, setPage] = useState(0);
   const [allColumns, setAllColumns] = useState(false);
   const [sort, setSort] = useState<{key: StationColumnKey; asc: boolean}>({
     key: "name",
     asc: true,
   });
-  const columns = allColumns ? fullColumns : basicColumns;
+  const columns = allColumns
+    ? [...basicColumns, ...fullColumns.filter(column => !basicColumns.some(basic => basic.key === column.key))]
+    : basicColumns;
+  const columnWidth = (key: StationColumnKey) => key === "address" ? 300 : key === "name" ? 180 : key === "detailAddress" ? 240 : 140;
   const sorted = useMemo(
     () =>
       [...rows].sort((left, right) => {
@@ -105,19 +113,9 @@ export default function GasStationTable({
     [rows, sort],
   );
   const selectedIndex = sorted.findIndex(station => stationKey(station) === selectedId);
-  const visibleRows = useMemo(() => pageItems(sorted, page), [sorted, page]);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setPage(0), 0);
-    return () => window.clearTimeout(timer);
-  }, [rows]);
-  useEffect(() => {
-    if (selectedIndex < 0) return;
-    const timer = window.setTimeout(() => setPage(pageForIndex(selectedIndex)), 0);
-    return () => window.clearTimeout(timer);
-  }, [selectedIndex]);
+  const {visibleRows, sentinel, visibleCount} = useInfiniteTableRows(sorted, selectedIndex);
   const sortBy = (key: StationColumnKey) => {
     setSort(value => ({key, asc: value.key === key ? !value.asc : true}));
-    setPage(0);
   };
   const cell = (station: GasStationRecord, key: StationColumnKey) => {
     if (key === "name")
@@ -140,7 +138,7 @@ export default function GasStationTable({
       return serviceLabel(station.services[key as StationServiceKey]);
     if (key === "latitude" || key === "longitude") return station[key]?.toFixed(10) ?? "—";
     if (key === "openTime" || key === "closeTime") return timeLabel(station[key]);
-    if (key === "address" && !allColumns)
+    if (key === "address")
       return [station.address, station.detailAddress].filter(Boolean).join(" ") || "미등록";
     return station[key as Exclude<StationColumnKey, StationServiceKey>] ?? "—";
   };
@@ -150,10 +148,18 @@ export default function GasStationTable({
       aria-label="주유소 목록"
     >
       <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
-        <h3>
-          주유·충전소 <span>{rows.length}</span>
-        </h3>
-        <div className="table-heading-actions flex items-center gap-[9px]">
+        <div className="flex min-w-0 items-center gap-[12px]">
+          <h3 className="shrink-0">주유·충전소 <span>{rows.length}</span></h3>
+          <Input
+            type="search"
+            className="w-[min(320px,_34vw)]"
+            aria-label="주유·충전소 목록 검색"
+            placeholder="주유소명·주소·전화번호 검색"
+            value={searchValue}
+            onChange={event => onSearchChange(event.target.value)}
+          />
+        </div>
+        <div className="table-heading-actions flex min-w-0 items-center gap-[9px]">
           <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
             {columns.find(column => column.key === sort.key)?.label} ·{" "}
             {sort.asc ? "오름차순" : "내림차순"}
@@ -171,6 +177,7 @@ export default function GasStationTable({
           >
             {allColumns ? "기본 컬럼 보기" : "전체 컬럼 보기"}
           </button>
+          <Button onClick={onClose} variant="secondary">닫기</Button>
         </div>
       </div>
       {loading || error ? (
@@ -186,17 +193,19 @@ export default function GasStationTable({
         <>
           <div className="station-table-scroll table-scroll flex-1 min-h-0 overflow-auto">
             <table
-              className={`admin-data-table station-table w-full [border-collapse:collapse] text-left text-[11px] ${allColumns ? "station-table--all min-w-[1900px]" : "station-table--basic min-w-[1180px]"}`}
+              className="admin-data-table station-table table-fixed [border-collapse:collapse] text-left text-[11px]"
+              style={{width: 48 + columns.reduce((sum, column) => sum + columnWidth(column.key), 0) + 340}}
             >
               <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
                 주유소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
               </caption>
+              <colgroup><col style={{width: 48}} />{basicColumns.map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}<col style={{width: 240}} /><col style={{width: 100}} />{columns.slice(basicColumns.length).map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}</colgroup>
               <thead>
                 <tr>
                   <th scope="col" className="row-number-cell">
                     No
                   </th>
-                  {columns.map(({key, label}) => (
+                  {basicColumns.map(({key, label}) => (
                     <th
                       key={key}
                       className={columnClass(key)}
@@ -210,8 +219,9 @@ export default function GasStationTable({
                       </button>
                     </th>
                   ))}
-                  {!allColumns && <th className="station-service-summary-cell">서비스 요약</th>}
+                  <th className="station-service-summary-cell">서비스 요약</th>
                   <th>좌표 상태</th>
+                  {columns.slice(basicColumns.length).map(({key, label}) => <th key={key} className={columnClass(key)} aria-sort={sort.key === key ? (sort.asc ? "ascending" : "descending") : "none"}><button type="button" onClick={() => sortBy(key)}>{label}{sort.key === key && (sort.asc ? " ↑" : " ↓")}</button></th>)}
                 </tr>
               </thead>
               <tbody>
@@ -222,17 +232,15 @@ export default function GasStationTable({
                     className={selectedId === stationKey(station) ? "selected-row" : ""}
                     onClick={() => onSelect(stationKey(station))}
                   >
-                    <td className="row-number-cell">{page * tablePageSize + index + 1}</td>
-                    {columns.map(({key}) => (
+                    <td className="row-number-cell">{index + 1}</td>
+                    {basicColumns.map(({key}) => (
                       <td key={key} className={key === "id" ? "id-cell" : columnClass(key)}>
                         {cell(station, key)}
                       </td>
                     ))}
-                    {!allColumns && (
                       <td className="station-service-summary-cell">
                         <StationServiceSummary station={station} />
                       </td>
-                    )}
                     <td>
                       <span
                         className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(station) ? "valid" : "missing"}`}
@@ -240,12 +248,13 @@ export default function GasStationTable({
                         {hasCoordinates(station) ? "등록" : "미등록 / 오류"}
                       </span>
                     </td>
+                    {columns.slice(basicColumns.length).map(({key}) => <td key={key} className={`overflow-hidden text-ellipsis !whitespace-nowrap ${key === "id" ? "id-cell" : columnClass(key) ?? ""}`}>{cell(station, key)}</td>)}
                   </tr>
                 ))}
               </tbody>
             </table>
+            {visibleCount < sorted.length && <div ref={sentinel} className="py-3 text-center text-xs text-slate-500" aria-live="polite">아래로 스크롤하면 목록을 더 불러옵니다</div>}
           </div>
-          <TablePagination total={sorted.length} page={page} onPageChange={setPage} />
         </>
       )}
     </section>

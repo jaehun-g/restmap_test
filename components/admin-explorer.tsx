@@ -49,6 +49,7 @@ export default function AdminExplorer() {
   const gas = useGasStations(
     stationQueryString(filters.missingRoute ? null : filters.routeName, location.scope, "ex"), true,
   );
+  const allStations = useGasStations("source=ex", true);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [editingStation, setEditingStation] = useState<GasStationRecord | null>(null);
   const [stationDirty, setStationDirty] = useState(false);
@@ -65,6 +66,8 @@ export default function AdminExplorer() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [detailModal, setDetailModal] = useState(false);
   const [listModal, setListModal] = useState<"rest" | "stations" | null>(null);
+  const [restListQuery, setRestListQuery] = useState("");
+  const [stationListQuery, setStationListQuery] = useState("");
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
   const mapPanelRef = useRef<HTMLElement>(null);
@@ -84,11 +87,7 @@ export default function AdminExplorer() {
     [areas, gas.stations, filters, search.query, location.scope, location.position, sourceFacilities],
   );
   const results = useMemo(() => mergedFacilities.facilities.map(({area}) => area), [mergedFacilities]);
-  const sorted = useMemo(
-    () => sortRestAreas(results, sortField, direction),
-    [results, sortField, direction],
-  );
-  const selected = results.find(area => area.id === selectedId);
+  const selected = selectedId === null ? undefined : areas.find(area => area.id === selectedId);
   const visibleAreas = results;
   const stationResults = mergedFacilities.stations;
   const linkedStationsByRestId = useMemo(
@@ -101,8 +100,16 @@ export default function AdminExplorer() {
         ?.label ?? filters.direction,
     [areas, filters.routeName, filters.direction],
   );
-  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
-    [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
+  const selectedStation = selectedStationId === null ? undefined : allStations.stations.find(station => stationKey(station) === selectedStationId);
+  const restListRows = useMemo(() => {
+    const query = restListQuery.trim().toLocaleLowerCase("ko-KR");
+    const matching = query ? areas.filter(area => `${area.name} ${area.routeName ?? ""} ${area.directionLabel ?? ""} ${area.phone ?? ""} ${area.stdRestCd ?? ""}`.toLocaleLowerCase("ko-KR").includes(query)) : areas;
+    return sortRestAreas(matching, sortField, direction);
+  }, [areas, restListQuery, sortField, direction]);
+  const stationListRows = useMemo(() => {
+    const query = stationListQuery.trim().toLocaleLowerCase("ko-KR");
+    return query ? allStations.stations.filter(station => `${station.name} ${station.address ?? ""} ${station.detailAddress ?? ""} ${station.phone ?? ""} ${station.siteCode ?? ""}`.toLocaleLowerCase("ko-KR").includes(query)) : allStations.stations;
+  }, [allStations.stations, stationListQuery]);
   const mayLeave = useCallback(
     () =>
       !editState.current.saving &&
@@ -190,7 +197,7 @@ export default function AdminExplorer() {
     return () => document.removeEventListener("fullscreenchange", updateFullscreen);
   }, []);
   useEffect(() => {
-    if (selectedStationId === null || selectedStation || gas.loading || editingStation) return;
+    if (selectedStationId === null || selectedStation || allStations.loading || editingStation) return;
     let active = true;
     queueMicrotask(() => {
       if (active) setSelectedStationId(null);
@@ -198,7 +205,7 @@ export default function AdminExplorer() {
     return () => {
       active = false;
     };
-  }, [selectedStationId, selectedStation, gas.loading, editingStation]);
+  }, [selectedStationId, selectedStation, allStations.loading, editingStation]);
   useEffect(() => {
     if (loading || selectedId === null || selected || editing) return;
     let active = true;
@@ -271,6 +278,7 @@ export default function AdminExplorer() {
       setSelectedId(null);
       void reload();
       void gas.reload();
+      void allStations.reload();
     }
   };
   const syncExStations = async () => {
@@ -291,6 +299,7 @@ export default function AdminExplorer() {
         `EX 동기화 완료: 전체 ${payload.total}건 · 지오코딩 ${payload.geocoded}건 · 미해결 ${payload.unresolved}건 · 삭제 ${payload.deleted}건`,
       );
       void gas.reload();
+      void allStations.reload();
     } catch (reason) {
       setSyncError(reason instanceof Error ? reason.message : "EX 주유소 동기화에 실패했습니다.");
     } finally {
@@ -325,7 +334,7 @@ export default function AdminExplorer() {
         </div>
         <div className="admin-actions flex items-center gap-[9px]">
           <Button variant="secondary" onClick={() => setListModal("rest")}>휴게소 목록 <span className="ml-1">{areas.length}</span></Button>
-          <Button variant="secondary" onClick={() => setListModal("stations")}>주유·충전소 목록 <span className="ml-1">{gas.stations.length}</span></Button>
+          <Button variant="secondary" onClick={() => setListModal("stations")}>주유·충전소 목록 <span className="ml-1">{allStations.stations.length}</span></Button>
           <AdminAuthControl
             auth={auth}
             onLogout={() => {
@@ -438,14 +447,9 @@ export default function AdminExplorer() {
       </div>
       {listModal && (
         <AdminDetailModal wide onClose={() => setListModal(null)}>
-          <section className="admin-table-panel flex-1 min-h-0" aria-label={listModal === "rest" ? "휴게소 목록" : "주유·충전소 목록"}>
-            <div className="flex items-center justify-between p-3 border-b border-slate-200">
-              <h2 className="font-semibold">{listModal === "rest" ? "휴게소 목록" : "주유·충전소 목록"}</h2>
-              <Button onClick={() => setListModal(null)}>닫기</Button>
-            </div>
-            {listModal === "rest" ? (
+          {listModal === "rest" ? (
               <AdminRestAreaTable
-                rows={sorted}
+                rows={restListRows}
                 selectedId={selectedId}
                 sortField={sortField}
                 direction={direction}
@@ -455,20 +459,25 @@ export default function AdminExplorer() {
                 error={error}
                 hasData={!!areas.length}
                 onRetry={reloadData}
-                onReset={reset}
+                onReset={() => setRestListQuery("")}
+                searchValue={restListQuery}
+                onSearchChange={setRestListQuery}
+                onClose={() => setListModal(null)}
               />
             ) : (
               <GasStationTable
-                rows={stationResults}
+                rows={stationListRows}
                 selectedId={selectedStationId}
                 onSelect={id => { setListModal(null); openStationDetails(id); }}
-                loading={gas.loading}
-                error={gas.error}
-                onReset={reset}
-                onRetry={() => { void gas.reload(); }}
+                loading={allStations.loading}
+                error={allStations.error}
+                onReset={() => setStationListQuery("")}
+                onRetry={() => { void allStations.reload(); }}
+                searchValue={stationListQuery}
+                onSearchChange={setStationListQuery}
+                onClose={() => setListModal(null)}
               />
             )}
-          </section>
         </AdminDetailModal>
       )}
       {detailModal && (
@@ -508,6 +517,7 @@ export default function AdminExplorer() {
                   editState.current.dirty = false;
                   setNotice(`${record.name}의 변경사항을 저장했습니다.`);
                   void gas.reload();
+                  void allStations.reload();
                 }}
               />
             ) : editing ? (
@@ -605,3 +615,4 @@ export default function AdminExplorer() {
     </main>
   );
 }
+
