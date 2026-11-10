@@ -29,7 +29,11 @@ import {compileRouteProximity, expandedBounds, routeStationRadiusMeters} from ".
 import {filterByGeoScope} from "./geo-search";
 import {saveGasStation} from "./gas-station-save";
 import type {StationUpdateRequest} from "./gas-station-validation";
-import {normalizeExGasStations, selectExStationColumns, selectMobileExStationColumns} from "./ex-gas-stations";
+import {
+  normalizeExGasStations,
+  selectExStationColumns,
+  selectMobileExStationColumns,
+} from "./ex-gas-stations";
 import {synchronizeExStations, type ExStationSyncSummary} from "./ex-station-sync";
 import {synchronizeExStationPrices, type ExStationPriceSyncSummary} from "./ex-station-price-sync";
 import {fetchFoodMenus} from "./food-menu-source";
@@ -49,7 +53,7 @@ function getPool(): Result<Pool> {
   if (!databaseGlobal.restAreaPool) {
     databaseGlobal.restAreaPool = new Pool({
       connectionString: config.value.connectionString,
-      max: 1,
+      max: 2,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 8_000,
       ssl: {rejectUnauthorized: false},
@@ -66,7 +70,14 @@ export async function queryRestAreas(mobile = false): Promise<Result<RestAreasRe
     const pool = getPool();
     if (!pool.ok) return pool;
     const sql = `${mobile ? selectMobileRestAreaColumns : selectRestAreaColumns} ORDER BY name, id`;
-    const {rows} = mobile ? await timedMapQuery<QueryResult<QueryResultRow>>(() => pool.value.connect(), sql, [], timing) : await pool.value.query<QueryResultRow>(sql);
+    const {rows} = mobile
+      ? await timedMapQuery<QueryResult<QueryResultRow>>(
+          () => pool.value.connect(),
+          sql,
+          [],
+          timing,
+        )
+      : await pool.value.query<QueryResultRow>(sql);
     processingStart = performance.now();
     const parsed = normalizeRestAreas(rows);
     if (!parsed.ok) return parsed;
@@ -85,7 +96,13 @@ export async function queryRestAreas(mobile = false): Promise<Result<RestAreasRe
   } catch (error) {
     return {ok: false, error: databaseError(error)};
   } finally {
-    if (mobile) logMapQueryTiming("rest", timing, processingStart === null ? null : performance.now() - processingStart, ok);
+    if (mobile)
+      logMapQueryTiming(
+        "rest",
+        timing,
+        processingStart === null ? null : performance.now() - processingStart,
+        ok,
+      );
   }
 }
 
@@ -139,25 +156,36 @@ export async function queryGasStations(
     let where = "";
     if (bounds) {
       const longitude =
-        bounds.west <= bounds.east ? "gs_longi BETWEEN $3 AND $4" : "(gs_longi >= $3 OR gs_longi <= $4)";
+        bounds.west <= bounds.east
+          ? "gs_longi BETWEEN $3 AND $4"
+          : "(gs_longi >= $3 OR gs_longi <= $4)";
       where = ` WHERE gs_lat BETWEEN $1 AND $2 AND ${longitude}`;
       values.push(bounds.south, bounds.north, bounds.west, bounds.east);
     }
-      const records: GasStationRecord[] = [];
-      if (query.source === "all") {
-        const {rows} = await pool.value.query<QueryResultRow>(
-          `${selectStationColumns}${where} ORDER BY "gs_sitenm", "gs_id"`,
-          values,
-        );
-        for (const row of rows) {
-          const parsed = stationRecordFromRow(row);
-          if (!parsed.ok) return parsed;
-          records.push(parsed.value);
-        }
+    const records: GasStationRecord[] = [];
+    if (query.source === "all") {
+      const {rows} = await pool.value.query<QueryResultRow>(
+        `${selectStationColumns}${where} ORDER BY "gs_sitenm", "gs_id"`,
+        values,
+      );
+      for (const row of rows) {
+        const parsed = stationRecordFromRow(row);
+        if (!parsed.ok) return parsed;
+        records.push(parsed.value);
       }
-    const exWhere = where.replace(/\bgs_lat\b/g, "ex_latitude").replace(/\bgs_longi\b/g, "ex_longitude");
+    }
+    const exWhere = where
+      .replace(/\bgs_lat\b/g, "ex_latitude")
+      .replace(/\bgs_longi\b/g, "ex_longitude");
     const sql = `${mobile ? selectMobileExStationColumns : selectExStationColumns}${exWhere} ORDER BY service_area_name, id`;
-    const {rows: exRows} = mobile ? await timedMapQuery<QueryResult<QueryResultRow>>(() => pool.value.connect(), sql, values, timing) : await pool.value.query<QueryResultRow>(sql, values);
+    const {rows: exRows} = mobile
+      ? await timedMapQuery<QueryResult<QueryResultRow>>(
+          () => pool.value.connect(),
+          sql,
+          values,
+          timing,
+        )
+      : await pool.value.query<QueryResultRow>(sql, values);
     processingStart = performance.now();
     const exStations = normalizeExGasStations(exRows);
     if (!exStations.ok) return exStations;
@@ -180,7 +208,13 @@ export async function queryGasStations(
       error.message = "주유소 테이블(tb_gscargo, tb_ex_station_geocodes)을 확인해주세요.";
     return {ok: false, error};
   } finally {
-    if (mobile) logMapQueryTiming("station", timing, processingStart === null ? null : performance.now() - processingStart, ok);
+    if (mobile)
+      logMapQueryTiming(
+        "station",
+        timing,
+        processingStart === null ? null : performance.now() - processingStart,
+        ok,
+      );
   }
 }
 
@@ -189,16 +223,34 @@ export async function queryMobileDetail(kind: "rest" | "station", id: number) {
     const pool = getPool();
     if (!pool.ok) return pool;
     if (kind === "rest") {
-      const {rows} = await pool.value.query<QueryResultRow>(`${selectRestAreaColumns} WHERE lg_id = $1`, [id]);
-      if (!rows.length) return {ok: false as const, error: {code: "NOT_FOUND", message: "휴게소를 찾을 수 없습니다."}};
+      const {rows} = await pool.value.query<QueryResultRow>(
+        `${selectRestAreaColumns} WHERE lg_id = $1`,
+        [id],
+      );
+      if (!rows.length)
+        return {
+          ok: false as const,
+          error: {code: "NOT_FOUND", message: "휴게소를 찾을 수 없습니다."},
+        };
       const parsed = normalizeRestAreas(rows);
-      return parsed.ok ? {ok: true as const, value: {...parsed.value[0], revision: rowRevision(rows[0])}} : parsed;
+      return parsed.ok
+        ? {ok: true as const, value: {...parsed.value[0], revision: rowRevision(rows[0])}}
+        : parsed;
     }
-    const {rows} = await pool.value.query<QueryResultRow>(`${selectExStationColumns} WHERE ex_id = $1`, [id]);
-    if (!rows.length) return {ok: false as const, error: {code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다."}};
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `${selectExStationColumns} WHERE ex_id = $1`,
+      [id],
+    );
+    if (!rows.length)
+      return {
+        ok: false as const,
+        error: {code: "NOT_FOUND", message: "주유소를 찾을 수 없습니다."},
+      };
     const parsed = normalizeExGasStations(rows);
     return parsed.ok ? {ok: true as const, value: parsed.value[0]} : parsed;
-  } catch (error) { return {ok: false as const, error: databaseError(error)}; }
+  } catch (error) {
+    return {ok: false as const, error: databaseError(error)};
+  }
 }
 
 /** Updates the read-only EX station snapshot from the Korea Expressway Corporation API. */
@@ -237,12 +289,16 @@ export async function queryFoodMenus(restAreaId: number): Promise<Result<FoodMen
       [restAreaId],
     );
     const items = rows.map(row => ({
-      key: String(row.source_key), name: String(row.food_nm),
+      key: String(row.source_key),
+      name: String(row.food_nm),
       price: row.food_cost === null ? null : Number(row.food_cost),
       recommended: typeof row.recommendyn === "boolean" ? row.recommendyn : null,
       best: typeof row.bestfoodyn === "boolean" ? row.bestfoodyn : null,
       sourceUpdatedAt: typeof row.source_updated_at === "string" ? row.source_updated_at : null,
-      collectedAt: row.collected_at instanceof Date ? row.collected_at.toISOString() : String(row.collected_at),
+      collectedAt:
+        row.collected_at instanceof Date
+          ? row.collected_at.toISOString()
+          : String(row.collected_at),
     }));
     return {ok: true, value: {items, collectedAt: items[0]?.collectedAt ?? null}};
   } catch (reason) {
