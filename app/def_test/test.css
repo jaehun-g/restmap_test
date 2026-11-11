@@ -1,0 +1,190 @@
+.def-test-page {
+  min-height: 100vh;
+  padding-top: 20px;
+  background: #fff;
+  color: #303033;
+  font-family: Arial, "Malgun Gothic", sans-serif;
+}
+.def-test-card {
+  max-width: 525px;
+  margin: 0 auto;
+  padding: 36px 22px 34px;
+  background: #f0f7fc;
+}
+.def-test-heading,
+.def-test-titleGroup,
+.def-test-row,
+.def-test-value,
+.def-test-footer {
+  display: flex;
+  align-items: center;
+}
+.def-test-heading {
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.def-test-titleGroup {
+  gap: 10px;
+  min-width: 0;
+}
+.def-test-titleGroup h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1.5px;
+  white-space: nowrap;
+}
+.def-test-selectWrap {
+  position: relative;
+  flex: none;
+}
+.def-test-selectWrap::after {
+  position: absolute;
+  top: 19px;
+  right: 22px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #aebac5;
+  border-bottom: 2px solid #aebac5;
+  content: "";
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+.def-test-selectWrap select {
+  width: 100px;
+  height: 50px;
+  padding: 0 35px 0 20px;
+  appearance: none;
+  border: 1px solid #dce4eb;
+  border-radius: 28px;
+  background: #fff;
+  color: #303033;
+  font: inherit;
+  font-size: 19px;
+  letter-spacing: -1px;
+}
+.def-test-selectWrap .def-test-longSelect {
+  width: 140px;
+}
+.def-test-date {
+  color: #687888;
+  font-size: 17px;
+  letter-spacing: -0.8px;
+  white-space: nowrap;
+}
+.def-test-prices {
+  min-height: 119px;
+  padding: 22px;
+  border-radius: 19px;
+  background: #fff;
+}
+.def-test-row {
+  min-height: 37px;
+  justify-content: space-between;
+  gap: 5px;
+  color: #697989;
+  font-size: 17px;
+  letter-spacing: -1px;
+  white-space: nowrap;
+}
+.def-test-row + .def-test-row {
+  border-top: 1px solid #dce3e8;
+}
+.def-test-value {
+  justify-content: flex-end;
+  gap: 6px;
+}
+.def-test-row strong {
+  color: #303033;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -1.3px;
+  line-height: 1;
+}
+.def-test-change {
+  color: #99a7b2;
+  font-size: 15px;
+}
+.def-test-up { color: #f04438; }
+.def-test-down { color: #0084ff; }
+.def-test-message,
+.def-test-error {
+  margin: 9px 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.def-test-error {
+  color: #b42318;
+}
+.def-test-note {
+  margin: 12px 0 0;
+  color: #98a4ae;
+  font-size: 16px;
+  letter-spacing: -0.7px;
+  line-height: 1.5;
+}
+.def-test-details {
+  max-width: 525px;
+  margin: 0 auto;
+  padding: 18px 22px;
+  color: #8997a3;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.def-test-details p + p {
+  margin-top: 4px;
+}
+.def-test-footer {
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.def-test-footer a {
+  color: #667d90;
+}
+.def-test-footer button {
+  border: 1px solid #dce4eb;
+  border-radius: 8px;
+  background: white;
+  padding: 6px 10px;
+}
+.def-test-srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 440px) {
+  .def-test-card {
+    padding: 28px 16px;
+  }
+  .def-test-heading {
+    flex-wrap: wrap;
+  }
+  .def-test-titleGroup h1 {
+    font-size: 23px;
+  }
+  .def-test-date {
+    font-size: 14px;
+  }
+  .def-test-prices {
+    padding: 18px 14px;
+  }
+  .def-test-row {
+    font-size: 13px;
+  }
+  .def-test-row strong {
+    font-size: 20px;
+  }
+  .def-test-value { flex-wrap: wrap; gap: 2px 5px; }
+  .def-test-change { font-size: 12px; }
+  .def-test-note {
+    font-size: 14px;
+  }
+}
