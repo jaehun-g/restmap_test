@@ -3,7 +3,7 @@
 import {useState} from "react";
 import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton} from "@/components/ui/button";
-import {facilityDefinitions, highlightedFacilities, type RestArea, routeDescription} from "@/lib/rest-areas";
+import {facilityDefinitions, hasCoordinates, highlightedFacilities, type RestArea, routeDescription} from "@/lib/rest-areas";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import FoodMenuSection from "@/components/food-menu-section";
@@ -29,13 +29,19 @@ export default function RestAreaDetails({
   onExpand?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("시설");
+  const linkedStations = stations.filter(station => station.brand === "EX");
+  const directStation = audience === "mobile" && linkedStations.length === 1 &&
+    hasCoordinates(linkedStations[0]) && onStationMap ? linkedStations[0] : null;
   const selectTab = (next: Tab) => {
+    if (next === "주유" && directStation && onStationMap) {
+      onStationMap(directStation);
+      return;
+    }
     setTab(next);
     onExpand?.();
   };
   const provided = facilityDefinitions.filter(([key]) => area.facilities[key] === true);
   const unavailable = facilityDefinitions.filter(([key]) => area.facilities[key] === false);
-  const linkedStations = stations.filter(station => station.brand === "EX");
   const gasoline = restAreaPriceSummary(linkedStations, "gasoline");
   const diesel = restAreaPriceSummary(linkedStations, "diesel");
 
@@ -87,7 +93,7 @@ export default function RestAreaDetails({
         </div>
         {linkedStations.length > 0 && (
           <button type="button" className="detail-station-link" onClick={() => selectTab("주유")}>
-            주유소 {linkedStations.length}곳 · 방향별 가격 확인 →
+            {directStation ? "주유소 지도에서 보기 →" : `주유소 ${linkedStations.length}곳 · 방향별 가격 확인 →`}
           </button>
         )}
       </div>

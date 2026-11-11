@@ -40,6 +40,25 @@ async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
   throw new Error("마커 레이어가 데이터 조회 완료 후 안정화되지 않았습니다.");
 }
 
+test("모바일에서 연결 주유소가 한 곳이면 주유 탭에서 바로 지도 정보를 연다", async ({page, context}) => {
+  const area = {...restAreaResponse.items[0], name: "E2E(부산)", routeName: "경부선", directionLabel: "부산 방향", latitude: 37.49, longitude: 127};
+  const station = {...gasStationResponse.items[0], name: "E2E(부산)주유소", routeName: "경부선", direction: "부산", latitude: 37.4905, longitude: 127};
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
+  await page.route("**/api/gas-stations**", route => route.fulfill({json: {...gasStationResponse, items: [station]}}));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.49, longitude: 127});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  await waitForMarkerLayerToSettle(page);
+  await page.locator(".sheet-summary").click();
+  await page.locator(".mobile-area-card").filter({hasText: area.name}).click();
+  await page.getByRole("tab", {name: "주유", exact: true}).click();
+  await expect(page.locator(".sheet-summary")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain(station.name);
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.panPositions.some(([lat]) => Math.abs(lat - 37.4905) < 0.000001))).toBe(true);
+});
+
 for (const audience of ["mobile", "admin"] as const) {
   test(`${audience} 양방향 휴게소의 유가 범위와 방향별 주유소 지도 이동`, async ({page, context}) => {
     const pageErrors: Error[] = [];
