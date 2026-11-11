@@ -3,6 +3,10 @@ import type {FacilityStation} from "./facility-places.ts";
 import type {RestArea} from "./rest-areas.ts";
 import type {GasStation} from "./gas-stations.ts";
 
+export function previewForRestArea<T extends {restAreaId: number}>(preview: T | null, restAreaId: number): T | null {
+  return preview?.restAreaId === restAreaId ? preview : null;
+}
+
 export function mobilePlaceList(
   areas: RestArea[],
   stations: FacilityStation<GasStation>[],

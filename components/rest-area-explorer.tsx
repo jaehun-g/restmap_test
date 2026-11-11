@@ -14,7 +14,7 @@ import type {GasStation, GasStationRecord} from "@/lib/gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
 import type {PlaceView} from "@/lib/map-places";
-import {mobilePlaceList} from "@/lib/mobile-place-list";
+import {mobilePlaceList, previewForRestArea} from "@/lib/mobile-place-list";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
@@ -54,11 +54,12 @@ export default function MobileExplorer({initialData}: {
   );
   const [panel, setPanel] = useState<Panel>("collapsed");
   const [detailExpanded, setDetailExpanded] = useState(false);
+  const [panelExpanded, setPanelExpanded] = useState(false);
   const touchStart = useRef<{x: number; y: number; canCollapse: boolean} | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [previewStation, setPreviewStation] = useState<{
-    station: GasStation; filters: typeof filters; query: string; view: PlaceView;
+    station: GasStation; restAreaId: number; filters: typeof filters; query: string; view: PlaceView;
   } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
@@ -236,13 +237,13 @@ export default function MobileExplorer({initialData}: {
   const expanded = effectivePanel !== "collapsed";
   const resultCount = listPlaces.length;
   const select = useCallback((id: number | null) => {
-    if (id !== null) setPreviewStation(null);
+    if (id !== null) setPreviewStation(current => previewForRestArea(current, id));
     setSelectedStationId(null);
     setSelectedId(id);
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
-    setPreviewStation(null);
+    setPreviewStation(current => previewForRestArea(current, id));
     setDetailExpanded(false);
     setSelectedStationId(null);
     setSelectedId(id);
@@ -251,6 +252,7 @@ export default function MobileExplorer({initialData}: {
   const collapse = useCallback(() => {
     setPanel("collapsed");
     setDetailExpanded(false);
+    setPanelExpanded(false);
   }, []);
   const selectStation = useCallback((id: string | null) => {
     if (id !== null) setPreviewStation(current => current && stationKey(current.station) === id ? current : null);
@@ -310,6 +312,7 @@ export default function MobileExplorer({initialData}: {
   }, [expanded, effectivePanel, selectedId, collapse]);
   const open = (next: Panel, element: HTMLElement) => {
     returnFocus.current = element;
+    setPanelExpanded(false);
     setPanel(next);
   };
   const reset = () => {
@@ -422,6 +425,7 @@ export default function MobileExplorer({initialData}: {
             fitRequest={view.fitRequest}
             searchFitPlaces={listPlaces}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
+            pinnedStationId={visiblePreviewStation ? stationKey(visiblePreviewStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
             areasLoading={loading}
@@ -445,11 +449,11 @@ export default function MobileExplorer({initialData}: {
         </div>
         <section
           ref={sheetRef}
-          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : ""}`}
+          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : expanded && panelExpanded ? "is-panel-full" : ""}`}
           onTouchStart={event => {
             const touch = event.touches[0];
-            const scroll = (event.target as HTMLElement).closest<HTMLElement>(".detail-scroll");
-            touchStart.current = effectivePanel === "detail" && touch
+            const scroll = (event.target as HTMLElement).closest<HTMLElement>(".detail-scroll, .mobile-area-list, .filter-sheet-scroll");
+            touchStart.current = touch
               ? {x: touch.clientX, y: touch.clientY, canCollapse: !scroll || scroll.scrollTop <= 0}
               : null;
           }}
@@ -458,17 +462,25 @@ export default function MobileExplorer({initialData}: {
             const touch = event.changedTouches[0];
             touchStart.current = null;
             if (!start || !touch) return;
-            const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY}, detailExpanded);
+            const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY}, effectivePanel === "detail" ? detailExpanded : panelExpanded);
+            if (effectivePanel === "collapsed") {
+              if (action === "expand") open("list", summaryRef.current ?? event.currentTarget);
+              return;
+            }
             if (action === "close") collapse();
-            else if (action) setDetailExpanded(action === "expand");
+            else if (action && effectivePanel === "detail") setDetailExpanded(action === "expand");
+            else if (action) setPanelExpanded(action === "expand");
           }}
+          onTouchCancel={() => { touchStart.current = null; }}
           aria-label={
             effectivePanel === "detail"
-              ? "휴게소 상세정보"
+              ? (selectedStation ? "주유소 상세정보" : "휴게소 상세정보")
               : effectivePanel === "routes"
                 ? "노선 필터"
                 : effectivePanel === "facilities"
                   ? "편의시설 필터"
+                  : effectivePanel === "directions"
+                    ? "방향 필터"
                   : "휴게소 목록"
           }
         >
@@ -558,9 +570,10 @@ export default function MobileExplorer({initialData}: {
                     </IconButton>
                   </div>
                   <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => {
-                    setPreviewStation({station, filters, query: search.query, view: placeView});
+                    setPreviewStation({station, restAreaId: selected.id, filters, query: search.query, view: placeView});
                     setSelectedId(null);
                     setSelectedStationId(stationKey(station));
+                    setDetailExpanded(false);
                     setPanel("collapsed");
                   }} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
                 </>

@@ -48,8 +48,8 @@ export function createPlaceMarkers(
 ) {
   const above = placement === "above";
   const cardArea = (view: DOMRect) => {
-    // placement-above의 translateY(-43px) 아래에 있는 마커도 패널에 가려지지 않아야 한다.
-    const bottom = above ? Math.max(view.top, view.bottom - 43) : view.bottom;
+    // 위쪽 카드 아래의 마커도 패널에 가려지지 않아야 한다.
+    const bottom = above ? Math.max(view.top, view.bottom - 51) : view.bottom;
     return {left: view.left, right: view.right, width: view.width,
       top: view.top, bottom, height: bottom - view.top};
   };
@@ -74,14 +74,14 @@ export function createPlaceMarkers(
     content: "",
     clickable: true,
     xAnchor: 0.5,
-    yAnchor: above ? 1 : 0,
+    yAnchor: 0,
     zIndex: 5,
   });
   const listOverlay = new sdk.CustomOverlay({
     content: "",
     clickable: true,
     xAnchor: 0.5,
-    yAnchor: above ? 1 : 0,
+    yAnchor: 0,
     zIndex: 6,
   });
   let listItems: MapPlace[] | null = null,
@@ -131,6 +131,7 @@ export function createPlaceMarkers(
   let card: HTMLElement | null = null,
     frame: number | null = null,
     activeKey: string | null = null;
+  let pinnedKey: string | null = null;
   let allowAdjustment = true;
   let zoomPending = false;
   // Kakao Maps can emit its map click immediately after a marker/overlay click.
@@ -415,12 +416,13 @@ export function createPlaceMarkers(
     }
     const previous = activeKey === null ? undefined : unitOfPlace.get(activeKey);
     const selected = key === null ? undefined : unitOfPlace.get(key);
+    const pinned = pinnedKey === null ? undefined : unitOfPlace.get(pinnedKey);
     if (clusterer && key !== activeKey) {
-      if (previous) {
+      if (previous && previous !== selected && previous !== pinned) {
         previous.marker.setMap(null);
         clusterer.addMarker(previous.marker, true);
       }
-      if (selected) {
+      if (selected && selected !== previous && selected !== pinned) {
         clusterer.removeMarker(selected.marker, true);
         selected.marker.setMap(map);
       }
@@ -562,10 +564,12 @@ export function createPlaceMarkers(
       placesByMarker.set(unit.marker, grouped);
     }
     const selectedUnit = activeKey === null ? undefined : unitOfPlace.get(activeKey);
+    const pinnedUnit = pinnedKey === null ? undefined : unitOfPlace.get(pinnedKey);
     if (clusterer) {
-      const clusteredAdditions = added.filter(marker => marker !== selectedUnit?.marker);
+      const clusteredAdditions = added.filter(marker => marker !== selectedUnit?.marker && marker !== pinnedUnit?.marker);
       if (clusteredAdditions.length) clusterer.addMarkers(clusteredAdditions, true);
       if (selectedUnit) selectedUnit.marker.setMap(map);
+      if (pinnedUnit && pinnedUnit !== selectedUnit) pinnedUnit.marker.setMap(map);
       if (changed) clusterer.redraw();
     }
     const previousKey = activeKey;
@@ -649,6 +653,23 @@ export function createPlaceMarkers(
   update(places);
   return {
     update,
+    setPinned(key: string | null) {
+      if (key === pinnedKey) return;
+      const previous = pinnedKey === null ? undefined : unitOfPlace.get(pinnedKey);
+      const next = key === null ? undefined : unitOfPlace.get(key);
+      const selected = activeKey === null ? undefined : unitOfPlace.get(activeKey);
+      pinnedKey = key;
+      if (!clusterer || previous === next) return;
+      if (previous && previous !== selected) {
+        previous.marker.setMap(null);
+        clusterer.addMarker(previous.marker, true);
+      }
+      if (next && next !== selected) {
+        clusterer.removeMarker(next.marker, true);
+        next.marker.setMap(map);
+      }
+      clusterer.redraw();
+    },
     suspendCardAdjustment() {
       allowAdjustment = false;
       if (frame !== null) {

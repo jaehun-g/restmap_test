@@ -90,7 +90,13 @@ for (const audience of ["mobile", "admin"] as const) {
     await expect(page.locator(".detail-gas-content")).toContainText("부산 방향");
     await page.locator(".detail-gas-content article").filter({hasText: "부산 방향"}).getByRole("button", {name: "지도에서 보기 →"}).click();
     await expect(page.locator(".detail-gas-content")).not.toBeVisible();
-    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("E2E(부산)주유소");
+    if (audience === "mobile") {
+      await expect(page.locator(".sheet-summary")).toBeVisible();
+      await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.panPositions.some(([lat]) => Math.abs(lat - 37.491) < 0.000001))).toBe(true);
+      await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("E2E(부산)주유소");
+    } else {
+      await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("E2E(부산)주유소");
+    }
     expect(pageErrors).toEqual([]);
   });
 }

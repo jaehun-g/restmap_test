@@ -204,7 +204,7 @@ input[type="checkbox"] {
   content: "";
 }
 .map-info-card.placement-above {
-  @apply [transform:translateY(-43px)];
+  @apply [transform:translateY(calc(-100%_-_51px))];
 }
 .map-info-card.placement-above::after {
   @apply top-auto bottom-[-7px] [transform:rotate(45deg)];

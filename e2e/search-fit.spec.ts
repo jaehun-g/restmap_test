@@ -64,6 +64,37 @@ test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와
   await expect(page.locator(".sheet-summary")).toBeVisible();
 });
 
+test("목록과 노선·편의시설 필터는 스와이프로 확장하고 스크롤 위치를 보존한다", async ({page}) => {
+  await mockMapData(page);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  const sheet = page.locator(".mobile-sheet");
+  const swipe = async (target: typeof sheet, from: number, to: number) => {
+    await target.dispatchEvent("touchstart", {touches: [{identifier: 1, clientX: 100, clientY: from}]});
+    await target.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: to}]});
+  };
+  await swipe(sheet, 600, 500);
+  await expect(page.getByRole("heading", {name: /장소 목록/})).toBeVisible();
+  await swipe(sheet, 600, 500);
+  await expect(sheet).toHaveClass(/is-panel-full/);
+  await expect(page.locator(".mobile-area-card").first()).toBeVisible();
+  await swipe(sheet, 300, 400);
+  await expect(sheet).not.toHaveClass(/is-panel-full/);
+  await swipe(sheet, 300, 400);
+  await expect(page.locator(".sheet-summary")).toBeVisible();
+  for (const [button, heading] of [["전체 노선", "노선 선택"], ["휴게소 편의시설", "편의시설 선택"]]) {
+    await page.getByRole("button", {name: button, exact: true}).click();
+    await expect(page.getByRole("heading", {name: heading})).toBeVisible();
+    await swipe(sheet, 600, 500);
+    await expect(sheet).toHaveClass(/is-panel-full/);
+    await expect(page.locator(".filter-sheet-scroll")).toBeVisible();
+    await swipe(sheet, 300, 400);
+    await expect(sheet).not.toHaveClass(/is-panel-full/);
+    await swipe(sheet, 300, 400);
+    await expect(page.locator(".sheet-summary")).toBeVisible();
+  }
+});
+
 test("모바일 장소 보기와 필터가 한 줄에서 가로 스크롤로 동작한다", async ({page}) => {
   await mockMapData(page);
   await page.setViewportSize({width: 390, height: 844});

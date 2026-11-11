@@ -34,6 +34,7 @@ function mockKakao() {
     content: [] as unknown[],
     clickable: [] as boolean[],
     prevented: 0,
+    overlayAnchors: [] as number[],
   };
   class LatLng {
     latitude: number;
@@ -90,6 +91,7 @@ function mockKakao() {
     setZIndex() {}
   }
   class Overlay {
+    constructor(options: {yAnchor: number}) { state.overlayAnchors.push(options.yAnchor); }
     setContent(content: unknown) {
       state.content.push(content);
     }
@@ -160,6 +162,14 @@ function areas(): RestArea[] {
 }
 const label = () => ({}) as HTMLElement;
 
+test("모바일 정보창은 높이가 달라져도 CSS 기준으로 마커 위에 배치한다", t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const layer = createPlaceMarkers(sdk, map, [], () => {}, label, undefined, undefined, "above");
+  assert.deepEqual(state.overlayAnchors, [0, 0]);
+  layer.dispose();
+});
+
 test("클러스터는 화면상 가까운 표시 단위 두 개부터 묶는다", t => {
   installCardDOM(t);
   const {sdk, map} = mockKakao();
@@ -172,6 +182,36 @@ test("클러스터는 화면상 가까운 표시 단위 두 개부터 묶는다"
   assert.equal(options?.gridSize, 48);
   assert.equal(options?.minClusterSize, 2);
   assert.equal(options?.minLevel, 7);
+  layer.dispose();
+});
+
+test("고정된 주유소는 연결 휴게소 선택 후에도 클러스터에 흡수되지 않는다", t => {
+  installCardDOM(t);
+  const {sdk, map} = mockKakao();
+  const members = new Set<unknown>();
+  sdk.MarkerClusterer = class {
+    addMarkers(markers: unknown[]) { markers.forEach(marker => members.add(marker)); }
+    addMarker(marker: unknown) { members.add(marker); }
+    removeMarker(marker: unknown) { members.delete(marker); }
+    redraw() {} setMinLevel() {} clear() { members.clear(); }
+  } as unknown as NonNullable<KakaoMaps["MarkerClusterer"]>;
+  const station = normalizeExGasStations([{
+    id: 1, source_key: "pinned", service_area_name: "연결 주유소",
+    latitude: 37.001, longitude: 127,
+  }]);
+  assert.ok(station.ok);
+  const place = stationPlace(station.value[0]);
+  const layer = createPlaceMarkers(sdk, map, [restPlace(areas()[0]), place], () => {}, label);
+  assert.equal(members.size, 2);
+  layer.setPinned(place.key);
+  assert.equal(members.size, 1);
+  layer.select(place.key);
+  layer.select("rest:1");
+  assert.equal(members.size, 0, "선택된 휴게소와 고정 주유소는 각각 개별 표시");
+  layer.select(null);
+  assert.equal(members.size, 1, "선택 해제 후에도 주유소는 개별 표시");
+  layer.setPinned(null);
+  assert.equal(members.size, 2, "미리보기 종료 후 클러스터에 복귀");
   layer.dispose();
 });
 

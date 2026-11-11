@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mobilePlaceList} from "../lib/mobile-place-list.ts";
+import {mobilePlaceList, previewForRestArea} from "../lib/mobile-place-list.ts";
 import type {RestArea} from "../lib/rest-areas.ts";
 import type {FacilityStation} from "../lib/facility-places.ts";
 
@@ -21,4 +21,11 @@ test("휴게소 보기는 휴게소만 표시한다", () => {
 });
 test("주유소 보기는 연결 여부와 관계없이 주유소 위치를 각각 표시한다", () => {
   assert.deepEqual(keys("ex"), ["station:EX:linked-a", "station:EX:linked-b", "station:EX:standalone", "station:EX:hidden-area"]);
+});
+
+test("연결된 휴게소를 다시 선택하면 주유소 미리보기를 유지하고 다른 휴게소는 정리한다", () => {
+  const preview = {restAreaId: 1, station: "linked-a"};
+  assert.equal(previewForRestArea(preview, 1), preview);
+  assert.equal(previewForRestArea(preview, 2), null);
+  assert.equal(previewForRestArea(null, 1), null);
 });

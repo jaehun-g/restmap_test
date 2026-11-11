@@ -42,6 +42,7 @@ export default function KakaoMap({
   stations = emptyStations,
   searchFitPlaces,
   selectedStationId = null,
+  pinnedStationId = null,
   onStationSelect,
   onStationDetails,
   areasLoading = false,
@@ -71,6 +72,7 @@ export default function KakaoMap({
   stations?: GasStation[];
   searchFitPlaces?: MapPlace[];
   selectedStationId?: string | null;
+  pinnedStationId?: string | null;
   onStationSelect?: (id: string | null) => void;
   onStationDetails?: (id: string) => void;
   areasLoading?: boolean;
@@ -283,6 +285,9 @@ export default function KakaoMap({
   useEffect(() => {
     layer.current?.update(committedPlaces);
   }, [map, committedPlaces]);
+  useEffect(() => {
+    layer.current?.setPinned(pinnedStationId);
+  }, [map, pinnedStationId, selectPlace, card, cardViewport, clearSelection, audience, runProgrammaticMapAction]);
   useEffect(() => {
     if (!map || !container.current) return;
     const adjust = () => layer.current?.adjustCard();

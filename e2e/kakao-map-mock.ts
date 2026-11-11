@@ -11,6 +11,7 @@ type KakaoMapMockMetrics = {
   redraws: number;
   boundsFits: number[][][];
   centerFits: number[][];
+  panPositions: number[][];
 };
 
 declare global {
@@ -49,7 +50,7 @@ export const installKakaoMapsMock = `
         window.__kakaoMapMock.initialViews.push({latitude: options.center.getLat(), longitude: options.center.getLng(), level: options.level});
       }
       setCenter(center) { this.center = center; window.__kakaoMapMock.centerFits.push([center.getLat(), center.getLng()]); }
-      panTo(center) { this.center = center; }
+      panTo(center) { this.center = center; window.__kakaoMapMock.panPositions.push([center.getLat(), center.getLng()]); }
       panBy() {}
       getCenter() { return this.center; }
       getBounds() { return this.bounds; }
@@ -96,7 +97,7 @@ export const installKakaoMapsMock = `
       setMinLevel() {}
       clear() { window.__kakaoMapMock.activeClusterers--; }
     }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, activeClusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
+    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, activeClusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: [], panPositions: []};
     window.kakao = {maps: {
       MapTypeId: {ROADMAP: 1, HYBRID: 3},
       Map: MapView,
