@@ -92,14 +92,14 @@ export default function RestAreaEditor({
           <span className={sharedClasses.eyebrow}>ID {original.id} · test_lounge</span>
           <h2>휴게소 정보 수정</h2>
         </div>
-        <span className="edit-status text-[9px] text-[#a68350]">
+        <span className={sharedClasses.editStatus}>
           {dirty ? "미저장 변경" : "변경 없음"}
         </span>
       </div>
       <div className={sharedClasses.editorScroll}>
         {!authenticated && (
           <p
-            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            className={sharedClasses.formError}
             role="alert"
           >
             인증이 만료되었거나 편집이 잠겼습니다. 관리자 인증 후 저장해주세요. 입력 초안은
@@ -153,7 +153,7 @@ export default function RestAreaEditor({
                       placeholder={"required" in field ? "필수" : "미등록"}
                     />}
                     {changed && (
-                      <small className="previous-value block text-[#a2adbd] text-[8px] mt-[3px] [overflow-wrap:anywhere]">
+                      <small className="previous-value block text-[#a2adbd] text-ui-10 mt-[3px] [overflow-wrap:anywhere]">
                         기존: {before || "미등록"}
                       </small>
                     )}
@@ -212,7 +212,7 @@ export default function RestAreaEditor({
         </fieldset>
         {error && (
           <p
-            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            className={sharedClasses.formError}
             role="alert"
           >
             {error}

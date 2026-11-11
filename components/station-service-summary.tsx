@@ -29,7 +29,7 @@ export default function StationServiceSummary({station}: {station: GasStation}) 
               className={value === true ? "available" : value === null ? "unknown" : "unavailable"}
             >
               <span>{label}</span>
-              <span className="facility-state shrink-0 text-[9px]">
+              <span className="facility-state shrink-0 text-ui-10">
                 {value === true ? "있음" : value === false ? "없음" : "미확인"}
               </span>
             </li>

@@ -107,7 +107,7 @@ export default function MobileFilterSheet({
               ))}
             </ul>
             {!found.length && routeQuery && (
-              <p className="filter-empty p-[15px] text-center text-muted text-[12px]">
+              <p className="filter-empty p-[15px] text-center text-muted text-ui-12">
                 일치하는 노선이 없습니다.
               </p>
             )}

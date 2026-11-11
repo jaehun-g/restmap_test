@@ -83,14 +83,14 @@ export default function GasStationEditor({
           <span className={sharedClasses.eyebrow}>GS 코드 {original.siteCode}</span>
           <h2>주유소 정보 수정</h2>
         </div>
-        <span className="edit-status text-[9px] text-[#a68350]">
+        <span className={sharedClasses.editStatus}>
           {dirty ? "미저장 변경" : "변경 없음"}
         </span>
       </div>
       <div className={sharedClasses.editorScroll}>
         {!authenticated && (
           <p
-            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            className={sharedClasses.formError}
             role="alert"
           >
             관리자 인증 후 저장해주세요. 입력 초안은 유지됩니다.
@@ -178,7 +178,7 @@ export default function GasStationEditor({
         </p>
         {error && (
           <p
-            className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+            className={sharedClasses.formError}
             role="alert"
           >
             {error}

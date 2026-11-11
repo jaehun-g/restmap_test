@@ -21,7 +21,7 @@ export default function FacilitySummary({area}: {area: RestArea}) {
         {facilityDefinitions.map(([key, label]) => (
           <li key={key} className={area.facilities[key] === true ? "available" : "unknown"}>
             <span>{label}</span>
-            <span className="facility-state shrink-0 text-[9px]">
+            <span className="facility-state shrink-0 text-ui-10">
               {area.facilities[key] === true
                 ? "있음"
                 : area.facilities[key] === false

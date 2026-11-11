@@ -62,7 +62,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           <button
-            className="table-area-name text-[#33445d] text-[12px] font-[650] p-[2px_0] [border:0] bg-[transparent] text-left"
+            className="table-area-name text-[#33445d] text-ui-12 font-[650] p-[2px_0] [border:0] bg-[transparent] text-left"
             aria-pressed={selectedId === area.id}
             onClick={event => {
               event.stopPropagation();
@@ -71,7 +71,7 @@ export default function AdminRestAreaTable({
           >
             {area.name}
           </button>
-            <span className="table-meta block text-[9px] mt-[5px] text-[#97a3b3]">
+            <span className="table-meta block text-ui-10 mt-[5px] text-[#97a3b3]">
               {area.phone || "전화번호 미등록"}
             </span>
         </>
@@ -80,7 +80,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           {area.routeName ?? (
-            <span className="missing-value text-[#b58a48] text-[10px]">미등록</span>
+            <span className="missing-value text-[#b58a48] text-ui-10">미등록</span>
           )}
           {area.routeNumber && <Badge variant="route">{area.routeNumber}</Badge>}
         </>
@@ -89,7 +89,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           {area.directionLabel ?? "—"}
-            <span className="table-meta block text-[9px] mt-[5px] text-[#97a3b3]">
+            <span className="table-meta block text-ui-10 mt-[5px] text-[#97a3b3]">
               {area.routeDirection ?? ""}
             </span>
         </>
@@ -102,8 +102,8 @@ export default function AdminRestAreaTable({
             value === true && key === "has_truck_lounge"
               ? "lounge-badge"
               : value === null
-                ? "missing-value text-[#b58a48] text-[10px]"
-                : "table-meta block text-[9px] mt-[5px] text-[#97a3b3]"
+                ? "missing-value text-[#b58a48] text-ui-10"
+                : "table-meta block text-ui-10 mt-[5px] text-[#97a3b3]"
           }
         >
           {value === true ? "있음" : value === false ? "없음" : "미확인"}
@@ -117,7 +117,7 @@ export default function AdminRestAreaTable({
   };
   return (
     <>
-      <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
+      <div className={sharedClasses.tablePanelHeading}>
         <div className="flex min-w-0 items-center gap-[12px]">
           <h3 id="table-heading" className="shrink-0">휴게소 목록 <span>{rows.length}</span></h3>
           <Input
@@ -129,15 +129,15 @@ export default function AdminRestAreaTable({
             onChange={event => onSearchChange(event.target.value)}
           />
         </div>
-        <div className="table-heading-actions flex min-w-0 items-center gap-[9px]">
-          <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
+        <div className={sharedClasses.tableHeadingActions}>
+          <span className={sharedClasses.tableSource}>
             {sortField === "id"
               ? "DB ID"
               : sortFields.find(field => field.key === sortField)?.label}{" "}
             · {direction === "asc" ? "오름차순" : "내림차순"}
           </span>
           <button
-            className="table-columns-toggle p-[7px_9px] min-h-[35px] [border:1px_solid_#e3e9f1] rounded-[6px] bg-[#f9fbfe] text-[#7185a1] text-[10px]"
+            className={sharedClasses.tableColumnsToggle}
             aria-pressed={allColumns}
             onClick={() => {
               const next = !allColumns;
@@ -167,8 +167,8 @@ export default function AdminRestAreaTable({
       ) : (
         <>
           <div className="table-scroll flex-1 min-h-0 overflow-auto">
-            <table className="admin-data-table rest-area-table table-fixed [border-collapse:collapse] text-left text-[11px]" style={{width: 48 + columns.reduce((sum, column) => sum + columnWidth(column.key), 0) + 340}}>
-              <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
+            <table className="admin-data-table rest-area-table table-fixed [border-collapse:collapse] text-left text-ui-12" style={{width: 48 + columns.reduce((sum, column) => sum + columnWidth(column.key), 0) + 340}}>
+              <caption className={sharedClasses.screenReaderOnly}>
                 휴게소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
               </caption>
               <colgroup><col style={{width: 48}} />{basicColumns.map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}<col style={{width: 240}} /><col style={{width: 100}} />{columns.slice(basicColumns.length).map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}</colgroup>
@@ -231,7 +231,7 @@ export default function AdminRestAreaTable({
                     </td>
                     <td>
                       <span
-                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(area) ? "valid" : "missing"}`}
+                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-ui-10 ${hasCoordinates(area) ? "valid" : "missing"}`}
                       >
                         {hasCoordinates(area) ? "등록" : "미등록 / 오류"}
                       </span>

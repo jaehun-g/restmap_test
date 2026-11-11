@@ -116,7 +116,7 @@ test("shared control utilities compile and retain native control geometry", () =
   for (const variant of ["primary", "secondary", "ghost"] as const) {
     const button = declarations(buttonClasses(variant).split(" "));
     assert.equal(button["min-height"], "42px");
-    assert.equal(button["font-size"], "13px");
+    assert.equal(normalize(button["font-size"]), "14px");
     assert.equal(button.display, "inline-flex");
   }
   assert.equal(declarations(fieldClasses().split(" "))["min-height"], "34px");
@@ -127,6 +127,21 @@ test("shared control utilities compile and retain native control geometry", () =
   assert.equal(rules.get(".map-card-body")?.["overflow-y"], "auto");
   assert.equal(compiler.root, "none");
   assert.ok(compiler.sources.every(item => !item.pattern.includes("tests")));
+});
+
+test("shared typography utilities retain their pixel sizes", () => {
+  const typography = postcss.parse(compiler.build([
+    ...candidates,
+    ...[10, 12, 14, 16, 18, 20, 24, 28].map(size => `text-ui-${size}`),
+  ]));
+  for (const size of [10, 12, 14, 16, 18, 20, 24, 28]) {
+    let fontSize: string | undefined;
+    typography.walkRules(`.text-ui-${size}`, rule => {
+      rule.walkDecls("font-size", decl => { fontSize = decl.value; });
+    });
+    assert.ok(fontSize, `text-ui-${size} must be generated`);
+    assert.equal(normalize(fontSize), `${size}px`);
+  }
 });
 
 // Node strips .ts types but cannot load TSX. Compile only these native wrappers in memory.

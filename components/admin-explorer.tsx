@@ -390,7 +390,7 @@ export default function AdminExplorer() {
       />
       {notice && (
         <div
-          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#eef8f4] text-[#3a836e] [border:1px_solid_#d9ede5] rounded-[8px] text-[11px]"
+          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#eef8f4] text-[#3a836e] [border:1px_solid_#d9ede5] rounded-[8px] text-ui-12"
           role="status"
         >
           <Icon name="check" size={17} />
@@ -402,7 +402,7 @@ export default function AdminExplorer() {
       )}
       {syncError && (
         <div
-          className="sync-error-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-[11px]"
+          className="sync-error-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-ui-12"
           role="alert"
         >
           {syncError}
@@ -550,7 +550,7 @@ export default function AdminExplorer() {
               />
             ) : selectedStation ? (
               <>
-                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-[9px]">
+                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-ui-10">
                   <span>
                     {selectedStation.brand === "EX" ? "EX 원본 키" : "GS 코드"}{" "}
                     {selectedStation.siteCode}
@@ -577,7 +577,7 @@ export default function AdminExplorer() {
               </>
             ) : selected ? (
               <>
-                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-[9px]">
+                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-ui-10">
                   <span>ID {selected.id}</span>
                   <Button
                     disabled={!auth.authenticated}

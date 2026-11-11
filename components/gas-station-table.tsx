@@ -131,7 +131,7 @@ export default function GasStationTable({
           >
             {station.name}
           </button>
-          <small className="block text-[10px] text-[#637995]">{stationLabel(station)}</small>
+          <small className="block text-ui-10 text-[#637995]">{stationLabel(station)}</small>
         </>
       );
     if (stationServices.some(service => service.key === key))
@@ -147,7 +147,7 @@ export default function GasStationTable({
       className="station-table-panel flex-1 min-h-[230px] flex flex-col"
       aria-label="주유소 목록"
     >
-      <div className="panel-heading flex justify-between items-center gap-[12px] min-h-[57px] p-[15px_20px] [border-bottom:1px_solid_var(--line)] shrink-0">
+      <div className={sharedClasses.tablePanelHeading}>
         <div className="flex min-w-0 items-center gap-[12px]">
           <h3 className="shrink-0">주유·충전소 <span>{rows.length}</span></h3>
           <Input
@@ -159,14 +159,14 @@ export default function GasStationTable({
             onChange={event => onSearchChange(event.target.value)}
           />
         </div>
-        <div className="table-heading-actions flex min-w-0 items-center gap-[9px]">
-          <span className="table-source text-[9px] text-[#99a6b7] tracking-[0.04em]">
+        <div className={sharedClasses.tableHeadingActions}>
+          <span className={sharedClasses.tableSource}>
             {columns.find(column => column.key === sort.key)?.label} ·{" "}
             {sort.asc ? "오름차순" : "내림차순"}
           </span>
           <button
             type="button"
-            className="table-columns-toggle p-[7px_9px] min-h-[35px] [border:1px_solid_#e3e9f1] rounded-[6px] bg-[#f9fbfe] text-[#7185a1] text-[10px]"
+            className={sharedClasses.tableColumnsToggle}
             aria-pressed={allColumns}
             onClick={() => {
               const next = !allColumns;
@@ -193,10 +193,10 @@ export default function GasStationTable({
         <>
           <div className="station-table-scroll table-scroll flex-1 min-h-0 overflow-auto">
             <table
-              className="admin-data-table station-table table-fixed [border-collapse:collapse] text-left text-[11px]"
+              className="admin-data-table station-table table-fixed [border-collapse:collapse] text-left text-ui-12"
               style={{width: 48 + columns.reduce((sum, column) => sum + columnWidth(column.key), 0) + 340}}
             >
-              <caption className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
+              <caption className={sharedClasses.screenReaderOnly}>
                 주유소 조회·정렬 목록. 컬럼 제목을 누르면 오름차순·내림차순으로 정렬합니다.
               </caption>
               <colgroup><col style={{width: 48}} />{basicColumns.map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}<col style={{width: 240}} /><col style={{width: 100}} />{columns.slice(basicColumns.length).map(column => <col key={column.key} style={{width: columnWidth(column.key)}} />)}</colgroup>
@@ -243,7 +243,7 @@ export default function GasStationTable({
                       </td>
                     <td>
                       <span
-                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-[9px] ${hasCoordinates(station) ? "valid" : "missing"}`}
+                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-ui-10 ${hasCoordinates(station) ? "valid" : "missing"}`}
                       >
                         {hasCoordinates(station) ? "등록" : "미등록 / 오류"}
                       </span>

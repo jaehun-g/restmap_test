@@ -1,4 +1,5 @@
 "use client";
+import {sharedClasses} from "@/lib/shared-classes";
 import {Button, IconButton} from "@/components/ui/button";
 import {Input} from "@/components/ui/field";
 import {useState} from "react";
@@ -78,7 +79,7 @@ export default function AdminAuthControl({
           )}
           {auth.error && (
             <p
-              className="form-error p-[10px] m-[10px_0] [border:1px_solid_#f0d6d1] rounded-[6px] bg-[#fff7f5] text-[11px] leading-[1.7]"
+              className={sharedClasses.formError}
               role="alert"
             >
               {auth.error}
@@ -88,7 +89,7 @@ export default function AdminAuthControl({
       )}
       {auth.error && !open && (
         <span
-          className="auth-error absolute top-[48px] right-[0] w-[260px] text-[#b2645b] bg-white p-[10px] rounded-[5px] text-[10px] z-[10]"
+          className="auth-error absolute top-[48px] right-[0] w-[260px] text-[#b2645b] bg-white p-[10px] rounded-[5px] text-ui-10 z-[10]"
           role="alert"
         >
           {auth.error}

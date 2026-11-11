@@ -338,7 +338,7 @@ export default function MobileExplorer({initialData}: {
         className="mobile-header absolute inset-[0_0_auto] bg-[transparent] pointer-events-none z-[4] p-[calc(10px_+_env(safe-area-inset-top,_0px))_18px_12px]"
         ref={headerRef}
       >
-        <h1 className="sr-only absolute w-[1px] h-[1px] p-[0] m-[-1px] overflow-hidden [clip:rect(0,_0,_0,_0)] whitespace-nowrap [border:0]">
+        <h1 className={sharedClasses.screenReaderOnly}>
           휴게소·주유소 찾기
         </h1>
         <SearchBox search={search} includeStations />
@@ -410,7 +410,7 @@ export default function MobileExplorer({initialData}: {
             </FilterChip>
         </div>
         {filters.routeName && placeView === "ex" && (
-          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
+          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-ui-12 leading-[1.6] compact">
             주유소는 선택 노선 주변 2km · 직선거리 기준
           </p>
         )}
@@ -556,7 +556,7 @@ export default function MobileExplorer({initialData}: {
                 <>
                   <div className="flex shrink-0 items-center justify-between px-[20px]">
                     <button
-                      className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-[#7b8aa0] text-[11px]"
+                      className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-[#7b8aa0] text-ui-12"
                       onClick={() => {
                         setSelectedId(null);
                         setPanel("list");
@@ -642,7 +642,7 @@ export default function MobileExplorer({initialData}: {
                                         {station.name}
                                       </span>
                                       {distance !== null && (
-                                        <small className="mobile-area-distance shrink-0 text-primary text-[11px] font-[600]">
+                                        <small className="mobile-area-distance shrink-0 text-primary text-ui-12 font-[600]">
                                           {formatDistance(distance)}
                                         </small>
                                       )}
@@ -689,11 +689,11 @@ export default function MobileExplorer({initialData}: {
                                       {area.name}
                                       {area.operationStatus === "suspended" && " · 일시 운영중지"}
                                       {area.operationStatus === "review" && " · 운영 확인 필요"}
-                                      {route && <span className="ml-[6px] text-[11px] font-normal text-[#8592a3]">{route}</span>}
+                                      {route && <span className="ml-[6px] text-ui-12 font-normal text-[#8592a3]">{route}</span>}
                                     </span>
                                     {distance !== null && (
                                       <small
-                                        className="mobile-area-distance shrink-0 text-primary text-[11px] font-[600]"
+                                        className="mobile-area-distance shrink-0 text-primary text-ui-12 font-[600]"
                                         aria-label={`내 위치에서 직선거리 ${formatDistance(distance)}`}
                                       >
                                         {formatDistance(distance)}

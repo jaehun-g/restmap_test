@@ -18,7 +18,7 @@ export default function TablePagination({
   const last = Math.min(total, (current + 1) * tablePageSize);
   return (
     <nav
-      className="table-pagination flex items-center justify-between gap-[8px] p-[8px_12px] text-[10px] [border-top:1px_solid_var(--line)] shrink-0"
+      className="table-pagination flex items-center justify-between gap-[8px] p-[8px_12px] text-ui-10 [border-top:1px_solid_var(--line)] shrink-0"
       aria-label="목록 페이지 이동"
     >
       <Button

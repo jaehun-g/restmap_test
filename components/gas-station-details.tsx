@@ -68,7 +68,7 @@ export default function GasStationDetails({
       </div>
       <div className={sharedClasses.detailScroll}>
         {routeName && station.brand === "GS" && (
-          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6]">
+          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-ui-12 leading-[1.6]">
             {routeName} 주변 2km · 직선거리 기준
             <br />
             고속도로 내부 또는 진입 가능 여부는 확인이 필요합니다.
@@ -142,7 +142,7 @@ export default function GasStationDetails({
                 }
               >
                 <span>{label}</span>
-                <span className="facility-state shrink-0 text-[9px]">
+                <span className="facility-state shrink-0 text-ui-10">
                   {value === true ? "있음" : value === false ? "없음" : "미확인"}
                 </span>
               </li>
@@ -157,7 +157,7 @@ export default function GasStationDetails({
           </p>
         )}
         {audience === "admin" && station.brand === "GS" && (
-          <details className="station-source-details p-[10px_0] text-[11px]">
+          <details className="station-source-details p-[10px_0] text-ui-12">
             <summary>읽기 전용 원본 정보 · GS 코드 {station.siteCode}</summary>
             {error ? (
               <p role="status">

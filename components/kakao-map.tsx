@@ -528,7 +528,7 @@ export default function KakaoMap({
               <p>
                 <code>.env.local</code>에 JavaScript 키를 설정해주세요.
               </p>
-              <code className="setting-name text-[11px] max-w-[100%] [overflow-wrap:anywhere] p-[9px_11px] bg-white rounded-[6px] [border:1px_solid_var(--line)] text-[#526b91]">
+              <code className="setting-name text-ui-12 max-w-[100%] [overflow-wrap:anywhere] p-[9px_11px] bg-white rounded-[6px] [border:1px_solid_var(--line)] text-[#526b91]">
                 NEXT_PUBLIC_KAKAO_MAP_APP_KEY
               </code>
             </>
@@ -561,7 +561,7 @@ export default function KakaoMap({
               {selectedRouteName && (
                 <div className="mobile-navigation-row flex items-center justify-between gap-[8px] w-full">
                   <span
-                    className="map-scope-label p-[8px_10px] rounded-[20px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-[11px]"
+                    className="map-scope-label p-[8px_10px] rounded-[20px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-ui-12"
                     role="status"
                   >
                     {[selectedRouteName, selectedDirection].filter(Boolean).join(" · ")} 전체 구간
@@ -582,7 +582,7 @@ export default function KakaoMap({
               )}
               {!selectedRouteName && mobileLocation.error && (
                 <p
-                  className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-[11px] leading-[1.6]"
+                  className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-ui-12 leading-[1.6]"
                   role="status"
                 >
                   {mobileLocation.error.message}
@@ -618,7 +618,7 @@ export default function KakaoMap({
           )}
           {ready && highway.error && (
             <div
-              className="map-route-error flex items-center justify-between gap-[8px] w-full p-[8px_10px] rounded-[10px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-[11px] pointer-events-auto"
+              className="map-route-error flex items-center justify-between gap-[8px] w-full p-[8px_10px] rounded-[10px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-ui-12 pointer-events-auto"
               role="status"
             >
               <span>{highway.error}</span>
@@ -629,7 +629,7 @@ export default function KakaoMap({
           )}
           {stationError && (
             <div
-              className="map-route-error flex items-center justify-between gap-[8px] w-full p-[8px_10px] rounded-[10px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-[11px] pointer-events-auto"
+              className="map-route-error flex items-center justify-between gap-[8px] w-full p-[8px_10px] rounded-[10px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-ui-12 pointer-events-auto"
               role="status"
             >
               <span>{stationError}</span>
@@ -644,7 +644,7 @@ export default function KakaoMap({
         <>
           <div
             ref={legend}
-            className="map-legend absolute z-[3] bottom-[36px] left-[12px] flex flex-wrap gap-[10px] items-center max-w-[calc(100%_-_24px)] p-[6px_9px] rounded-[5px] bg-[#fffffff0] text-[9px] text-[#6c7c90] pointer-events-none"
+            className="map-legend absolute z-[3] bottom-[36px] left-[12px] flex flex-wrap gap-[10px] items-center max-w-[calc(100%_-_24px)] p-[6px_9px] rounded-[5px] bg-[#fffffff0] text-ui-10 text-[#6c7c90] pointer-events-none"
           >
             <span>
               <i />
@@ -691,7 +691,7 @@ export default function KakaoMap({
                 <Icon name="layers" size={20} />
               </button>
               <button
-                className={`map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-[12px] font-[600] [box-shadow:0_2px_8px_#26374d10] ${mobileLocation.requesting && !locationDisabled ? "is-locating" : ""}`}
+                className={`map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-ui-12 font-[600] [box-shadow:0_2px_8px_#26374d10] ${mobileLocation.requesting && !locationDisabled ? "is-locating" : ""}`}
                 aria-label="내 위치로 이동"
                 aria-busy={mobileLocation.requesting}
                 title={mobileLocation.requesting ? "위치 확인 중" : "내 위치로 이동"}
@@ -712,7 +712,7 @@ export default function KakaoMap({
         <div className="admin-location-status absolute left-[16px] right-[16px] top-[70px] flex flex-col items-start gap-[6px] z-[6] pointer-events-none">
           {mobileLocation.error && (
             <p
-              className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-[11px] leading-[1.6]"
+              className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-ui-12 leading-[1.6]"
               role="status"
             >
               {mobileLocation.error.message}
@@ -720,7 +720,7 @@ export default function KakaoMap({
           )}
           {!selectedRouteName && mobileLocation.researchAvailable && (
             <button
-              className="map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-[12px] font-[600] [box-shadow:0_2px_8px_#26374d10]"
+              className="map-button pointer-events-auto min-h-[40px] inline-flex gap-[6px] items-center p-[8px_10px] rounded-[8px] [border:1px_solid_#e3e8ef] bg-white text-[#334e73] text-ui-12 font-[600] [box-shadow:0_2px_8px_#26374d10]"
               disabled={locationDisabled}
               onClick={() => {
                 clearSelection();

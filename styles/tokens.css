@@ -1,4 +1,12 @@
 @theme {
+  --text-ui-10: 10px;
+  --text-ui-12: 12px;
+  --text-ui-14: 14px;
+  --text-ui-16: 16px;
+  --text-ui-18: 18px;
+  --text-ui-20: 20px;
+  --text-ui-24: 24px;
+  --text-ui-28: 28px;
   --color-primary: #0865ff;
   --color-primary-dark: #0649ba;
   --color-primary-soft: #edf4ff;

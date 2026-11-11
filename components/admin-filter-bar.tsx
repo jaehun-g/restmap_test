@@ -43,7 +43,7 @@ export default function AdminFilterBar({
     >
       <div className="admin-filter-controls flex items-end gap-[10px] flex-wrap">
         <SearchBox search={search} disabled={disabled} includeStations={includeStations} />
-        <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
+        <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
           노선
           <Select
             aria-label="노선 필터"
@@ -69,7 +69,7 @@ export default function AdminFilterBar({
             ))}
           </Select>
         </label>
-        <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
+        <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
           방향
           <Select
             aria-label="방향 필터"
@@ -119,7 +119,7 @@ export default function AdminFilterBar({
           </details>
         )}
         {!hideRestFilters && (
-          <label className="filter-select flex flex-col text-[9px] text-[#94a1b3] gap-[3px]">
+          <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
             휴게소 라운지
             <Select
               aria-label="화물차 라운지 필터"
