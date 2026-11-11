@@ -458,7 +458,7 @@ export default function MobileExplorer({initialData}: {
                     ? "휴게소를 찾고 있어요"
                     : error
                       ? "휴게소 조회 확인"
-                      : `${placeView === "rest" ? "휴게소" : "고속도로 주유소"} ${resultCount}개`}
+                      : `${placeView === "rest" ? "휴게소" : placeView === "ex" ? "고속도로 주유소" : "휴게소·주유소"} ${resultCount}곳`}
                 </strong>
                 <small>
                   {error
