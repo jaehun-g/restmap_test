@@ -92,6 +92,9 @@
 .mobile-area-info > span {
   @apply block mt-[6px] text-[10px] text-[#8592a3];
 }
+.mobile-area-info .mobile-fuel-price {
+  @apply text-[12px] font-[600] text-[#526b91];
+}
 .mobile-area-info .facility-tags {
   @apply flex gap-[4px] flex-wrap mt-[9px];
 }

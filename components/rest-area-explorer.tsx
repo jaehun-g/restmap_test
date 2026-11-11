@@ -13,7 +13,9 @@ import type {RestAreaRecord} from "@/lib/rest-areas";
 import type {GasStationRecord} from "@/lib/gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
-import {restPlace, stationPlace, type PlaceView} from "@/lib/map-places";
+import type {PlaceView} from "@/lib/map-places";
+import {mobilePlaceList} from "@/lib/mobile-place-list";
+import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
@@ -188,10 +190,7 @@ export default function MobileExplorer({initialData}: {
     [areas, filters.routeName, filters.direction],
   );
   const listPlaces = useMemo(() => {
-    const places = [
-      ...(placeView === "ex" ? [] : visibleAreas.map(restPlace)),
-      ...(placeView === "rest" ? [] : stationResults.map(stationPlace)),
-    ];
+    const places = mobilePlaceList(visibleAreas, stationResults, placeView);
     if (location.position)
       places.sort((left, right) => {
         const a = areaDistance(left.record, location.position) ?? Infinity,
@@ -607,6 +606,8 @@ export default function MobileExplorer({initialData}: {
                             );
                           }
                           const area = place.record;
+                          const linkedStations = linkedStationsByRestId.get(area.id) ?? [];
+                          const hasPrices = linkedStations.some(station => station.prices?.gasoline || station.prices?.diesel);
                           const available = facilityDefinitions.filter(
                             ([key]) => area.facilities[key] === true,
                           );
@@ -635,6 +636,7 @@ export default function MobileExplorer({initialData}: {
                                       {area.name}
                                       {area.operationStatus === "suspended" && " · 일시 운영중지"}
                                       {area.operationStatus === "review" && " · 운영 확인 필요"}
+                                      {route && <span className="ml-[6px] text-[11px] font-normal text-[#8592a3]">{route}</span>}
                                     </span>
                                     {distance !== null && (
                                       <small
@@ -646,7 +648,13 @@ export default function MobileExplorer({initialData}: {
                                     )}
                                     <Icon name="chevron" size={16} />
                                   </strong>
-                                  {route && <span>{route}</span>}
+                                  {linkedStations.length > 0 && (
+                                    <span className="mobile-fuel-price">
+                                      {hasPrices
+                                        ? `휘발유 ${restAreaPriceSummary(linkedStations, "gasoline").text} · 경유 ${restAreaPriceSummary(linkedStations, "diesel").text}`
+                                        : "주유 가격 정보 없음"}
+                                    </span>
+                                  )}
                                   <span className="facility-tags">
                                     {available.slice(0, 3).map(([key, label]) => (
                                       <span key={key}>{label}</span>
