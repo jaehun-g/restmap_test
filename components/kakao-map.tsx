@@ -449,7 +449,9 @@ export default function KakaoMap({
         : null;
   useEffect(() => {
     const move = lastSelection.current.map !== map || lastSelection.current.key !== selectedKey;
-    layer.current?.select(selectedKey, showCard, move);
+    if (move && selectedKey && !showCard && audience === "mobile")
+      layer.current?.focus(selectedKey, false);
+    else layer.current?.select(selectedKey, showCard, move);
     lastSelection.current = {map, key: selectedKey};
   }, [
     map,

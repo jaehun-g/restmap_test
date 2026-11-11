@@ -234,6 +234,28 @@ test("단일 마커 클릭은 클러스터 목록 선택과 같은 레벨로 확
   }
 });
 
+test("바텀시트에서 선택하면 정보창 없이 마커 수준까지 확대하고 이미 가까우면 레벨을 유지한다", t => {
+  installCardDOM(t);
+  for (const [level, expected] of [[10, [4]], [3, []]] as const) {
+    const {sdk, map, state} = mockKakao();
+    map.getLevel = () => level;
+    const station = normalizeExGasStations([{
+      id: 1, source_key: "list", service_area_name: "주유소", latitude: 36, longitude: 128,
+    }]);
+    assert.ok(station.ok);
+    const actions: boolean[] = [];
+    const layer = createPlaceMarkers(
+      sdk, map, [restPlace(areas()[0]), stationPlace(station.value[0])], () => {}, label,
+      undefined, undefined, "above", (action, zoom) => {actions.push(zoom ?? false); action();},
+    );
+    layer.focus("station:EX:list", false);
+    assert.deepEqual(state.levels, [...expected]);
+    assert.deepEqual(actions, [level > 4]);
+    assert.equal(state.shown, 0, "상세 시트가 열린 동안 인포윈도우를 열지 않음");
+    layer.dispose();
+  }
+});
+
 test("표시 집합 변경은 남는 마커를 재사용하고 추가·제외된 마커만 반영한다", t => {
   installCardDOM(t);
   const {sdk, map, state} = mockKakao();

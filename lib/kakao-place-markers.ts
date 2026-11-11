@@ -653,6 +653,15 @@ export function createPlaceMarkers(
   update(places);
   return {
     update,
+    focus(key: string, showCard = true) {
+      const place = placeByKey.get(key);
+      const expectZoomChange = !!place && hasCoordinates(place.record) &&
+        map.getLevel() > CLUSTER_MIN_LEVEL - 1;
+      runProgrammaticMapAction(() => {
+        if (place) zoomToPlace(place);
+        select(key, showCard, true);
+      }, expectZoomChange);
+    },
     setPinned(key: string | null) {
       if (key === pinnedKey) return;
       const previous = pinnedKey === null ? undefined : unitOfPlace.get(pinnedKey);
