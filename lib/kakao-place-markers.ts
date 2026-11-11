@@ -101,7 +101,7 @@ export function createPlaceMarkers(
         map,
         gridSize: 48,
         minLevel: 7,
-        minClusterSize: 3,
+        minClusterSize: 2,
         averageCenter: false,
         disableClickZoom: true,
         clickable: true,
@@ -536,7 +536,12 @@ export function createPlaceMarkers(
           ? () => {
               suppressFollowUpMapClick();
               const current = created.places[0];
-              select(current.key);
+              const expectZoomChange =
+                hasCoordinates(current.record) && map.getLevel() > CLUSTER_MIN_LEVEL - 1;
+              runProgrammaticMapAction(() => {
+                zoomToPlace(current);
+                select(current.key);
+              }, expectZoomChange);
               onSelect(current);
             }
           : () => {

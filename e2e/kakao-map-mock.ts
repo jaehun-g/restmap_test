@@ -4,6 +4,7 @@ type KakaoMapMockMetrics = {
   initialViews: Array<{latitude: number; longitude: number; level: number}>;
   markerCreates: number;
   clusterers: number;
+  activeClusterers: number;
   markers: Array<{click(): void}>;
   overlayContents: string[];
   addCalls: boolean[];
@@ -87,15 +88,15 @@ export const installKakaoMapsMock = `
       getBounds() { const bounds = new LatLngBounds(); bounds.extend(this.center); return bounds; }
     }
     class Clusterer {
-      constructor() { window.__kakaoMapMock.clusterers++; }
+      constructor() { window.__kakaoMapMock.clusterers++; window.__kakaoMapMock.activeClusterers++; }
       addMarkers(_markers, nodraw) { window.__kakaoMapMock.addCalls.push(nodraw); }
       addMarker() {}
       removeMarker() {}
       redraw() { window.__kakaoMapMock.redraws++; }
       setMinLevel() {}
-      clear() {}
+      clear() { window.__kakaoMapMock.activeClusterers--; }
     }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
+    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, activeClusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
     window.kakao = {maps: {
       MapTypeId: {ROADMAP: 1, HYBRID: 3},
       Map: MapView,

@@ -4,7 +4,7 @@ import { countLabel, pinKindFor, placePinImageUrl } from "../lib/place-pin.ts";
 
 test("pinKindFor selects mixed when both rest and station exist", () => {
   assert.equal(pinKindFor({ rest: 2, station: 3, lounge: 0 }), "mixed");
-  assert.equal(pinKindFor({ rest: 1, station: 1, lounge: 1 }), "mixed");
+  assert.equal(pinKindFor({ rest: 1, station: 1, lounge: 1 }), "lounge");
 });
 
 test("pinKindFor selects station when only stations exist", () => {
@@ -37,4 +37,11 @@ test("placePinImageUrl has no badge when total is 1", () => {
   const decoded = decodeURIComponent(url);
   assert.doesNotMatch(decoded, /<rect/);
   assert.doesNotMatch(decoded, />\+/);
+});
+
+test("일반·주유소 마커는 목록의 위치 아이콘을 쓰고 라운지는 화물차 아이콘을 쓴다", () => {
+  for (const kind of ["rest", "station", "exStation", "mixed"] as const) {
+    assert.match(decodeURIComponent(placePinImageUrl(kind, 1)), /M20 10c0 6-8 11/);
+  }
+  assert.match(decodeURIComponent(placePinImageUrl("lounge", 1)), /M2 6h12v12H2z/);
 });

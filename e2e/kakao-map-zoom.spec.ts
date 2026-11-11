@@ -18,7 +18,6 @@ test("휴게소 요약을 먼저 열어도 늦게 도착한 주유소 가격을 
   await page.setViewportSize({width: 390, height: 844});
   await page.goto("/mobile", {waitUntil: "domcontentloaded"});
   try {
-    await page.getByRole("button", {name: "휴게소", exact: true}).click();
     await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBeGreaterThan(0);
     await page.evaluate(() => window.__kakaoMapMock.markers[0].click());
     await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain("서하남행복드림쉼터");
@@ -72,7 +71,6 @@ for (const audience of ["mobile", "admin"] as const) {
     await waitForMarkerLayerToSettle(page);
     if (audience === "mobile") {
       // 휴게소 보기에서도 연결 주유소 정보와 지도 이동이 유지되어야 한다.
-      await page.getByRole("button", {name: "휴게소", exact: true}).click();
       await page.locator(".sheet-summary").click();
       await page.locator(".mobile-area-card").filter({hasText: area.name}).click();
     } else {

@@ -551,6 +551,9 @@ input[type="checkbox"] {
 .list-pin.is-station {
   @apply bg-[#e7f5ed] text-[#15845c];
 }
+.list-pin.is-ex-station {
+  @apply bg-[#f2ebff] text-[#7c3aed];
+}
 .map-legend .legend-station {
   @apply bg-[#15845c];
 }

@@ -19,6 +19,6 @@ test("통합 보기는 연결된 여러 주유소를 휴게소 하나로 묶고 
 test("휴게소 보기는 휴게소만 표시한다", () => {
   assert.deepEqual(keys("rest"), ["rest:1", "rest:2"]);
 });
-test("주유소 보기는 주유소가 연결된 휴게소와 독립 주유소를 표시한다", () => {
-  assert.deepEqual(keys("ex"), ["rest:1", "station:EX:standalone", "station:EX:hidden-area"]);
+test("주유소 보기는 연결 여부와 관계없이 주유소 위치를 각각 표시한다", () => {
+  assert.deepEqual(keys("ex"), ["station:EX:linked-a", "station:EX:linked-b", "station:EX:standalone", "station:EX:hidden-area"]);
 });

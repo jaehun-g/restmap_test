@@ -9,14 +9,14 @@ export function mobilePlaceList(
   view: PlaceView,
 ): MapPlace[] {
   if (view === "rest") return areas.map(restPlace);
+  if (view === "ex") return stations.filter(station => station.brand === "EX").map(stationPlace);
   const visibleAreaIds = new Set(areas.map(area => area.id));
   const linkedIds = new Set(stations.flatMap(station =>
     station.linkedRestAreaId !== null && visibleAreaIds.has(station.linkedRestAreaId)
       ? [station.linkedRestAreaId] : [],
   ));
-  const shownAreas = view === "all" ? areas : areas.filter(area => linkedIds.has(area.id));
   return [
-    ...shownAreas.map(restPlace),
+    ...areas.map(restPlace),
     ...stations.filter(station => station.linkedRestAreaId === null || !linkedIds.has(station.linkedRestAreaId)).map(stationPlace),
   ];
 }

@@ -69,22 +69,25 @@ test("모바일 장소 보기와 필터가 한 줄에서 가로 스크롤로 동
   await page.setViewportSize({width: 390, height: 844});
   await page.goto("/mobile");
   const row = page.locator(".mobile-filters");
-  const tabs = row.getByRole("navigation", {name: "장소 보기"});
+  const stationToggle = row.getByRole("button", {name: "주유소만 보기"});
   const route = row.getByRole("button", {name: "전체 노선", exact: true});
   const lounge = row.getByRole("button", {name: /라운지 OFF/});
   await expect(route).toBeEnabled();
   const geometry = await row.evaluate(element => {
-    const tabs = element.querySelector(".place-tabs")!.getBoundingClientRect();
-    const route = element.querySelector(".filter-chip")!.getBoundingClientRect();
-    return {overflow: element.scrollWidth > element.clientWidth, sameRow: tabs.top < route.bottom && route.top < tabs.bottom};
+    const route = element.querySelectorAll(".filter-chip")[0].getBoundingClientRect();
+    const toggle = element.querySelectorAll(".filter-chip")[2].getBoundingClientRect();
+    return {overflow: element.scrollWidth > element.clientWidth, sameRow: toggle.top < route.bottom && route.top < toggle.bottom};
   });
   expect(geometry).toEqual({overflow: true, sameRow: true});
   await lounge.scrollIntoViewIfNeeded();
   await expect.poll(() => row.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
   await lounge.click();
   await expect(row.getByRole("button", {name: /라운지 ON/})).toHaveAttribute("aria-pressed", "true");
-  await tabs.getByRole("button", {name: "주유소"}).click();
-  await expect(row.getByRole("button", {name: /라운지/})).toHaveCount(0);
+  await stationToggle.click();
+  await expect(stationToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(row.getByRole("button", {name: /라운지/})).toBeDisabled();
+  await stationToggle.click();
+  await expect(stationToggle).toHaveAttribute("aria-pressed", "false");
 });
 
 test("관리자 검색은 현재 검색 결과 전체로 지도를 맞춘다", async ({page}) => {
@@ -117,6 +120,7 @@ test("모바일은 선택 노선과 내 위치 범위를 건너뛰고 검색 결
   await page.locator(".mobile-filters button").filter({hasText: "전체 노선"}).click();
   await page.locator(".route-options button").filter({hasText: "경부선"}).click();
   await expect(page.locator(".map-scope-label")).toContainText("경부선");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.activeClusterers)).toBe(1);
   const before = await page.evaluate(() => window.__kakaoMapMock.boundsFits.length + window.__kakaoMapMock.centerFits.length);
   const search = page.getByRole("searchbox", {name: "휴게소명·노선명·주유소명·주소 검색"});
   await search.fill("E2E 휴게소");

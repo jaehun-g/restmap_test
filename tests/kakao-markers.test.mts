@@ -160,6 +160,40 @@ function areas(): RestArea[] {
 }
 const label = () => ({}) as HTMLElement;
 
+test("클러스터는 화면상 가까운 표시 단위 두 개부터 묶는다", t => {
+  installCardDOM(t);
+  const {sdk, map} = mockKakao();
+  let options: {gridSize: number; minClusterSize: number; minLevel: number} | undefined;
+  sdk.MarkerClusterer = class {
+    constructor(value: typeof options) { options = value; }
+    addMarkers() {} addMarker() {} removeMarker() {} redraw() {} setMinLevel() {} clear() {}
+  } as unknown as NonNullable<KakaoMaps["MarkerClusterer"]>;
+  const layer = createPlaceMarkers(sdk, map, [], () => {}, label);
+  assert.equal(options?.gridSize, 48);
+  assert.equal(options?.minClusterSize, 2);
+  assert.equal(options?.minLevel, 7);
+  layer.dispose();
+});
+
+test("단일 마커 클릭은 클러스터 목록 선택과 같은 레벨로 확대하고 더 가까운 레벨은 유지한다", t => {
+  installCardDOM(t);
+  for (const [level, expectedLevels, zoomExpected] of [[9, [4], true], [3, [], false]] as const) {
+    const {sdk, map, state} = mockKakao();
+    map.getLevel = () => level;
+    const actions: boolean[] = [];
+    const chosen: string[] = [];
+    const layer = createPlaceMarkers(
+      sdk, map, [restPlace(areas()[0])], place => chosen.push(place.key), label,
+      undefined, undefined, "below", (action, zoom) => {actions.push(zoom ?? false); action();},
+    );
+    state.clicks[0]();
+    assert.deepEqual(state.levels, [...expectedLevels]);
+    assert.deepEqual(actions, [zoomExpected]);
+    assert.deepEqual(chosen, ["rest:1"]);
+    layer.dispose();
+  }
+});
+
 test("표시 집합 변경은 남는 마커를 재사용하고 추가·제외된 마커만 반영한다", t => {
   installCardDOM(t);
   const {sdk, map, state} = mockKakao();

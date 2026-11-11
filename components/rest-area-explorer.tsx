@@ -10,7 +10,7 @@ import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {useMobileDetails} from "@/hooks/use-mobile-details";
 import type {RestAreaRecord} from "@/lib/rest-areas";
-import type {GasStationRecord} from "@/lib/gas-stations";
+import type {GasStation, GasStationRecord} from "@/lib/gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
 import type {PlaceView} from "@/lib/map-places";
@@ -30,7 +30,6 @@ import QueryState from "./query-state";
 import SearchBox from "./search-box";
 import MobileFilterSheet from "./mobile-filter-sheet";
 import Icon from "./icon";
-import PlaceControls from "./place-controls";
 import GasStationDetails from "./gas-station-details";
 type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities";
 export default function MobileExplorer({initialData}: {
@@ -58,6 +57,9 @@ export default function MobileExplorer({initialData}: {
   const touchStart = useRef<{x: number; y: number; canCollapse: boolean} | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
+  const [previewStation, setPreviewStation] = useState<{
+    station: GasStation; filters: typeof filters; query: string; view: PlaceView;
+  } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -202,9 +204,31 @@ export default function MobileExplorer({initialData}: {
   const selected = visibleAreas.find(area => area.id === selectedId);
   const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
     [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
-  const mapStations = placeView === "rest" ? [] : stationResults;
-  const selectedMapStations = selectedStation && !mapStations.some(station => stationKey(station) === stationKey(selectedStation))
-    ? [...mapStations, selectedStation] : mapStations;
+  const mapAreas = useMemo(
+    () => listPlaces.flatMap(place => place.kind === "rest" ? [place.record] : []),
+    [listPlaces],
+  );
+  const mapStations = useMemo(
+    () => listPlaces.flatMap(place => place.kind === "station" ? [place.record] : []),
+    [listPlaces],
+  );
+  const visiblePreviewStation = previewStation && previewStation.filters === filters &&
+    previewStation.query === search.query && previewStation.view === placeView ? previewStation.station : null;
+  const stalePreview = previewStation && !visiblePreviewStation ? previewStation : null;
+  const extraStation = stalePreview && selectedStationId === stationKey(stalePreview.station)
+    ? null : selectedStation ?? visiblePreviewStation;
+  const selectedMapStations = extraStation && !mapStations.some(station => stationKey(station) === stationKey(extraStation))
+    ? [...mapStations, extraStation] : mapStations;
+  useEffect(() => {
+    if (!stalePreview) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setSelectedStationId(current => current === stationKey(stalePreview.station) ? null : current);
+      setPreviewStation(null);
+    });
+    return () => { active = false; };
+  }, [stalePreview]);
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
@@ -212,11 +236,13 @@ export default function MobileExplorer({initialData}: {
   const expanded = effectivePanel !== "collapsed";
   const resultCount = listPlaces.length;
   const select = useCallback((id: number | null) => {
+    if (id !== null) setPreviewStation(null);
     setSelectedStationId(null);
     setSelectedId(id);
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
+    setPreviewStation(null);
     setDetailExpanded(false);
     setSelectedStationId(null);
     setSelectedId(id);
@@ -227,11 +253,13 @@ export default function MobileExplorer({initialData}: {
     setDetailExpanded(false);
   }, []);
   const selectStation = useCallback((id: string | null) => {
+    if (id !== null) setPreviewStation(current => current && stationKey(current.station) === id ? current : null);
     setSelectedId(null);
     setSelectedStationId(id);
     setPanel("collapsed");
   }, []);
   const stationDetails = useCallback((id: string) => {
+    setPreviewStation(current => current && stationKey(current.station) === id ? current : null);
     setDetailExpanded(false);
     setSelectedId(null);
     setSelectedStationId(id);
@@ -285,6 +313,7 @@ export default function MobileExplorer({initialData}: {
     setPanel(next);
   };
   const reset = () => {
+    setPreviewStation(null);
     search.clear(false);
     setFilters(initialFilters());
     setSelectedId(null);
@@ -292,6 +321,7 @@ export default function MobileExplorer({initialData}: {
     setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
+    setPreviewStation(null);
     setFilters(current => ({...current, routeName: null, direction: null}));
     setSelectedId(null);
     setSelectedStationId(null);
@@ -310,15 +340,6 @@ export default function MobileExplorer({initialData}: {
         </h1>
         <SearchBox search={search} includeStations />
         <div className="mobile-filters flex items-center flex-nowrap gap-[6px] m-[8px_-18px_0] p-[2px_18px_6px] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [scroll-padding:0_18px]">
-          <PlaceControls
-            view={placeView}
-            onView={next => {
-              setPlaceView(next);
-              setSelectedId(null);
-              setSelectedStationId(null);
-              setPanel("collapsed");
-            }}
-          />
           <FilterChip
             active={Boolean(filters.routeName)}
             onClick={event => open("routes", event.currentTarget)}
@@ -338,21 +359,36 @@ export default function MobileExplorer({initialData}: {
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </FilterChip>
           )}
-          {placeView !== "ex" && (
             <FilterChip
               active={filters.facilities.length > 0}
               onClick={event => open("facilities", event.currentTarget)}
               aria-expanded={panel === "facilities"}
+              disabled={placeView === "ex"}
             >
               휴게소 편의시설
               {filters.facilities.length > 0 && <b>{filters.facilities.length}</b>}
               <Icon name="chevronUp" size={13} style={{transform: "rotate(180deg)"}} />
             </FilterChip>
-          )}
-          {placeView !== "ex" && (
+          <FilterChip
+            active={placeView === "ex"}
+            aria-pressed={placeView === "ex"}
+            onClick={() => {
+              const next = placeView === "ex" ? "all" : "ex";
+              setPlaceView(next);
+              setPreviewStation(null);
+              if (next === "ex") setFilters(current => ({...current, facilities: [], lounge: "all"}));
+              setSelectedId(null);
+              setSelectedStationId(null);
+              setPanel("collapsed");
+            }}
+          >
+            <Icon name="fuel" size={14} />
+            주유소만 보기
+          </FilterChip>
             <FilterChip
               variant="lounge"
               active={filters.lounge === "present"}
+              disabled={placeView === "ex"}
               aria-pressed={filters.lounge === "present"}
               aria-label={
                 filters.lounge === "present"
@@ -369,7 +405,6 @@ export default function MobileExplorer({initialData}: {
               <Icon name="truck" size={14} />
               라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
             </FilterChip>
-          )}
         </div>
         {filters.routeName && placeView === "ex" && (
           <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-[11px] leading-[1.6] compact">
@@ -380,7 +415,7 @@ export default function MobileExplorer({initialData}: {
       <div className="mobile-content flex-1 min-h-0 flex flex-col relative">
         <div className="mobile-map absolute inset-[0]">
           <KakaoMap
-            areas={placeView === "ex" ? [] : visibleAreas}
+            areas={mapAreas}
             stations={selectedMapStations}
             linkedStationsByRestId={linkedStationsByRestId}
             selectedDirection={selectedDirectionLabel}
@@ -389,7 +424,7 @@ export default function MobileExplorer({initialData}: {
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
-            areasLoading={placeView === "ex" ? false : loading}
+            areasLoading={loading}
             stationsLoading={placeView === "rest" ? false : gas.loading}
             stationError={gas.error}
             onRetryStations={() => {
@@ -522,7 +557,12 @@ export default function MobileExplorer({initialData}: {
                       <Icon name="close" />
                     </IconButton>
                   </div>
-                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => selectStation(stationKey(station))} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
+                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => {
+                    setPreviewStation({station, filters, query: search.query, view: placeView});
+                    setSelectedId(null);
+                    setSelectedStationId(stationKey(station));
+                    setPanel("collapsed");
+                  }} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
                 </>
               ) : (
                 <>
@@ -580,7 +620,7 @@ export default function MobileExplorer({initialData}: {
                                   onClick={() => stationDetails(stationKey(station))}
                                   aria-label={`${station.name} 주유소 상세정보 보기`}
                                 >
-                                  <span className="list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 is-station">
+                                  <span className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 ${station.brand === "EX" ? "is-ex-station" : "is-station"}`}>
                                     <Icon name="pin" size={19} />
                                   </span>
                                   <span className="mobile-area-info flex-1 min-w-0">

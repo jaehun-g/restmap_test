@@ -263,7 +263,7 @@ export default function KakaoMap({
       clearSelection,
       audience === "mobile" ? "above" : "below",
       runProgrammaticMapAction,
-      !selectedRouteName,
+      true,
       () => container.current!.getBoundingClientRect(),
     );
     layer.current = current;
@@ -279,7 +279,6 @@ export default function KakaoMap({
     clearSelection,
     audience,
     runProgrammaticMapAction,
-    selectedRouteName,
   ]);
   useEffect(() => {
     layer.current?.update(committedPlaces);
