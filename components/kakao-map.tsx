@@ -417,8 +417,8 @@ export default function KakaoMap({
     routeViewport.current.view.update(selectedRouteName, highway.route, positionedItems, action => {
       if (locationLayer.current) locationLayer.current.fitRoute(action);
       else action();
-    });
-  }, [map, selectedRouteName, highway.route, positionedItems]);
+    }, false, highway.loading);
+  }, [map, selectedRouteName, highway.route, highway.loading, positionedItems]);
   const selectedKey =
     selectedStationId !== null
       ? (places.find(

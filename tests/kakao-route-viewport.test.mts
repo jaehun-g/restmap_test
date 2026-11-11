@@ -56,7 +56,15 @@ test("routes with no matching rest areas still fit the route bounds", () => {
   assert.equal(fitted[0].getNorthEast().getLat(), 37);
 });
 
-test("loading or failed route queries fit rest areas once and successful recovery fits the route", () => {
+test("loading waits for the route before fitting the map", () => {
+  const { view, fitted } = mockKakao();
+  view.update("경부선", null, areas(), undefined, false, true);
+  assert.equal(fitted.length, 0);
+  view.update("경부선", route(), areas());
+  assert.equal(fitted.length, 1);
+});
+
+test("failed route queries fit rest areas once and successful recovery fits the route", () => {
   const { view, fitted } = mockKakao();
   view.update("경부선", null, areas());
   view.update("경부선", null, [...areas()]);
