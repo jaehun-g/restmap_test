@@ -158,6 +158,18 @@ export default function KakaoMap({
   const [satellite, setSatellite] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [initialLocationWaitExpired, setInitialLocationWaitExpired] = useState(false);
+  const initialCamera = useRef(mobileLocation?.cameraRequest);
+  useEffect(() => {
+    initialCamera.current = mobileLocation?.cameraRequest;
+  }, [mobileLocation?.cameraRequest]);
+  const initialLocationReady = !mobileEnabled || initialLocationWaitExpired || !!map ||
+    !!mobileLocation?.cameraRequest || !!mobileLocation?.error;
+  useEffect(() => {
+    if (!mobileEnabled) return;
+    const timer = window.setTimeout(() => setInitialLocationWaitExpired(true), 2000);
+    return () => window.clearTimeout(timer);
+  }, [mobileEnabled]);
   useEffect(() => {
     const types = window.kakao?.maps.MapTypeId;
     if (map && types) map.setMapTypeId(satellite ? types.HYBRID : types.ROADMAP);
@@ -194,7 +206,7 @@ export default function KakaoMap({
     [locationEnabled],
   );
   useEffect(() => {
-    if (!appKey) {
+    if (!appKey || !initialLocationReady) {
       return;
     }
     let cancelled = false;
@@ -203,9 +215,13 @@ export default function KakaoMap({
       .then(sdk => {
         if (cancelled || !container.current) return;
         const saved = locationEnabled ? mobileMemory.current.viewport : undefined;
+        const initialPosition = mobileEnabled ? initialCamera.current?.center : undefined;
         const instance = new sdk.Map(container.current, {
-          center: new sdk.LatLng(saved?.center.latitude ?? 36.4, saved?.center.longitude ?? 127.8),
-          level: saved?.level ?? 13,
+          center: new sdk.LatLng(
+            saved?.center.latitude ?? initialPosition?.latitude ?? 36.4,
+            saved?.center.longitude ?? initialPosition?.longitude ?? 127.8,
+          ),
+          level: saved?.level ?? (initialPosition ? 10 : 13),
         });
         observer = new ResizeObserver(() => {
           const center = instance.getCenter();
@@ -224,7 +240,7 @@ export default function KakaoMap({
       cancelled = true;
       observer?.disconnect();
     };
-  }, [attempt, locationEnabled]);
+  }, [attempt, locationEnabled, mobileEnabled, initialLocationReady]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;

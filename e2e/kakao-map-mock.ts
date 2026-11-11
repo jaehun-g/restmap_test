@@ -1,6 +1,7 @@
 type KakaoMapMockMetrics = {
   map: {getLevel(): number; setLevel(level: number): void; getMapTypeId(): number; moveBounds(south: number, west: number, north: number, east: number): void} | null;
   mapCreates: number;
+  initialViews: Array<{latitude: number; longitude: number; level: number}>;
   markerCreates: number;
   clusterers: number;
   markers: Array<{click(): void}>;
@@ -44,6 +45,7 @@ export const installKakaoMapsMock = `
         this.bounds.extend(new LatLng(38, 128));
         window.__kakaoMapMock.map = this;
         window.__kakaoMapMock.mapCreates++;
+        window.__kakaoMapMock.initialViews.push({latitude: options.center.getLat(), longitude: options.center.getLng(), level: options.level});
       }
       setCenter(center) { this.center = center; window.__kakaoMapMock.centerFits.push([center.getLat(), center.getLng()]); }
       panTo(center) { this.center = center; }
@@ -93,7 +95,7 @@ export const installKakaoMapsMock = `
       setMinLevel() {}
       clear() {}
     }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
+    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: []};
     window.kakao = {maps: {
       MapTypeId: {ROADMAP: 1, HYBRID: 3},
       Map: MapView,
