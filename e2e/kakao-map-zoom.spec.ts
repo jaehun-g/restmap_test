@@ -318,13 +318,19 @@ test("mobile rest-area details load food menus independently of the map response
     contentType: "application/json",
     body: JSON.stringify({items: [], unmappedCount: 0, fetchedAt: "2026-10-21T00:00:00.000Z"}),
   }));
-  await page.route("**/api/rest-areas/1/food-menus", route => route.fulfill({
-    contentType: "application/json",
-    body: JSON.stringify({items: [{
-      key: "000001|272", name: "E2E signature udon", price: 9500,
-      recommended: true, best: true, sourceUpdatedAt: "2026-10-21", collectedAt: "2026-10-21T00:00:00.000Z",
-    }], collectedAt: "2026-10-21T00:00:00.000Z"}),
-  }));
+  let releaseMenus!: () => void;
+  const menuGate = new Promise<void>(resolve => { releaseMenus = resolve; });
+  await page.route("**/api/rest-areas/1/food-menus", async route => {
+    await menuGate;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({items: Array.from({length: 4}, (_, index) => ({
+        key: `000001|${272 + index}`, name: index === 0 ? "E2E signature udon" : `E2E menu ${index}`,
+        price: 9500, recommended: index === 0, best: index === 0,
+        sourceUpdatedAt: "2026-10-21", collectedAt: "2026-10-21T00:00:00.000Z",
+      })), collectedAt: "2026-10-21T00:00:00.000Z"}),
+    });
+  });
   await page.route("**/api/rest-areas/2/food-menus", route => route.fulfill({
     contentType: "application/json",
     body: JSON.stringify({items: [], collectedAt: null}),
@@ -347,13 +353,23 @@ test("mobile rest-area details load food menus independently of the map response
   await restArea.click();
   const menusResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/rest-areas/1/food-menus");
   await page.getByRole("tab", {name: "음식", exact: true}).click();
-  expect((await (await menusResponse).json()).collectedAt).toBe("2026-10-21T00:00:00.000Z");
   const foodSection = page.locator(".food-menu-section");
+  await expect(foodSection).toHaveAttribute("aria-busy", "true");
+  await expect(foodSection.getByRole("status")).toContainText("메뉴 정보를 불러오는 중입니다.");
+  await expect(foodSection.locator(".spinner")).toBeVisible();
+  releaseMenus();
+  expect((await (await menusResponse).json()).collectedAt).toBe("2026-10-21T00:00:00.000Z");
+  await expect(foodSection).toHaveAttribute("aria-busy", "false");
   await expect(foodSection).toBeVisible();
   await expect(foodSection).toContainText("E2E signature udon");
   await expect(foodSection).toContainText("9,500");
   await expect(foodSection).toContainText("\uCD94\uCC9C");
   await expect(foodSection).toContainText("\uC778\uAE30");
+  await expect(foodSection.locator(".food-menu-heading")).toContainText("4개");
+  const more = foodSection.getByRole("button", {name: "전체 메뉴 보기 (4개)"});
+  await expect(more).toBeVisible();
+  await more.click();
+  await expect(foodSection.getByRole("button", {name: "접기"})).toHaveAttribute("aria-expanded", "true");
   await page.locator(".back-to-list").click();
   await page.locator(".mobile-area-card").filter({hasText: "B"}).first().click();
   await page.getByRole("tab", {name: "음식", exact: true}).click();

@@ -269,6 +269,30 @@ input[type="checkbox"] {
   margin: 0 0 10px;
   font-size: var(--text-ui-14);
 }
+.food-menu-heading span {
+  margin-left: 4px;
+  color: var(--blue);
+  font-size: var(--text-ui-12);
+}
+.food-menu-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  color: var(--muted);
+  font-size: var(--text-ui-12);
+}
+.food-menu-more {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 9px;
+  border: 1px solid #dce6f3;
+  border-radius: 8px;
+  background: #fff;
+  color: #386ba9;
+  font-size: var(--text-ui-12);
+  font-weight: 650;
+}
 .food-menu-section ul {
   display: grid;
   gap: 8px;

@@ -2,6 +2,7 @@
 
 import {useEffect, useMemo, useState} from "react";
 import {foodBadges, foodPrice, type FoodMenusResponse} from "@/lib/food-menus";
+import {sharedClasses} from "@/lib/shared-classes";
 
 export default function FoodMenuSection({restAreaId}: {restAreaId: number}) {
   const [data, setData] = useState<FoodMenusResponse | null>(null);
@@ -23,9 +24,9 @@ export default function FoodMenuSection({restAreaId}: {restAreaId: number}) {
 
   const ordered = useMemo(() => [...(data?.items ?? [])].sort((a, b) => Number(Boolean(b.recommended)) - Number(Boolean(a.recommended))), [data]);
   const preview = ordered.slice(0, 5);
-  return <section className="food-menu-section" aria-label="휴게소 음식 메뉴">
-    <div className="food-menu-heading"><h3>전체 메뉴 <span>{data?.items.length ?? 0}개</span></h3></div>
-    {loading ? <p role="status">메뉴 정보를 불러오는 중입니다.</p>
+  return <section className="food-menu-section" aria-label="휴게소 음식 메뉴" aria-busy={loading}>
+    <div className="food-menu-heading"><h3>전체 메뉴 {data && <span>{data.items.length}개</span>}</h3></div>
+    {loading ? <div className="food-menu-loading" role="status"><span className={sharedClasses.spinner} aria-hidden="true" />메뉴 정보를 불러오는 중입니다.</div>
       : error ? <p role="status">메뉴 정보를 불러오지 못했습니다.</p>
         : !ordered.length ? <p>등록된 메뉴 정보가 없습니다.</p>
           : <>
