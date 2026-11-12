@@ -337,7 +337,7 @@ test("marker clicks do not bubble into map-close and EX selections keep their di
   );
   state.clicks[0]();
   assert.equal(selected, places[0].key);
-  assert.deepEqual(state.clickable, [true, true]);
+  assert.deepEqual(state.clickable, [false, false]);
   assert.equal(cleared, 0);
   assert.ok(state.images.includes("/marker-ex-station.svg"));
   assert.ok(state.ids.includes("/marker-ex-station-selected.svg"));
@@ -484,7 +484,7 @@ test("hiding cards temporarily closes and restores an open group list", t => {
   assert.ok(state.content.at(-1) instanceof CardElement);
   layer.dispose();
 });
-test("clicking an empty map area closes an open single-place card and clears its selection", () => {
+test("clicking an empty map area closes an open single-place card and clears its selection", async () => {
   const {sdk, map, state} = mockKakao();
   let cleared = 0;
   const markers = createPlaceMarkers(
@@ -502,8 +502,24 @@ test("clicking an empty map area closes an open single-place card and clears its
   assert.equal(state.shown, 1);
   const hidden = state.hidden;
   state.mapClicks[0]();
+  await new Promise(resolve => setTimeout(resolve, 5));
   assert.ok(state.hidden > hidden);
   assert.equal(cleared, 1);
+  markers.dispose();
+});
+
+test("지도 클릭이 마커 클릭보다 먼저 발생해도 마커 선택을 해제하지 않는다", async () => {
+  const {sdk, map, state} = mockKakao();
+  let cleared = 0;
+  let selected = 0;
+  const layer = createPlaceMarkers(sdk, map, areas().slice(0, 1).map(restPlace),
+    () => { selected++; }, label, undefined, () => { cleared++; });
+  state.mapClicks[0]();
+  state.clicks[0]();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(selected, 1);
+  assert.equal(cleared, 0);
+  layer.dispose();
 });
 test("fit handles multiple markers, a single marker and empty results", () => {
   const {sdk, map, state} = mockKakao();

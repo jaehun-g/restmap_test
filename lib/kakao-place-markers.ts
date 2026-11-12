@@ -104,7 +104,7 @@ export function createPlaceMarkers(
         minClusterSize: 2,
         averageCenter: false,
         disableClickZoom: true,
-        clickable: true,
+        clickable: false,
         styles: [
           {
             width: `${PIN_WIDTH}px`,
@@ -137,7 +137,10 @@ export function createPlaceMarkers(
   // Kakao Maps can emit its map click immediately after a marker/overlay click.
   // Keep that follow-up event from dismissing the card that was just opened.
   let suppressMapClickUntil = 0;
+  let pendingMapClick: ReturnType<typeof setTimeout> | null = null;
   function suppressFollowUpMapClick() {
+    if (pendingMapClick !== null) clearTimeout(pendingMapClick);
+    pendingMapClick = null;
     suppressMapClickUntil = Date.now() + 250;
     sdk.event.preventMap?.();
   }
@@ -176,8 +179,13 @@ export function createPlaceMarkers(
   }
   function handleMapClick() {
     if (Date.now() <= suppressMapClickUntil) return;
-    closeList();
-    closeCardFromMap();
+    if (pendingMapClick !== null) clearTimeout(pendingMapClick);
+    pendingMapClick = setTimeout(() => {
+      pendingMapClick = null;
+      if (disposed || Date.now() <= suppressMapClickUntil) return;
+      closeList();
+      closeCardFromMap();
+    }, 0);
   }
   /** 목록에서 장소를 고르면 그 장소를 중심으로 개별 마커 레벨까지 확대합니다. 이미 더 확대돼 있으면 유지합니다. */
   function zoomToPlace(place: MapPlace) {
@@ -522,7 +530,7 @@ export function createPlaceMarkers(
           title: single
             ? `${first.record.name}${isLounge(first) ? " · 화물차 라운지" : first.kind === "station" ? ` · ${stationLabel(first.record)}` : ""}`
             : `이 위치의 장소 ${grouped.length}개`,
-          clickable: true,
+          clickable: false,
           image: single ? placeImage(first, false) : groupImage(grouped),
         });
         marker.setZIndex(unitZ(grouped));
@@ -621,7 +629,6 @@ export function createPlaceMarkers(
       content.className = "place-cluster-pin";
       content.setAttribute("role", "button");
       content.tabIndex = 0;
-      protectMapInteraction(content);
       content.setAttribute(
         "aria-label",
         `${summary.total}개 장소: 휴게소 ${summary.rest}, 주유소 ${summary.station}${summary.lounge ? `, 라운지 ${summary.lounge}` : ""}. 목록 보기`,
@@ -704,6 +711,7 @@ export function createPlaceMarkers(
     select,
     dispose() {
       disposed = true;
+      if (pendingMapClick !== null) clearTimeout(pendingMapClick);
       clearCard();
       closeList();
       resizeObserver?.disconnect();
