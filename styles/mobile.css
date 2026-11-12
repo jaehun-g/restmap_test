@@ -18,9 +18,6 @@
 .mobile-map .mobile-navigation {
   @apply flex-col items-center;
 }
-.mobile-navigation-row .map-button {
-  @apply shrink-0;
-}
 .map-route-error .map-button {
   @apply shrink-0;
 }

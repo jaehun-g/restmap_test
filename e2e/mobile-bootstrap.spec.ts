@@ -30,7 +30,7 @@ test("서버 초기 데이터로 두 종류 마커를 표시하고 최초 API �
   const routeResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/api/gas-stations");
   await page.locator(".route-options button").filter({hasText: "경부선"}).click();
   await expect.poll(() => clientQueries.length).toBe(1);
-  await expect(page.locator(".map-scope-label")).toContainText("경부선");
+  await expect(page.locator(".mobile-filters button").filter({hasText: "경부선"})).toBeVisible();
   expect((await routeResponse).ok()).toBe(true);
   await page.locator(".mobile-filters button").filter({hasText: "경부선"}).click();
   await page.locator(".route-options button").filter({hasText: "전체 노선"}).click();

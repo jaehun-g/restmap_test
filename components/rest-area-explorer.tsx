@@ -92,7 +92,7 @@ export default function MobileExplorer({initialData}: {
       if (sheetAnimation.current === animation) sheetAnimation.current = null;
       animation.cancel();
     };
-  }, [panel, detailExpanded]);
+  }, [panel, detailExpanded, panelExpanded]);
   useEffect(() => {
     const sheet = sheetRef.current;
     if (!sheet) return;
@@ -409,11 +409,6 @@ export default function MobileExplorer({initialData}: {
               라운지 <b>{filters.lounge === "present" ? "ON" : "OFF"}</b>
             </FilterChip>
         </div>
-        {filters.routeName && placeView === "ex" && (
-          <p className="station-route-note text-[#526882] bg-[#f1f7f4] rounded-[8px] p-[10px] text-ui-12 leading-[1.6] compact">
-            주유소는 선택 노선 주변 2km · 직선거리 기준
-          </p>
-        )}
       </header>
       <div className="mobile-content flex-1 min-h-0 flex flex-col relative">
         <div className="mobile-map absolute inset-[0]">
@@ -421,7 +416,6 @@ export default function MobileExplorer({initialData}: {
             areas={mapAreas}
             stations={selectedMapStations}
             linkedStationsByRestId={linkedStationsByRestId}
-            selectedDirection={selectedDirectionLabel}
             fitRequest={view.fitRequest}
             searchFitPlaces={listPlaces}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
@@ -506,17 +500,15 @@ export default function MobileExplorer({initialData}: {
                       ? "휴게소 조회 확인"
                       : `${placeView === "rest" ? "휴게소" : placeView === "ex" ? "고속도로 주유소" : "휴게소·주유소"} ${resultCount}곳`}
                 </strong>
-                <small>
+                {(error || !filters.routeName) && <small>
                   {error
                     ? "목록에서 조회 상태를 확인해주세요"
-                    : filters.routeName
-                      ? `${filters.routeName} 전체 구간`
-                      : search.query.trim()
+                    : search.query.trim()
                         ? "전체 지역 검색"
                       : location.requesting
                         ? "현재 위치를 확인하고 있어요"
                         : scopeLabel(location.scope)}
-                </small>
+                </small>}
               </span>
               <Icon name="chevronUp" size={20} />
             </button>

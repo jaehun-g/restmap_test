@@ -124,7 +124,7 @@ export default function RestAreaDetails({
       >
         {tab === "시설" && (
           <section aria-label="편의시설">
-            <div className="facility-heading">
+            <div className="detail-section-heading">
               <h3>편의시설</h3>
               <span>{provided.length}개</span>
             </div>
@@ -165,6 +165,10 @@ export default function RestAreaDetails({
         {tab === "음식" && <FoodMenuSection key={area.id} restAreaId={area.id} />}
         {tab === "주유" && (
           <section className="detail-gas-content" aria-label="주유소 정보">
+            <div className="detail-section-heading">
+              <h3>주유소</h3>
+              <span>{linkedStations.length}곳</span>
+            </div>
             {linkedStations.length ? (
               linkedStations.map(station => {
                 const prices = stationPriceItems(station);

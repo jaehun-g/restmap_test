@@ -15,7 +15,7 @@ test.describe("휴게소·EX 주유소 통합 화면", () => {
     await expect(page.getByRole("button", {name: "서울 방향"})).toBeVisible();
     await page.getByRole("button", {name: "서울 방향"}).click();
     await expect(page.getByRole("button", {name: "서울 방향"})).toBeVisible();
-    await expect(page.getByText("경부선 · 서울 방향 전체 구간")).toBeVisible();
+    await expect(page.getByText(/전체 구간/)).toHaveCount(0);
 
     await page.locator(".sheet-summary").click();
     await page.getByRole("button", {name: /죽전\(서울 방향\).*상세정보/}).click();

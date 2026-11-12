@@ -260,27 +260,34 @@ input[type="checkbox"] {
   margin: 18px 0;
 }
 
-.food-menu-section {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid #e7ebf0;
-}
-.food-menu-section h3 {
-  margin: 0 0 10px;
-  font-size: var(--text-ui-14);
-}
-.food-menu-heading span {
-  margin-left: 4px;
-  color: var(--blue);
-  font-size: var(--text-ui-12);
-}
 .food-menu-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 64px;
   color: var(--muted);
   font-size: var(--text-ui-12);
+}
+.food-menu-loading ul {
+  margin-top: 10px;
+}
+.food-menu-skeleton {
+  align-items: center;
+  min-height: 36px;
+}
+.food-menu-skeleton span {
+  height: 12px;
+  border-radius: 6px;
+  background: #dfe6ef;
+  animation: food-menu-pulse 1.4s ease-in-out infinite;
+}
+.food-menu-skeleton-name {
+  width: 45%;
+}
+.food-menu-skeleton-price {
+  width: 52px;
+}
+@keyframes food-menu-pulse {
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .food-menu-skeleton span { animation: none; }
 }
 .food-menu-more {
   width: 100%;
@@ -446,6 +453,21 @@ input[type="checkbox"] {
   width: 100%;
   padding-top: 12px;
 }
+.detail-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.detail-section-heading h3 {
+  margin: 0;
+  font-size: var(--text-ui-14);
+}
+.detail-section-heading > span {
+  color: var(--blue);
+  font-size: var(--text-ui-12);
+}
 .detail-facility-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -506,7 +528,7 @@ input[type="checkbox"] {
   font-size: var(--text-ui-14);
 }
 .detail-gas-content .station-price-section {
-  margin: 8px 0 18px;
+  margin: 0 0 18px;
   padding: 14px;
   border: 1px solid #e3ebf5;
   border-radius: 12px;
@@ -776,9 +798,6 @@ input[type="checkbox"] {
 }
 .place-tabs button.active {
   @apply bg-primary-soft text-primary;
-}
-.station-route-note.compact {
-  @apply m-[6px_0] p-[5px_8px] text-ui-10;
 }
 .list-pin.is-station {
   @apply bg-station-soft text-station;

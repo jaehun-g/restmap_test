@@ -53,7 +53,6 @@ export default function KakaoMap({
   onFullscreen,
   fullscreen = false,
   linkedStationsByRestId,
-  selectedDirection = null,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -83,7 +82,6 @@ export default function KakaoMap({
   onFullscreen?: () => void;
   fullscreen?: boolean;
   linkedStationsByRestId?: ReadonlyMap<number, GasStation[]>;
-  selectedDirection?: string | null;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const topbar = useRef<HTMLDivElement>(null);
@@ -558,16 +556,6 @@ export default function KakaoMap({
         >
           {mobileEnabled && mobileLocation ? (
             <>
-              {selectedRouteName && (
-                <div className="mobile-navigation-row flex items-center justify-between gap-[8px] w-full">
-                  <span
-                    className="map-scope-label p-[8px_10px] rounded-[20px] bg-[#fffffff2] [box-shadow:0_2px_8px_#26374d12] text-[#526b91] text-ui-12"
-                    role="status"
-                  >
-                    {[selectedRouteName, selectedDirection].filter(Boolean).join(" · ")} 전체 구간
-                  </span>
-                </div>
-              )}
               {ready && !selectedRouteName && mobileLocation.researchAvailable && (
                 <button
                   className={cn(sharedClasses.mapButton, "map-research-button")}

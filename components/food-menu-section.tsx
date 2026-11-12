@@ -2,7 +2,6 @@
 
 import {useEffect, useMemo, useState} from "react";
 import {foodBadges, foodPrice, type FoodMenusResponse} from "@/lib/food-menus";
-import {sharedClasses} from "@/lib/shared-classes";
 
 export default function FoodMenuSection({restAreaId}: {restAreaId: number}) {
   const [data, setData] = useState<FoodMenusResponse | null>(null);
@@ -25,8 +24,16 @@ export default function FoodMenuSection({restAreaId}: {restAreaId: number}) {
   const ordered = useMemo(() => [...(data?.items ?? [])].sort((a, b) => Number(Boolean(b.recommended)) - Number(Boolean(a.recommended))), [data]);
   const preview = ordered.slice(0, 5);
   return <section className="food-menu-section" aria-label="휴게소 음식 메뉴" aria-busy={loading}>
-    <div className="food-menu-heading"><h3>전체 메뉴 {data && <span>{data.items.length}개</span>}</h3></div>
-    {loading ? <div className="food-menu-loading" role="status"><span className={sharedClasses.spinner} aria-hidden="true" />메뉴 정보를 불러오는 중입니다.</div>
+    <div className="detail-section-heading food-menu-heading"><h3>전체 메뉴</h3>{data && <span>{data.items.length}개</span>}</div>
+    {loading ? <div className="food-menu-loading" role="status">
+      <span>메뉴 정보를 불러오는 중입니다.</span>
+      <ul aria-hidden="true">
+        {[0, 1, 2].map(index => <li className="food-menu-skeleton" key={index}>
+          <span className="food-menu-skeleton-name" />
+          <span className="food-menu-skeleton-price" />
+        </li>)}
+      </ul>
+    </div>
       : error ? <p role="status">메뉴 정보를 불러오지 못했습니다.</p>
         : !ordered.length ? <p>등록된 메뉴 정보가 없습니다.</p>
           : <>

@@ -83,6 +83,7 @@ for (const audience of ["mobile", "admin"] as const) {
     }));
     await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
     await page.route("**/api/gas-stations**", route => route.fulfill({json: {...gasStationResponse, items: stations}}));
+    await page.route("**/api/rest-areas/*/food-menus", route => route.fulfill({json: {items: [], collectedAt: null}}));
     await context.grantPermissions(["geolocation"]);
     await context.setGeolocation({latitude: 37.49, longitude: 127});
     await page.setViewportSize(audience === "mobile" ? {width: 390, height: 844} : {width: 1440, height: 1000});
@@ -103,7 +104,18 @@ for (const audience of ["mobile", "admin"] as const) {
     }
     await expect(page.locator(".detail-overview-prices")).toContainText("1,650~1,680원/L");
     await expect(page.locator(".detail-overview-prices")).toContainText("1,520~1,540원/L");
+    await page.getByRole("tab", {name: "시설", exact: true}).click();
+    await expect(page.locator(".detail-section-heading")).toBeVisible();
+    const headingPosition = async () => page.locator(".detail-section-heading").evaluate(element => {
+      const heading = element.getBoundingClientRect();
+      const panel = element.closest("[role=tabpanel]")!.getBoundingClientRect();
+      return {x: heading.x - panel.x, y: heading.y - panel.y};
+    });
+    const facilityPosition = await headingPosition();
+    await page.getByRole("tab", {name: "음식", exact: true}).click();
+    await expect.poll(headingPosition).toEqual(facilityPosition);
     await page.getByRole("button", {name: "주유소 2곳 · 방향별 가격 확인 →"}).click();
+    await expect.poll(headingPosition).toEqual(facilityPosition);
     await expect(page.locator(".detail-gas-content article")).toHaveCount(2);
     await expect(page.locator(".detail-gas-content")).toContainText("서울 방향");
     await expect(page.locator(".detail-gas-content")).toContainText("부산 방향");
@@ -299,7 +311,8 @@ test("노선 선택은 서버 검색을 유지하고 전체 노선 복귀 시 �
   await page.locator(".route-options button").filter({hasText: "경부선"}).click();
   await expect.poll(() => queries.length).toBe(2);
   expect([...queries[1]]).toEqual([["source", "ex"], ["routeName", "경부선"]]);
-  await expect(page.locator(".map-scope-label")).toContainText("경부선");
+  await expect(page.locator(".mobile-filters button").filter({hasText: "경부선"})).toBeVisible();
+  await expect(page.getByText(/전체 구간/)).toHaveCount(0);
   await waitForMarkerLayerToSettle(page);
   await page.locator(".mobile-filters button").filter({hasText: "경부선"}).click();
   await page.locator(".route-options button").filter({hasText: "전체 노선"}).click();
@@ -356,10 +369,12 @@ test("mobile rest-area details load food menus independently of the map response
   const foodSection = page.locator(".food-menu-section");
   await expect(foodSection).toHaveAttribute("aria-busy", "true");
   await expect(foodSection.getByRole("status")).toContainText("메뉴 정보를 불러오는 중입니다.");
-  await expect(foodSection.locator(".spinner")).toBeVisible();
+  await expect(foodSection.locator(".food-menu-skeleton")).toHaveCount(3);
+  await expect(foodSection.locator(".food-menu-skeleton").first()).toBeVisible();
   releaseMenus();
   expect((await (await menusResponse).json()).collectedAt).toBe("2026-10-21T00:00:00.000Z");
   await expect(foodSection).toHaveAttribute("aria-busy", "false");
+  await expect(foodSection.locator(".food-menu-skeleton")).toHaveCount(0);
   await expect(foodSection).toBeVisible();
   await expect(foodSection).toContainText("E2E signature udon");
   await expect(foodSection).toContainText("9,500");

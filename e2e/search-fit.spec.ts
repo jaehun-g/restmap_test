@@ -66,6 +66,15 @@ test("모바일 상세 시트는 요약으로 열리고 탭 또는 위로 스와
 
 test("목록과 노선·편의시설 필터는 스와이프로 확장하고 스크롤 위치를 보존한다", async ({page}) => {
   await mockMapData(page);
+  await page.addInitScript(() => {
+    const originalAnimate = Element.prototype.animate;
+    (window as unknown as {sheetAnimations: number}).sheetAnimations = 0;
+    Element.prototype.animate = function (...args) {
+      if (this.classList.contains("mobile-sheet"))
+        (window as unknown as {sheetAnimations: number}).sheetAnimations++;
+      return originalAnimate.apply(this, args);
+    };
+  });
   await page.setViewportSize({width: 390, height: 844});
   await page.goto("/mobile");
   const sheet = page.locator(".mobile-sheet");
@@ -83,15 +92,31 @@ test("목록과 노선·편의시설 필터는 스와이프로 확장하고 스�
   await swipe(sheet, 300, 400);
   await expect(page.locator(".sheet-summary")).toBeVisible();
   for (const [button, heading] of [["전체 노선", "노선 선택"], ["휴게소 편의시설", "편의시설 선택"]]) {
+    const animationCount = () => page.evaluate(() => (window as unknown as {sheetAnimations: number}).sheetAnimations);
+    const finishAnimation = () => sheet.evaluate(async element => {
+      await Promise.all(element.getAnimations().map(animation => animation.finished.catch(() => {})));
+    });
+    const beforeOpen = await animationCount();
     await page.getByRole("button", {name: button, exact: true}).click();
     await expect(page.getByRole("heading", {name: heading})).toBeVisible();
+    await expect.poll(animationCount).toBeGreaterThan(beforeOpen);
+    await finishAnimation();
+    const beforeExpand = await animationCount();
     await swipe(sheet, 600, 500);
     await expect(sheet).toHaveClass(/is-panel-full/);
+    await expect.poll(animationCount).toBeGreaterThan(beforeExpand);
+    await finishAnimation();
     await expect(page.locator(".filter-sheet-scroll")).toBeVisible();
+    const beforeCollapse = await animationCount();
     await swipe(sheet, 300, 400);
     await expect(sheet).not.toHaveClass(/is-panel-full/);
+    await expect.poll(animationCount).toBeGreaterThan(beforeCollapse);
+    await finishAnimation();
+    const beforeClose = await animationCount();
     await swipe(sheet, 300, 400);
     await expect(page.locator(".sheet-summary")).toBeVisible();
+    await expect.poll(animationCount).toBeGreaterThan(beforeClose);
+    await finishAnimation();
   }
 });
 
@@ -150,7 +175,7 @@ test("모바일은 선택 노선과 내 위치 범위를 건너뛰고 검색 결
   await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
   await page.locator(".mobile-filters button").filter({hasText: "전체 노선"}).click();
   await page.locator(".route-options button").filter({hasText: "경부선"}).click();
-  await expect(page.locator(".map-scope-label")).toContainText("경부선");
+  await expect(page.locator(".mobile-filters button").filter({hasText: "경부선"})).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.activeClusterers)).toBe(1);
   const before = await page.evaluate(() => window.__kakaoMapMock.boundsFits.length + window.__kakaoMapMock.centerFits.length);
   const search = page.getByRole("searchbox", {name: "휴게소명·노선명·주유소명·주소 검색"});

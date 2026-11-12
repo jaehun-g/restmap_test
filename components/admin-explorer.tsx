@@ -9,7 +9,6 @@ import {useAdminSession} from "@/hooks/use-admin-session";
 import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {
   filterRestAreas,
-  directionOptions,
   initialFilters,
   sortRestAreas,
   type RestAreaFilters,
@@ -93,12 +92,6 @@ export default function AdminExplorer() {
   const linkedStationsByRestId = useMemo(
     () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
     [mergedFacilities.facilities, sourceFacilities],
-  );
-  const selectedDirectionLabel = useMemo(
-    () =>
-      directionOptions(areas, filters.routeName).find(option => option.key === filters.direction)
-        ?.label ?? filters.direction,
-    [areas, filters.routeName, filters.direction],
   );
   const selectedStation = selectedStationId === null ? undefined : allStations.stations.find(station => stationKey(station) === selectedStationId);
   const restListRows = useMemo(() => {
@@ -419,7 +412,6 @@ export default function AdminExplorer() {
               stations={selectedMapStations}
               searchFitPlaces={[...mapAreas.map(restPlace), ...mapStations.map(stationPlace)]}
               linkedStationsByRestId={linkedStationsByRestId}
-              selectedDirection={selectedDirectionLabel}
               selectedStationId={selectedStation ? stationKey(selectedStation) : null}
               onStationSelect={selectStation}
               onStationDetails={openStationDetails}
