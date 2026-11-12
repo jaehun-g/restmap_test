@@ -290,6 +290,22 @@ test("programmatic marker focus ignores a delayed zoom event until map idle", as
   assert.equal(filterByGeoScope(places.value, controller.getSnapshot().scope, origin).length, visibleBefore);
 });
 
+test("a camera adjustment does not cancel suppression of a delayed marker zoom", async () => {
+  const {map, controller, locate, emit, layer, finishDelayedZoom} = connected();
+  await locate();
+  const before = controller.getSnapshot().scope;
+  layer.runProgrammaticMapAction(() => {
+    (map as KakaoMap & {setLevelDelayed(level: number): void}).setLevelDelayed(4);
+  }, true);
+  layer.runProgrammaticMapAction(() => map.setCenter(new LatLng(37.2, 127)));
+  finishDelayedZoom();
+  emit("idle");
+  assert.equal(controller.getSnapshot().scope, before);
+  map.setLevel(5);
+  emit("idle");
+  assert.notEqual(controller.getSnapshot().scope, before);
+});
+
 test("manual zoom keeps the selected place in the active location results", async () => {
   const {map, controller, locate, emit, state, setPlaceSelected} = connected();
   await locate();

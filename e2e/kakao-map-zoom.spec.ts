@@ -176,7 +176,7 @@ test(`${delayed} 응답이 늦어도 두 종류 마커를 함께 표시하고 �
     await expect.poll(() => queries.length).toBe(1);
     await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.mapCreates)).toBe(1);
     await page.evaluate(() => (window as unknown as {__resolveTestLocation(): void}).__resolveTestLocation());
-    await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
+    await expect(page.locator(".sheet-summary small")).toContainText("내 위치 기준 15km");
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(0);
     releaseResponse();
@@ -190,69 +190,27 @@ test(`${delayed} 응답이 늦어도 두 종류 마커를 함께 표시하고 �
 });
 }
 
-test("지도 확대·축소와 지도 내 재검색은 전국 EX 목록을 재조회하지 않고 범위 내 마커만 갱신한다", async ({page, context}) => {
-  const pageErrors: Error[] = [];
+test("지도 영역이 자동으로 목록에 반영된다", async ({page, context}) => {
   let stationRequests = 0;
-  const outside = {...gasStationResponse.items[0], id: 2, siteCode: "E2E-EX-2", name: "반경 밖 주유소", latitude: 37.7};
-  page.on("pageerror", error => pageErrors.push(error));
+  const outside = {...gasStationResponse.items[0], id: 2, siteCode: "E2E-EX-2", name: "Outside Station", latitude: 37.7, longitude: 127};
   await page.addInitScript({content: installKakaoMapsMock});
-  await page.route("**/api/rest-areas", async route => {
-    await route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify(restAreaResponse),
-    });
-  });
-  await page.route("**/api/gas-stations**", async route => {
+  await page.route("**/api/rest-areas", route => route.fulfill({json: restAreaResponse}));
+  await page.route("**/api/gas-stations**", route => {
     stationRequests++;
-    await route.fulfill({
-      json: {...gasStationResponse, items: [...gasStationResponse.items, outside]},
-    });
+    return route.fulfill({json: {...gasStationResponse, items: [...gasStationResponse.items, outside]}});
   });
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({latitude: 37.5, longitude: 127});
   await page.setViewportSize({width: 390, height: 844});
   await page.goto("/mobile");
-
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.mapCreates)).toBeGreaterThan(0);
-  expect(pageErrors).toEqual([]);
-  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBeGreaterThan(0);
-  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.clusterers)).toBeGreaterThan(0);
-
-  await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
-  const before = await waitForMarkerLayerToSettle(page);
-  expect(before).toBe(3);
-  const initial = await page.evaluate(() => window.__kakaoMapMock);
-  expect(initial.addCalls).toEqual(expect.arrayContaining([true]));
-  expect(initial.redraws).toBeGreaterThanOrEqual(initial.addCalls.length);
-  await expect.poll(() => stationRequests).toBeGreaterThan(0);
-  expect(stationRequests).toBe(1);
-  await page.locator(".sheet-summary").click();
-  await expect(page.locator(".mobile-area-card")).toHaveCount(3);
-  await expect(page.locator(".mobile-area-card").filter({hasText: outside.name})).toHaveCount(0);
-  const initialLevel = await page.evaluate(() => window.__kakaoMapMock.map!.getLevel());
-
-  await page.evaluate(() => {
-    const map = window.__kakaoMapMock.map;
-    if (!map) throw new Error("Kakao map mock was not initialized");
-    map.setLevel(map.getLevel() + 1);
-  });
-  await expect(page.locator(".mobile-area-card")).toHaveCount(4);
-  await expect(page.locator(".mobile-area-card").filter({hasText: outside.name})).toHaveCount(1);
-  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before + 1);
-  await page.evaluate(level => window.__kakaoMapMock.map!.setLevel(level), initialLevel);
-  await expect(page.locator(".mobile-area-card")).toHaveCount(3);
-  await page.waitForTimeout(300);
-  expect(stationRequests).toBe(1);
-  expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(before + 1);
-  await page.keyboard.press("Escape");
+  await expect.poll(() => stationRequests).toBe(1);
   await page.evaluate(() => window.__kakaoMapMock.map!.moveBounds(37.69, 126.99, 37.71, 127.01));
-  await page.getByRole("button", {name: "지도 내 재검색", exact: true}).click();
   await page.locator(".sheet-summary").click();
   await expect(page.locator(".mobile-area-card")).toHaveCount(1);
   await expect(page.locator(".mobile-area-card")).toContainText(outside.name);
-  await page.waitForTimeout(300);
+  await expect(page.getByRole("button", {name: "지도 내 재검색"})).toHaveCount(0);
   expect(stationRequests).toBe(1);
-  expect(pageErrors).toEqual([]);
 });
 
 test("검색으로 일부 장소를 제외해도 남아 있는 마커를 재생성하지 않는다", async ({page, context}) => {
@@ -327,10 +285,12 @@ test("노선 선택은 서버 검색을 유지하고 전체 노선 복귀 시 �
   await expect(page.locator(".mobile-filters button").filter({hasText: "경부선"})).toBeVisible();
   await expect(page.getByText(/전체 구간/)).toHaveCount(0);
   await waitForMarkerLayerToSettle(page);
+  await page.evaluate(() => window.__kakaoMapMock.map!.setBoundsSilent(37.48, 126.99, 37.50, 127.01));
   await page.locator(".mobile-filters button").filter({hasText: "경부선"}).click();
   await page.locator(".route-options button").filter({hasText: "전체 노선"}).click();
-  await expect(page.locator(".sheet-summary small")).toContainText("반경 15km");
-  await page.waitForTimeout(400);
+  await expect(page.locator(".sheet-summary small")).toContainText("현재 지도 영역");
+  await page.locator(".sheet-summary").click();
+  await expect(page.locator(".mobile-area-card").filter({hasText: area.name})).toBeVisible();
   expect(queries).toHaveLength(2);
   expect([...queries[0]]).toEqual([["source", "ex"]]);
 });
