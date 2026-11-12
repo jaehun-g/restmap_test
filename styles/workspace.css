@@ -205,6 +205,10 @@ input[type="checkbox"] {
 }
 .map-info-card.placement-above {
   @apply [transform:translateY(calc(-100%_-_51px))];
+  pointer-events: auto;
+}
+.map-canvas div:has(> .map-info-card.placement-above) {
+  pointer-events: none;
 }
 .map-info-card.placement-above::after {
   @apply top-auto bottom-[-7px] [transform:rotate(45deg)];

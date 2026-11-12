@@ -147,7 +147,10 @@ for (const kind of ["rest", "station"] as const) {
         if (closeMethod === "button") await card.locator(".map-card-close").click();
         else {
           await page.waitForTimeout(300);
-          await page.locator(".map-canvas").click({position: {x: 20, y: 150}});
+          const box = await card.boundingBox();
+          if (!box) throw new Error("정보창 위치를 확인할 수 없습니다.");
+          // 위로 이동한 정보창의 원래 오버레이 영역을 클릭한다.
+          await page.mouse.click(box.x + 20, box.y + box.height + 80);
         }
         await expect(card).toHaveCount(0);
       }
