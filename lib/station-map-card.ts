@@ -6,7 +6,7 @@ export function createStationMapCard(
   onDetails: () => void,
 ): HTMLElement {
   const card = document.createElement("section");
-  card.className = "map-info-card";
+  card.className = "map-info-card station-map-card";
   card.setAttribute("aria-label", `${station.name} 요약`);
   const heading = document.createElement("div");
   heading.className = "map-card-heading";
