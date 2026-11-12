@@ -43,7 +43,13 @@ async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
 test("모바일에서 연결 주유소가 한 곳이면 주유 탭에서 바로 지도 정보를 연다", async ({page, context}) => {
   const area = {...restAreaResponse.items[0], name: "E2E(부산)", routeName: "경부선", directionLabel: "부산 방향", latitude: 37.49, longitude: 127};
   const station = {...gasStationResponse.items[0], name: "E2E(부산)주유소", routeName: "경부선", direction: "부산", latitude: 37.4905, longitude: 127};
-  await page.addInitScript({content: installKakaoMapsMock});
+  await page.addInitScript({content: installKakaoMapsMock + `
+    const markerSetMap = window.kakao.maps.Marker.prototype.setMap;
+    window.kakao.maps.Marker.prototype.setMap = function(map) {
+      this.__testMap = map;
+      markerSetMap.call(this, map);
+    };
+  `});
   await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
   await page.route("**/api/gas-stations**", route => route.fulfill({json: {...gasStationResponse, items: [station]}}));
   await context.grantPermissions(["geolocation"]);
@@ -57,6 +63,13 @@ test("모바일에서 연결 주유소가 한 곳이면 주유 탭에서 바로 
   await expect(page.locator(".sheet-summary")).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayContents.at(-1))).toContain(station.name);
   await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.panPositions.some(([lat]) => Math.abs(lat - 37.4905) < 0.000001))).toBe(true);
+  const pinnedMarker = () => page.evaluate(() => {
+    const markers = window.__kakaoMapMock.markers as unknown as {options: {position: {getLat(): number}}; __testMap?: unknown}[];
+    return markers.some(marker => Math.abs(marker.options.position.getLat() - 37.4905) < 0.000001 && !!marker.__testMap);
+  });
+  await expect.poll(pinnedMarker).toBe(true);
+  await page.getByRole("button", {name: "내 위치로 이동"}).click();
+  await expect.poll(pinnedMarker).toBe(false);
 });
 
 for (const audience of ["mobile", "admin"] as const) {

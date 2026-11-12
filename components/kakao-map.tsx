@@ -54,6 +54,7 @@ export default function KakaoMap({
   mobileLocation,
   selectedRouteName = null,
   onClearRoute,
+  onLocate,
   stations = emptyStations,
   searchFitPlaces,
   selectedStationId = null,
@@ -83,6 +84,7 @@ export default function KakaoMap({
   mobileLocation?: MobileMapLocation;
   selectedRouteName?: string | null;
   onClearRoute?: () => void;
+  onLocate?: () => void;
   stations?: GasStation[];
   searchFitPlaces?: MapPlace[];
   selectedStationId?: string | null;
@@ -696,6 +698,7 @@ export default function KakaoMap({
                 disabled={mobileLocation.requesting || locationDisabled}
                 onClick={() => {
                   clearSelection();
+                  onLocate?.();
                   if (selectedRouteName) onClearRoute?.();
                   mobileLocation.locate();
                 }}

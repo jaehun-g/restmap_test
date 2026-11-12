@@ -432,6 +432,7 @@ export default function MobileExplorer({initialData}: {
             }}
             selectedRouteName={filters.routeName}
             onClearRoute={clearRoute}
+            onLocate={() => setPreviewStation(null)}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
             onSelect={select}
             onDetails={details}
