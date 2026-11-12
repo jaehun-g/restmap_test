@@ -27,6 +27,10 @@
 # misc
 .DS_Store
 *.pem
+/work-log/
+/food-award-photos/
+/bug.md
+*.log
 
 # debug
 npm-debug.log*
