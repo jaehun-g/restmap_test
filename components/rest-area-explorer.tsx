@@ -18,9 +18,9 @@ import type {PlaceView} from "@/lib/map-places";
 import {mobilePlaceList, previewForRestArea} from "@/lib/mobile-place-list";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
-import {filterFacilityPlaces} from "@/lib/facility-filters";
+import {filterFacilityPlaces, mobileSearchScope} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
-import {areaDistance, formatDistance, scopeLabel} from "@/lib/geo-search";
+import {areaDistance, formatDistance, formatRadius, type GeoBounds} from "@/lib/geo-search";
 import {cardDisplayArea} from "@/lib/map-card-layout";
 import {detailSheetSwipe} from "@/lib/mobile-sheet-gesture";
 import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
@@ -159,13 +159,19 @@ export default function MobileExplorer({initialData}: {
     );
     return new DOMRect(area.left, area.top, area.width, area.height);
   }, []);
+  const [viewportBounds, setViewportBounds] = useState<GeoBounds | null>(null);
+  const updateViewport = useCallback((bounds: GeoBounds) => {
+    setViewportBounds(current => current && current.south === bounds.south && current.west === bounds.west && current.north === bounds.north && current.east === bounds.east ? current : bounds);
+  }, []);
+  const hasActiveFilter = Boolean(search.query.trim() || filters.routeName || filters.missingRoute || filters.direction || filters.facilities.length || filters.lounge !== "all" || placeView !== "all");
+  const searchScope = useMemo(() => mobileSearchScope(filters, search.query, placeView, viewportBounds), [filters, search.query, placeView, viewportBounds]);
   const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
       filters, query: search.query, stationServices: [],
-      scope: location.scope, position: location.position,
+      scope: searchScope, position: location.position,
     }, sourceFacilities),
-    [areas, gas.stations, filters, search.query, location.scope, location.position, sourceFacilities],
+    [areas, gas.stations, filters, search.query, searchScope, location.position, sourceFacilities],
   );
   const baseVisibleAreas = useMemo(
     () => mergedFacilities.facilities.map(({area}) => area),
@@ -433,6 +439,7 @@ export default function MobileExplorer({initialData}: {
             selectedRouteName={filters.routeName}
             onClearRoute={clearRoute}
             onLocate={() => setPreviewStation(null)}
+            onViewportChange={updateViewport}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
             onSelect={select}
             onDetails={details}
@@ -510,7 +517,9 @@ export default function MobileExplorer({initialData}: {
                         ? "전체 지역 검색"
                       : location.requesting
                         ? "현재 위치를 확인하고 있어요"
-                        : scopeLabel(location.scope)}
+                        : hasActiveFilter ? "전체 지역 검색" : location.locationRadius
+                          ? `현재 지도 영역 · 내 위치 기준 ${formatRadius(location.locationRadius.radiusMeters)}`
+                          : "현재 지도 영역"}
                 </small>}
               </span>
               <Icon name="chevronUp" size={20} />

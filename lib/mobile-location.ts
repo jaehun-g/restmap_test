@@ -24,13 +24,13 @@ export type LocationState = {
 
 const messages: Record<LocationErrorCode, string> = {
   INSECURE:
-    "현재 위치는 HTTPS 또는 localhost에서 사용할 수 있어요. 지도를 이동해 지도 내 재검색을 이용해주세요.",
-  UNSUPPORTED: "이 브라우저는 현재 위치를 지원하지 않아요. 지도 내 재검색을 이용해주세요.",
+    "현재 위치는 HTTPS 또는 localhost에서 사용할 수 있어요. 지도를 이동해 주변 장소를 확인해주세요.",
+  UNSUPPORTED: "이 브라우저는 현재 위치를 지원하지 않아요. 지도를 이동해 주변 장소를 확인해주세요.",
   DENIED:
-    "위치 권한이 꺼져 있어요. 브라우저 설정에서 위치를 허용하거나 지도 내 재검색을 이용해주세요.",
+    "위치 권한이 꺼져 있어요. 브라우저 설정에서 위치를 허용하거나 지도를 이동해 주변 장소를 확인해주세요.",
   TIMEOUT: "위치 확인 시간이 초과됐어요. 내 위치 버튼으로 다시 시도해주세요.",
   UNAVAILABLE:
-    "현재 위치를 확인하지 못했어요. 내 위치 버튼으로 다시 시도하거나 지도 내 재검색을 이용해주세요.",
+    "현재 위치를 확인하지 못했어요. 내 위치 버튼으로 다시 시도하거나 지도를 이동해 주변 장소를 확인해주세요.",
 };
 const failure = (code: LocationErrorCode): LocationResult => ({
   ok: false,

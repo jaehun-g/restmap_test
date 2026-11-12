@@ -1,5 +1,5 @@
 type KakaoMapMockMetrics = {
-  map: {getLevel(): number; setLevel(level: number): void; getMapTypeId(): number; moveBounds(south: number, west: number, north: number, east: number): void} | null;
+  map: {getLevel(): number; setLevel(level: number): void; getMapTypeId(): number; moveBounds(south: number, west: number, north: number, east: number): void; setBoundsSilent(south: number, west: number, north: number, east: number): void} | null;
   mapCreates: number;
   initialViews: Array<{latitude: number; longitude: number; level: number}>;
   markerCreates: number;
@@ -59,6 +59,11 @@ export const installKakaoMapsMock = `
       setMapTypeId(type) { this.mapType = type; }
       getMapTypeId() { return this.mapType; }
       setBounds(bounds) { this.bounds = bounds; window.__kakaoMapMock.boundsFits.push(bounds.points.map(point => [point.getLat(), point.getLng()])); emit(this, "idle"); }
+      setBoundsSilent(south, west, north, east) {
+        this.bounds = new LatLngBounds();
+        this.bounds.extend(new LatLng(south, west));
+        this.bounds.extend(new LatLng(north, east));
+      }
       moveBounds(south, west, north, east) {
         emit(this, "dragstart");
         this.bounds = new LatLngBounds();
