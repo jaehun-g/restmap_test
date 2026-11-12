@@ -129,7 +129,7 @@ try {
     "## API 필드 충돌", "", "기준정보·상세 편의시설의 코드와 이름으로 기존 행을 식별합니다. 방향이 충돌하는 편의시설 요약은 보강에 사용하지 않습니다.", "",
     "| 표준 코드 | 이름 | 사유 |", "|---|---|---|",
     ...sourceWarnings.map(item => `| ${cell(item.code)} | ${cell(item.name)} | ${cell(item.warning)} |`), "");
-  await fs.writeFile(option("--report") ?? "docs/rest-area-integration.md", lines.join("\n"));
+  await fs.writeFile(option("--report") ?? ".rest-area-sync/rest-area-integration.md", lines.join("\n"));
   await fs.writeFile(".rest-area-sync/result.json", JSON.stringify({summary, plan, inserted: inserted.map(item => item.row.id)}, null, 2));
   if (applied) await fs.writeFile(".rest-area-sync/applied-result.json", JSON.stringify({summary, plan, inserted: inserted.map(item => item.row.id)}, null, 2));
   console.log(JSON.stringify(summary, null, 2));

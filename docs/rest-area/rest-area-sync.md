@@ -2,7 +2,7 @@
 
 CSV의 기존 휴게소와 기존 DB ID를 유지하고 EX API에만 있는 시설을 추가한다. 명시적으로 `--apply`를 전달해야 DB를 변경한다. 새로운 의존성은 사용하지 않는다.
 
-2026-10-22 사용자 요청으로 검증한 민자 구간 휴게소 23곳은 서비스 대상에서 제외한다. `lib/excluded-private-rest-areas.ts`의 표준 코드 목록으로 API 재추가를 막으며, CSV에서도 해당 시설명·노선을 대조해 제외한다. 혼합 노선 전체를 제외하지 않는다. [삭제 결과](./private-rest-area-removal.md)에 대상과 백업 정보를 기록한다.
+2026-10-22 사용자 요청으로 검증한 민자 구간 휴게소 23곳은 서비스 대상에서 제외한다. `lib/excluded-private-rest-areas.ts`의 표준 코드 목록으로 API 재추가를 막으며, CSV에서도 해당 시설명·노선을 대조해 제외한다. 혼합 노선 전체를 제외하지 않는다. 적용 이력은 [작업 요약](./data-correction-history.md)을 참고한다.
 
 ```powershell
 npm run sync:rest-areas -- --csv "<CSV 경로>" --geocode
@@ -13,7 +13,7 @@ npm run sync:rest-areas -- --csv "<CSV 경로>" --geocode --apply
 
 ## 식별자와 우선순위
 
-- `test_lounge.id`는 유지한다. `std_rest_cd`와 `service_area_code` 두 문자열 컬럼을 추가하고 각각 NULL을 제외한 고유 인덱스를 둔다.
+- `tb_lounge.lg_id`는 유지한다. `lg_std_rest_cd`와 `lg_service_area_code`는 문자열 컬럼이며 각각 NULL을 제외한 고유 인덱스를 둔다.
 - `locationinfoRest.stdRestCd`, `restConvList.stdRestCd`, `conveniServiceArea.serviceAreaCode2`를 표준 코드로 통합한다. 요약 API의 `serviceAreaCode`는 기준정보 코드와 교차 확인한다.
 - 기존 코드가 있으면 코드를 우선한다. 최초 연결은 이름·노선·방향을 대조하며 이름 변경은 전화번호와 방향, 200m 이내 좌표가 모두 맞을 때만 연결한다.
 - 기존 값과 CSV 값을 유지하고 NULL을 API로 보완한다. 시설 목록에 항목이 없다는 이유만으로 0을 저장하지 않는다. 원본 O/X처럼 명시적인 경우에만 1/0을 사용한다.
@@ -27,7 +27,7 @@ npm run sync:rest-areas -- --csv "<CSV 경로>" --geocode --apply
 
 ## 실행 자료와 재실행
 
-`.rest-area-sync/`는 Git에서 제외된다. 수집 스냅샷, 반영 전 데이터, 계획, 지오코딩 캐시, 결과를 저장한다. `--snapshot <파일>`로 24시간 이내 수집 자료를 재사용할 수 있다. `--retry-unresolved`는 실패한 좌표를 다시 검색한다. `--report <파일>`은 기본 보고서 경로 `docs/rest-area-integration.md`를 바꾼다.
+`.rest-area-sync/`는 Git에서 제외된다. 수집 스냅샷, 반영 전 데이터, 계획, 지오코딩 캐시, 결과를 저장한다. `--snapshot <파일>`로 24시간 이내 수집 자료를 재사용할 수 있다. `--retry-unresolved`는 실패한 좌표를 다시 검색한다. `--report <파일>`은 기본 보고서 경로 `.rest-area-sync/rest-area-integration.md`를 바꾼다.
 
 `--audit-source-coordinates`는 DB의 REAL 좌표 정밀도를 고려해 원본 API와 50m 이내로 일치하는 좌표가 노선 밖에 있는지 다시 확인한다. `--audit-added-coordinates`는 반영 전 existing 행을 포함한 스냅샷을 기준으로 신규 추가 시설 전체의 좌표를 다시 확인한다. 키워드에서 휴게소 자체를 유일하게 검증하면 주소 필지의 중심점보다 해당 장소 좌표를 우선하며, 원본 주소의 좌표가 같은 휴게소 키워드 위치와 1km 이상 다르면 자동 확정을 보류한다.
 
@@ -37,4 +37,4 @@ DB 반영은 테이블 잠금과 단일 트랜잭션으로 처리한다. 계획 
 
 ## 음식정보
 
-휴게소 동기화 후 `npm run sync:food-menus`로 음식정보를 갱신한다. `test_food_area_mappings`는 `std_rest_cd`로 휴게소를 우선 연결하고, 코드가 없는 기존 휴게소에만 이름·노선·방향을 보조 기준으로 사용한다. 수동 매핑은 기존 음식정보 동기화 정책대로 유지한다.
+휴게소 동기화 후 `npm run sync:food-menus`로 음식정보를 갱신한다. `tb_food_area_mappings`는 표준 코드로 휴게소를 우선 연결하고, 코드가 없는 기존 휴게소에만 이름·노선·방향을 보조 기준으로 사용한다. 수동 매핑은 기존 음식정보 동기화 정책대로 유지한다.

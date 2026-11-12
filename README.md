@@ -94,12 +94,12 @@ PC 관리자 화면과 모바일 사용자 화면은 별도 페이지이며 같�
 Vercel과 로컬 모두 `DATABASE_URL`만 사용하며, 기존 MariaDB 환경 변수는 설정하지 않습니다.
 환경변수를 변경하면 개발 서버를 재시작하세요.
 
-EX 주유소 동기화에 필요한 테이블은 Supabase SQL Editor에서 준비합니다. 현재 Supabase 스키마가 준비되어 있으므로 MariaDB용 테이블 생성 스크립트는 실행하지 않습니다. 확인 방법은 [Supabase 및 Vercel 설정](docs/supabase-vercel.md)을 참고하세요.
+EX 주유소 동기화에 필요한 테이블은 Supabase SQL Editor에서 준비합니다. 현재 Supabase 스키마가 준비되어 있으므로 MariaDB용 테이블 생성 스크립트는 실행하지 않습니다. 확인 방법은 [Supabase 및 Vercel 설정](docs/operations/supabase-vercel.md)을 참고하세요.
 
 - [카카오 Web SDK 가이드](https://apis.map.kakao.com/web/guide/)
 - [카카오맵 활성화 안내](https://developers.kakao.com/docs/ko/kakaomap/common)
-- [Supabase 및 Vercel 설정](docs/supabase-vercel.md)
-- [MariaDB 비상 복구 지침](docs/mariadb-fallback.md)
+- [Supabase 및 Vercel 설정](docs/operations/supabase-vercel.md)
+- [MariaDB 비상 복구 지침](docs/operations/mariadb-fallback.md)
 
 ## 실행
 

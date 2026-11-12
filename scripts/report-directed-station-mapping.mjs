@@ -10,7 +10,7 @@ import {selectLegacyRows} from "./db-columns.mjs";
 
 nextEnv.loadEnvConfig(process.cwd());
 const client = new Client({connectionString: process.env.DATABASE_URL, ssl: {rejectUnauthorized: false}, connectionTimeoutMillis: 10_000});
-const reportPath = new URL("../docs/directed-rest-area-station-review.md", import.meta.url);
+const reportPath = new URL("../.rest-area-sync/directed-rest-area-station-review.md", import.meta.url);
 const cell = value => String(value ?? "미제공").replace(/\|/g, "\\|").replace(/[\r\n]+/g, " ");
 const point = item => item.latitude !== null && item.longitude !== null;
 const direction = area => area.directionLabel ?? area.routeDirection;
@@ -106,8 +106,9 @@ try {
   lines.push("## 후보 없는 항목의 검증 기록", "", "| 휴게소 ID | 확인한 주유소명 / 원천 코드 | 실제 주유소 유무 | 수정값 / 근거 | 반영 여부 |", "| --- | --- | --- | --- | --- |");
   for (const {area} of unmatched.filter(item => !item.candidates.length)) lines.push(`| ${area.id} | | | | [ ] |`);
   lines.push("", "## 재실행", "", "```powershell", "node scripts/report-directed-station-mapping.mjs", "```", "", "최신 DB를 읽어 이 문서를 다시 생성한다. 수기로 작성한 검증 메모를 보존하려면 재실행 전에 별도로 보관해야 한다.", "");
+  await fs.mkdir(new URL("../.rest-area-sync/", import.meta.url), {recursive: true});
   await fs.writeFile(reportPath, lines.join("\n"), "utf8");
-  console.log(JSON.stringify({checkedAt, directed: directed.length, matched: directed.length - unmatched.length, unmatched: unmatched.length, withStation: withStation.length, unknownStation: unknownStation.length, withoutStation: withoutStation.length, report: "docs/directed-rest-area-station-review.md", examples: withStation.slice(0, 10).map(item => ({id: item.area.id, name: item.area.name}))}, null, 2));
+  console.log(JSON.stringify({checkedAt, directed: directed.length, matched: directed.length - unmatched.length, unmatched: unmatched.length, withStation: withStation.length, unknownStation: unknownStation.length, withoutStation: withoutStation.length, report: ".rest-area-sync/directed-rest-area-station-review.md", examples: withStation.slice(0, 10).map(item => ({id: item.area.id, name: item.area.name}))}, null, 2));
 } catch (error) {
   await client.query("ROLLBACK").catch(() => {});
   throw error;

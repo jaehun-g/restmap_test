@@ -41,18 +41,22 @@ try {
     unresolved: unresolved.length, sourceCodes: rows.filter(row => row.std_rest_cd).length, serviceCodes: rows.filter(row => row.service_area_code).length,
     foodMatched: mappings.filter(row => row.match_status === "matched").length, foodUnmatched: mappings.filter(row => row.match_status !== "matched").length,
     foodMenus: foodCounts.total, visibleMenus: foodCounts.visible, preservedOriginalValues: true};
+  await fs.mkdir(".rest-area-sync", {recursive: true});
   await fs.writeFile(".rest-area-sync/verification.json", JSON.stringify({validation, unresolved: unresolved.map(row => ({id: row.id, name: row.name, code: row.std_rest_cd}))}, null, 2));
-  let report = await fs.readFile("docs/rest-area-integration.md", "utf8");
+  let report;
+  try {
+    report = await fs.readFile(".rest-area-sync/rest-area-integration.md", "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    report = "# 휴게소 통합 검증 결과\n\n## 신규 추가 휴게소\n\n## 이름 보정\n";
+  }
   report = report.replace(/"unresolvedCoordinates": \d+/, `"unresolvedCoordinates": ${unresolved.length}`);
   const cell = value => String(value ?? "미제공").replace(/\|/g, "\\|");
   const newRows = ["## 신규 추가 휴게소", "", "최종 좌표 감사 결과를 반영했습니다.", "", "| ID | 이름 | 표준 코드 | 노선 | 위도 | 경도 |", "|---:|---|---|---|---:|---:|",
     ...added.map(row => `| ${row.id} | ${cell(row.name)} | ${row.std_rest_cd} | ${cell(row.route_name)} | ${cell(row.latitude)} | ${cell(row.longitude)} |`), "", ""];
   report = report.replace(/## 신규 추가 휴게소[\s\S]*?(?=## 이름 보정)/, newRows.join("\n"));
-  const audit = await fs.readFile("docs/rest-area-coordinate-audit.md", "utf8");
-  const coordinates = audit.match(/## 좌표 처리[\s\S]*?(?=## API 필드 충돌)/)?.[0];
-  if (coordinates) report = report.replace(/## 좌표 처리[\s\S]*?(?=## API 필드 충돌)/, coordinates);
   report = report.replace(/\n## 최종 DB 검증[\s\S]*$/, "");
-  report += `\n## 최종 DB 검증\n\n\`\`\`json\n${JSON.stringify(validation, null, 2)}\n\`\`\`\n\n[좌표 재검증 보고서](./rest-area-coordinate-audit.md)를 함께 확인하세요.\n`;
-  await fs.writeFile("docs/rest-area-integration.md", report);
+  report += `\n## 최종 DB 검증\n\n\`\`\`json\n${JSON.stringify(validation, null, 2)}\n\`\`\`\n`;
+  await fs.writeFile(".rest-area-sync/rest-area-integration.md", report);
   console.log(JSON.stringify(validation, null, 2));
 } finally { await client.end(); }

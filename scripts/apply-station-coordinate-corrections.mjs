@@ -42,10 +42,11 @@ try {
   for (const station of beforeLinks) if (!replacements.has(station.siteCode) && projected.find(item => item.siteCode === station.siteCode)?.linkedRestAreaId !== station.linkedRestAreaId)
     throw new Error(`다른 주유소 연결 변경: ${station.siteCode}`);
   if (apply && changes.length) {
+    await fs.mkdir(new URL("../.rest-area-sync/", import.meta.url), {recursive: true});
     // 변경 전 좌표를 먼저 보관하고, 모든 대상 갱신·재검증이 성공한 경우에만 커밋한다.
     const backup = {createdAt: new Date().toISOString(), changes};
     const stamp = Date.now();
-    await fs.writeFile(new URL(`../docs/station-coordinate-corrections-${stamp}.json`, import.meta.url), JSON.stringify(backup, null, 2) + "\n", "utf8");
+    await fs.writeFile(new URL(`../.rest-area-sync/station-coordinate-corrections-${stamp}.json`, import.meta.url), JSON.stringify(backup, null, 2) + "\n", "utf8");
     for (const change of changes) {
       const result = await client.query(`UPDATE public.${dbTable("ex_station_geocodes")} SET ${dbColumn("ex_station_geocodes", "latitude")}=$2, ${dbColumn("ex_station_geocodes", "longitude")}=$3, ${dbColumn("ex_station_geocodes", "geocode_status")}='SUCCESS', ${dbColumn("ex_station_geocodes", "geocode_error_code")}=NULL, ${dbColumn("ex_station_geocodes", "geocoded_at")}=CURRENT_TIMESTAMP, ${dbColumn("ex_station_geocodes", "updated_at")}=CURRENT_TIMESTAMP WHERE ${dbColumn("ex_station_geocodes", "source_key")}=$1 RETURNING ${dbColumn("ex_station_geocodes", "id")} AS id`, [change.sourceKey, change.after.latitude, change.after.longitude]);
       if (result.rowCount !== 1) throw new Error(`갱신 건수 오류: ${change.sourceKey}`);
@@ -59,8 +60,8 @@ try {
     }
     const lines = ["# 거리 초과 주유소 좌표 보정 결과", "", `반영 시각: ${backup.createdAt}`, "", "사용자 지시에 따라 동명·동방향·동일 노선이며 거리 외 기존 검증을 통과하는 유일 후보만 반영했다. 다른 휴게소에 연결된 주유소와 대상이 모호한 후보는 제외했다. 휴게소에는 주소 필드가 없어 위도·경도만 맞추고 기존 주유소 주소와 원천 식별자는 유지했다. 보정 좌표는 동기화에서도 유지한다.", "", "| 주유소 ID | 주유소 | 휴게소 ID | 휴게소 | 기존 거리(m) | 변경 전 좌표 | 변경 후 좌표 |", "| --- | --- | --- | --- | ---: | --- | --- |"];
     for (const item of changes) lines.push(`| ${item.stationId} | ${item.stationName} | ${item.restAreaId} | ${item.restAreaName} | ${Math.round(item.distance)} | ${item.before.latitude}, ${item.before.longitude} | ${item.after.latitude}, ${item.after.longitude} |`);
-    lines.push("", `변경 전 좌표 및 원천 코드: [JSON 기록](station-coordinate-corrections-${stamp}.json)`, "");
-    await fs.writeFile(new URL("../docs/station-coordinate-corrections.md", import.meta.url), lines.join("\n"), "utf8");
+    lines.push("", `변경 전 좌표 및 원천 코드: [JSON 기록](./station-coordinate-corrections-${stamp}.json)`, "");
+    await fs.writeFile(new URL("../.rest-area-sync/station-coordinate-corrections.md", import.meta.url), lines.join("\n"), "utf8");
   }
   await client.query(apply ? "COMMIT" : "ROLLBACK");
   console.log(JSON.stringify({applied: apply, count: changes.length, changes}, null, 2));

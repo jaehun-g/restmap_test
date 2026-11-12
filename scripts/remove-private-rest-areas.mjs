@@ -44,7 +44,7 @@ try {
   const summary = {applied: apply, before: before.length, targetCount: targets.length, removed, remaining: before.length - removed, unlinkedFoodMappings: unlinked, backupPath};
   if (apply && targets.length) {
     const lines = ["# 민자 구간 휴게소 삭제 결과", "", `반영 시각: ${new Date().toISOString()}`, "", "사용자 요청으로 검증한 민자 구간 휴게소 23곳을 tb_lounge에서 삭제했다. 혼합 노선은 시설 단위로 제외하며 같은 노선의 공영 구간 휴게소는 유지한다. 연결된 음식정보 매핑은 미연결 상태로 바꾸고 후보 ID에서 삭제 대상을 제거했다. 수집한 원본 음식정보는 보존했다. EX 주유소와 지도 선형은 이번 휴게소 삭제 대상에 포함하지 않았다.", "", "```json", JSON.stringify(summary, null, 2), "```", "", "## 삭제 대상", "", "| ID | 휴게소 | 표준 코드 | DB 노선명 |", "| --- | --- | --- | --- |", ...targets.map(row => `| ${row.id} | ${row.name} | ${row.std_rest_cd} | ${row.route_name} |`), "", "## 동기화 제외", "", "lib/excluded-private-rest-areas.ts의 표준 코드로 EX API의 재추가를 막고, CSV는 시설명·노선 일치로 제외한다. 새 민자 시설은 확인 후 이 목록에 추가해야 한다. 원천 API는 민자 여부를 별도 구분하지 않으므로 이 목록은 검증한 23곳에 대한 정책이다.", "", "백업에는 삭제 전 휴게소 행, 관련 음식정보 매핑 및 메뉴를 저장했다. 백업 경로는 위 집계에 기록했으며 Git에서는 제외된다.", ""];
-    await fs.writeFile("docs/private-rest-area-removal.md", lines.join("\n"), "utf8");
+    await fs.writeFile(".rest-area-sync/private-rest-area-removal.md", lines.join("\n"), "utf8");
   }
   console.log(JSON.stringify({...summary, targets: targets.map(row => ({id: row.id, name: row.name, code: row.std_rest_cd}))}, null, 2));
 } catch (error) {

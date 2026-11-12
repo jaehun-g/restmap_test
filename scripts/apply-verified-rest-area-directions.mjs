@@ -35,7 +35,7 @@ try {
   }
   await client.query(apply ? "COMMIT" : "ROLLBACK");
   const summary = {applied: apply, count: changes.length, backupPath, changes: changes.map(item => ({id: item.id, code: item.code, before: item.before.name, after: item.after.name, direction: item.after.direction_label}))};
-  if (apply && changes.length) await fs.writeFile("docs/rest-area-direction-corrections.md", ["# 양북임시·부안 방향 보정", "", `반영 시각: ${new Date().toISOString()}`, "", "사용자 확인에 따라 양북임시 상→울산·하→포항, 부안 상→서울·하→목포로 보정했다. 이름, direction_label, route_direction을 변경하고 표준 코드·ID·좌표는 유지했다. 코드별 보정 및 기존 원천 이름 매핑으로 API·CSV 동기화 후에도 보정값을 유지한다.", "", "```json", JSON.stringify(summary, null, 2), "```", ""].join("\n"), "utf8");
+  if (apply && changes.length) await fs.writeFile(".rest-area-sync/rest-area-direction-corrections.md", ["# 양북임시·부안 방향 보정", "", `반영 시각: ${new Date().toISOString()}`, "", "사용자 확인에 따라 양북임시 상→울산·하→포항, 부안 상→서울·하→목포로 보정했다. 이름, direction_label, route_direction을 변경하고 표준 코드·ID·좌표는 유지했다. 코드별 보정 및 기존 원천 이름 매핑으로 API·CSV 동기화 후에도 보정값을 유지한다.", "", "```json", JSON.stringify(summary, null, 2), "```", ""].join("\n"), "utf8");
   console.log(JSON.stringify(summary, null, 2));
 } catch (error) {
   await client.query("ROLLBACK").catch(() => {});
