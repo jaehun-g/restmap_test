@@ -30,6 +30,7 @@
 /work-log/
 /food-award-photos/
 /bug.md
+/프로젝트-진행상황.md
 *.log
 
 # debug
