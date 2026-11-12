@@ -1,6 +1,7 @@
 "use client";
 import {Button} from "@/components/ui/button";
 import {sharedClasses} from "@/lib/shared-classes";
+import {cn} from "@/lib/design-system";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {loadKakaoMaps, type KakaoMap as MapInstance} from "@/lib/kakao-sdk";
 import {createPlaceMarkers} from "@/lib/kakao-place-markers";
@@ -17,11 +18,9 @@ import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
 import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
 import {
   createLocationMapLayer,
-  visibleMapBounds,
   type MobileMapLocation,
   type MobileMapMemory,
 } from "@/lib/kakao-location";
-import type {GeoBounds} from "@/lib/geo-search";
 import Icon from "./icon";
 const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
 const emptyStations: GasStation[] = [];
@@ -56,7 +55,6 @@ export default function KakaoMap({
   selectedRouteName = null,
   onClearRoute,
   onLocate,
-  onViewportChange,
   stations = emptyStations,
   searchFitPlaces,
   selectedStationId = null,
@@ -87,7 +85,6 @@ export default function KakaoMap({
   selectedRouteName?: string | null;
   onClearRoute?: () => void;
   onLocate?: () => void;
-  onViewportChange?: (bounds: GeoBounds) => void;
   stations?: GasStation[];
   searchFitPlaces?: MapPlace[];
   selectedStationId?: string | null;
@@ -376,26 +373,6 @@ export default function KakaoMap({
     clearSelection,
     cardViewport,
   ]);
-  const updateViewport = useCallback(() => {
-    const sdk = window.kakao?.maps;
-    if (!map || !sdk || !onViewportChange) return;
-    const canvas = container.current;
-    const rect = canvas?.getBoundingClientRect();
-    onViewportChange(visibleMapBounds(sdk, map, canvas, rect && cardViewport ? cardViewport(rect) : rect));
-    zoomChanged?.(map.getLevel());
-  }, [map, onViewportChange, cardViewport, zoomChanged]);
-  useEffect(() => {
-    const sdk = window.kakao?.maps;
-    if (!map || !sdk || !onViewportChange) return;
-    sdk.event.addListener(map, "idle", updateViewport);
-    updateViewport();
-    return () => sdk.event.removeListener(map, "idle", updateViewport);
-  }, [map, onViewportChange, updateViewport]);
-  useEffect(() => {
-    if (!onViewportChange) return;
-    const timer = window.setTimeout(updateViewport, 120);
-    return () => window.clearTimeout(timer);
-  }, [onViewportChange, updateViewport, viewportVersion]);
   const position = mobileLocation?.position;
   const scope = mobileLocation?.scope;
   const cameraRequest = mobileLocation?.cameraRequest;
@@ -596,6 +573,18 @@ export default function KakaoMap({
         >
           {mobileEnabled && mobileLocation ? (
             <>
+              {ready && !selectedRouteName && mobileLocation.researchAvailable && (
+                <button
+                  className={cn(sharedClasses.mapButton, "map-research-button")}
+                  onClick={() => {
+                    clearSelection();
+                    locationLayer.current?.research();
+                  }}
+                >
+                  <Icon name="refresh" size={16} />
+                  지도 내 재검색
+                </button>
+              )}
               {!selectedRouteName && mobileLocation.error && (
                 <LocationErrorNotice message={mobileLocation.error.message} dismiss={mobileLocation.dismissError} />
               )}

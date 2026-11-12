@@ -177,7 +177,7 @@ export function createLocationMapLayer(
       pendingMove = false;
       if (outermost)
         suppressProgrammaticZoomUntilIdle =
-          (suppressProgrammaticZoomUntilIdle || expectZoomChange || initialLevel !== map.getLevel()) &&
+          (expectZoomChange || initialLevel !== map.getLevel()) &&
           !(programmaticZoomObserved && programmaticIdleObserved);
       rememberView();
     }
@@ -292,7 +292,7 @@ export function createLocationMapLayer(
           ),
         );
         radiusLabel.setMap(map);
-        if (!routeMode && scope.kind === "radius" && request && memory.cameraSequence !== request.sequence) {
+        if (scope.kind === "radius" && request && memory.cameraSequence !== request.sequence) {
           memory.cameraSequence = request.sequence;
           memory.initialFitDone = true;
           programmatic(() => {

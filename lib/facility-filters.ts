@@ -1,15 +1,10 @@
 import {isBidirectionalDirection, linkedStationsByArea, mergeFacilityPlaces, normalizedDirection, type FacilityPlaces} from "./facility-places.ts";
 import {filterRestAreas, type RestAreaFilters} from "./rest-area-filters.ts";
 import {filterStations} from "./map-places.ts";
-import {filterByGeoScope, type GeoPoint, type GeoSearchScope, type GeoBounds} from "./geo-search.ts";
+import {filterByGeoScope, type GeoPoint, type GeoSearchScope} from "./geo-search.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import type {GasStation, StationServiceKey} from "./gas-stations.ts";
 import type {RestArea} from "./rest-areas.ts";
-
-export function mobileSearchScope(filters: RestAreaFilters, query: string, view: string, bounds: GeoBounds | null): GeoSearchScope {
-  const active = Boolean(query.trim() || filters.routeName || filters.missingRoute || filters.direction || filters.facilities.length || filters.lounge !== "all" || view !== "all");
-  return !active && bounds ? {kind: "bounds", bounds} : {kind: "all"};
-}
 
 /** 검색·필터보다 먼저 시설을 통합하여 같은 장소가 주유소 마커로 분리되는 것을 방지한다. */
 export function filterFacilityPlaces<A extends RestArea, T extends GasStation>(

@@ -99,29 +99,3 @@ test("서하남 판교 방향 필터에서 쉼터와 연결 주유소를 함께 
   assert.equal(opposite.facilities.length, 0);
   assert.equal(opposite.stations.length, 0);
 });
-
-test("mobile viewport limits only unfiltered browsing", async () => {
-  const {mobileSearchScope} = await import("../lib/facility-filters.ts");
-  const {initialFilters} = await import("../lib/rest-area-filters.ts");
-  const bounds = {south: 35, west: 126, north: 37, east: 129};
-  const filters = initialFilters();
-  assert.deepEqual(mobileSearchScope(filters, "", "all", bounds), {kind: "bounds", bounds});
-  assert.deepEqual(mobileSearchScope(filters, "", "all", null), {kind: "all"});
-  assert.deepEqual(mobileSearchScope(filters, "food", "all", bounds), {kind: "all"});
-  assert.deepEqual(mobileSearchScope({...filters, lounge: "present"}, "", "all", bounds), {kind: "all"});
-  assert.deepEqual(mobileSearchScope({...filters, facilities: ["has_toilet"]} as unknown as typeof filters, "", "all", bounds), {kind: "all"});
-  assert.deepEqual(mobileSearchScope(filters, "", "ex", bounds), {kind: "all"});
-});
-
-test("viewport movement updates results and filters bypass the viewport", async () => {
-  const {mobileSearchScope} = await import("../lib/facility-filters.ts");
-  const filters = initialFilters();
-  const first = {south: 36.9999, west: 126.9999, north: 37.0005, east: 127.0005};
-  const second = {south: 37.0009, west: 127.0009, north: 37.003, east: 127.003};
-  const results = (bounds: typeof first, active = filters) => filterFacilityPlaces(areas, stations, {...options(), filters: active, scope: mobileSearchScope(active, "", "all", bounds)});
-  assert.deepEqual(results(first).facilities.map(({area}) => area.id), [1]);
-  assert.deepEqual(results(second).facilities.map(({area}) => area.id), [2]);
-  assert.deepEqual(results(first, {...filters, lounge: "present"}).facilities.map(({area}) => area.id), [1]);
-  assert.deepEqual(results(first, {...filters, routeName: "경부선"}).facilities.map(({area}) => area.id), [1, 2]);
-  assert.deepEqual(results(first).facilities.map(({area}) => area.id), [1]);
-});
