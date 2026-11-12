@@ -17,6 +17,7 @@ export type MobileMapLocation = {
   error: {message: string} | null;
   researchAvailable: boolean;
   locate: () => void;
+  dismissError: () => void;
   cameraReady: (sequence: number, level: number) => void;
   radiusReady: (level: number) => void;
   zoomChanged: (level: number) => void;

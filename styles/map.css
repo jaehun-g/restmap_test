@@ -1,4 +1,20 @@
 /* Shared map and detail presentation; each route owns its surrounding layout. */
+@keyframes location-notice-auto-close {
+  to { opacity: 0; transform: translateY(-12px); }
+}
+@keyframes location-notice-manual-close {
+  to { opacity: 0; transform: translateY(-12px); }
+}
+.map-location-error {
+  animation: location-notice-auto-close 200ms ease-in 800ms forwards;
+}
+.map-location-error.is-closing {
+  animation: location-notice-manual-close 200ms ease-in forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-location-error { animation-duration: 1ms; animation-delay: 999ms; }
+  .map-location-error.is-closing { animation-duration: 1ms; animation-delay: 0ms; }
+}
 .map-research-button {
   @apply rounded-[24px] text-primary px-[15px];
 }

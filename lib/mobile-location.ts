@@ -149,6 +149,9 @@ export class MobileLocationController {
     ++this.requestSequence;
     if (this.state.requesting) this.update({requesting: false});
   }
+  clearError() {
+    if (this.state.error) this.update({error: null});
+  }
   cameraReady = (sequence: number, level: number) => {
     if (this.state.cameraRequest?.sequence !== sequence || this.state.scope.kind !== "radius")
       return;

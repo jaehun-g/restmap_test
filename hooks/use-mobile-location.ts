@@ -25,9 +25,15 @@ export function useMobileLocation(autoLocate = true) {
       controller.cancelPendingRequests();
     };
   }, [controller, locate, autoLocate]);
+  useEffect(() => {
+    if (!state.error) return;
+    const timer = window.setTimeout(() => controller.clearError(), 2000);
+    return () => window.clearTimeout(timer);
+  }, [controller, state.error]);
   return {
     ...state,
     locate,
+    dismissError: () => controller.clearError(),
     cameraReady: controller.cameraReady,
     radiusReady: controller.radiusReady,
     zoomChanged: controller.zoomChanged,

@@ -24,6 +24,21 @@ import {
 import Icon from "./icon";
 const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
 const emptyStations: GasStation[] = [];
+function LocationErrorNotice({message, dismiss}: {message: string; dismiss: () => void}) {
+  const [closing, setClosing] = useState(false);
+  return (
+    <div
+      className={`map-location-error ${closing ? "is-closing" : ""} pointer-events-auto flex w-full items-start gap-2 rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-ui-12 leading-[1.6]`}
+      role="status"
+      onAnimationEnd={dismiss}
+    >
+      <span className="flex-1">{message}</span>
+      <button type="button" aria-label="위치 안내 닫기" onClick={() => setClosing(true)}>
+        <Icon name="close" size={16} />
+      </button>
+    </div>
+  );
+}
 export default function KakaoMap({
   areas,
   selectedId,
@@ -569,12 +584,7 @@ export default function KakaoMap({
                 </button>
               )}
               {!selectedRouteName && mobileLocation.error && (
-                <p
-                  className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-ui-12 leading-[1.6]"
-                  role="status"
-                >
-                  {mobileLocation.error.message}
-                </p>
+                <LocationErrorNotice message={mobileLocation.error.message} dismiss={mobileLocation.dismissError} />
               )}
             </>
           ) : (
@@ -699,12 +709,7 @@ export default function KakaoMap({
       {ready && !mobileEnabled && mobileLocation && (
         <div className="admin-location-status absolute left-[16px] right-[16px] top-[70px] flex flex-col items-start gap-[6px] z-[6] pointer-events-none">
           {mobileLocation.error && (
-            <p
-              className="map-location-error w-full rounded-[10px] bg-[#fffffff2] p-[10px_12px] text-[#526b91] text-ui-12 leading-[1.6]"
-              role="status"
-            >
-              {mobileLocation.error.message}
-            </p>
+            <LocationErrorNotice message={mobileLocation.error.message} dismiss={mobileLocation.dismissError} />
           )}
           {!selectedRouteName && mobileLocation.researchAvailable && (
             <button
