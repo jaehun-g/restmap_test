@@ -337,7 +337,7 @@ test("marker clicks do not bubble into map-close and EX selections keep their di
   );
   state.clicks[0]();
   assert.equal(selected, places[0].key);
-  assert.deepEqual(state.clickable, [false, false]);
+  assert.deepEqual(state.clickable, [true, true]);
   assert.equal(cleared, 0);
   assert.ok(state.images.includes("/marker-ex-station.svg"));
   assert.ok(state.ids.includes("/marker-ex-station-selected.svg"));

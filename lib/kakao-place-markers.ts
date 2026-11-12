@@ -530,7 +530,7 @@ export function createPlaceMarkers(
           title: single
             ? `${first.record.name}${isLounge(first) ? " · 화물차 라운지" : first.kind === "station" ? ` · ${stationLabel(first.record)}` : ""}`
             : `이 위치의 장소 ${grouped.length}개`,
-          clickable: false,
+          clickable: true,
           image: single ? placeImage(first, false) : groupImage(grouped),
         });
         marker.setZIndex(unitZ(grouped));

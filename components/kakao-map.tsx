@@ -17,7 +17,7 @@ import {MapFitPolicy, type MapFitRequest} from "@/lib/map-fit-policy";
 import {hasCoordinates, type RestArea} from "@/lib/rest-areas";
 import {
   createLocationMapLayer,
-  visibleMapBounds,
+  mapBounds,
   type MobileMapLocation,
   type MobileMapMemory,
 } from "@/lib/kakao-location";
@@ -379,11 +379,10 @@ export default function KakaoMap({
   const updateViewport = useCallback(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk || !onViewportChange) return;
-    const canvas = container.current;
-    const rect = canvas?.getBoundingClientRect();
-    onViewportChange(visibleMapBounds(sdk, map, canvas, rect && cardViewport ? cardViewport(rect) : rect));
+    // 패널을 펼치거나 정보창을 닫아도 같은 지도 영역의 장소를 유지한다.
+    onViewportChange(mapBounds(map));
     zoomChanged?.(map.getLevel());
-  }, [map, onViewportChange, cardViewport, zoomChanged]);
+  }, [map, onViewportChange, zoomChanged]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk || !onViewportChange) return;

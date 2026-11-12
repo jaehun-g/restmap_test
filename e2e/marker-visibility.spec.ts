@@ -112,6 +112,51 @@ async function selectedMarkerVisible(page: Page) {
   });
 }
 
+for (const kind of ["rest", "station"] as const) {
+  for (const closeMethod of ["button", "outside"] as const) {
+    test(`mobile: 실제 마커 클릭으로 ${kind} 정보창을 ${closeMethod} 닫기 후 다시 연다`, async ({page, context}) => {
+      await page.setViewportSize({width: 390, height: 844});
+      await context.grantPermissions(["geolocation"]);
+      await context.setGeolocation({latitude: 37.5, longitude: 127});
+      await setup(page);
+      await page.goto("/mobile");
+      // 모바일은 서버 초기 데이터를 사용하므로 현재 화면에 보이는 실제 장소를 고른다.
+      const candidates = page.locator(kind === "rest"
+        ? '.map-canvas img[src="/marker.svg"], .map-canvas img[src="/marker-lounge.svg"]'
+        : '.map-canvas img[src="/marker-ex-station.svg"]');
+      let title = "";
+      await expect.poll(async () => {
+        title = await candidates.evaluateAll(images => {
+          const top = document.querySelector('.mobile-header')!.getBoundingClientRect().bottom;
+          const bottom = document.querySelector('.mobile-sheet')!.getBoundingClientRect().top;
+          return images.find(image => {
+            const box = image.getBoundingClientRect();
+            return box.left >= 0 && box.right <= innerWidth && box.top > top && box.bottom < bottom;
+          })?.getAttribute('title') ?? "";
+        });
+        return title;
+      }).not.toBe("");
+      const name = title.split(" · ")[0];
+      const marker = page.locator(`.map-canvas img[title=${JSON.stringify(title)}]`);
+      const card = page.locator(".map-info-card");
+      for (let attempt = 0; attempt < 3; attempt++) {
+        // SDK trigger는 실제 마커의 클릭 설정을 우회하므로 화면의 이미지를 클릭한다.
+        await marker.click();
+        await expect(card).toBeVisible();
+        await expect(card.locator(".map-card-heading strong")).toHaveText(name);
+        if (closeMethod === "button") await card.locator(".map-card-close").click();
+        else {
+          await page.waitForTimeout(300);
+          await page.locator(".map-canvas").click({position: {x: 20, y: 150}});
+        }
+        await expect(card).toHaveCount(0);
+      }
+      await page.locator(".sheet-summary").click();
+      await expect(page.locator(".mobile-area-list")).toContainText(name);
+    });
+  }
+}
+
 for (const mode of ["admin", "mobile"] as const) {
   test(`${mode}: 줌 재조회가 실패해도 범위 안 기존 마커를 유지하고 재시도한다`, async ({page, context}) => {
     await page.setViewportSize(mode === "admin" ? {width: 1440, height: 960} : {width: 390, height: 844});

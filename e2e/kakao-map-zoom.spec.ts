@@ -40,6 +40,79 @@ async function waitForMarkerLayerToSettle(page: Page): Promise<number> {
   throw new Error("마커 레이어가 데이터 조회 완료 후 안정화되지 않았습니다.");
 }
 
+for (const closeMethod of ["close-button", "outside-click"] as const) {
+  test(`모바일 인포윈도우 ${closeMethod} 이후 목록과 마커 재선택을 유지한다`, async ({page, context}) => {
+    const area = restAreaResponse.items[0];
+    const station = gasStationResponse.items[0];
+    await page.addInitScript({content: installKakaoMapsMock + `
+      window.__testOverlays = [];
+      const BaseOverlay = window.kakao.maps.CustomOverlay;
+      window.kakao.maps.CustomOverlay = class extends BaseOverlay {
+        constructor(...args) { super(...args); window.__testOverlays.push(this); }
+        setContent(content) { super.setContent(content); this.content = content; }
+        setMap(map) { this.map = map; }
+      };
+      window.kakao.maps.Map.prototype.getProjection = function() {
+        const canvas = document.querySelector('.map-canvas');
+        const bounds = this.getBounds();
+        const sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
+        return {coordsFromContainerPoint: point => new window.kakao.maps.LatLng(
+          ne.getLat() - point.y / canvas.clientHeight * (ne.getLat() - sw.getLat()),
+          sw.getLng() + point.x / canvas.clientWidth * (ne.getLng() - sw.getLng())
+        )};
+      };
+    `});
+    await page.route("**/api/rest-areas", route => route.fulfill({json: {...restAreaResponse, items: [area]}}));
+    await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
+    await context.grantPermissions(["geolocation"]);
+    await context.setGeolocation({latitude: 37.5, longitude: 127});
+    await page.setViewportSize({width: 390, height: 844});
+    await page.goto("/mobile");
+    await waitForMarkerLayerToSettle(page);
+    // 두 장소를 지도 하단에 둔다. 시트 높이를 검색 범위에 적용하면 목록에서 사라진다.
+    await page.evaluate(() => window.__kakaoMapMock.map!.moveBounds(37.48, 126.99, 37.6, 127.01));
+    const markerCount = await waitForMarkerLayerToSettle(page);
+    const activeCard = () => page.evaluate(() => {
+      const overlays = (window as unknown as {__testOverlays: {map: unknown; content: HTMLElement | string}[]}).__testOverlays;
+      const card = overlays.find(overlay => overlay.map && overlay.content instanceof HTMLElement && overlay.content.classList.contains("map-info-card"));
+      return card?.content instanceof HTMLElement ? card.content.getAttribute("aria-label") : null;
+    });
+    for (const place of [area, station]) {
+      const clickMarker = () => page.evaluate(name => {
+        const markers = window.__kakaoMapMock.markers as unknown as {options: {title: string}; click(): void}[];
+        markers.findLast(marker => marker.options.title.startsWith(name))!.click();
+      }, place.name);
+      await clickMarker();
+      await expect.poll(activeCard).toBe(`${place.name} 요약`);
+      if (closeMethod === "close-button") {
+        await page.evaluate(() => {
+          const overlays = (window as unknown as {__testOverlays: {map: unknown; content: HTMLElement | string}[]}).__testOverlays;
+          const card = overlays.find(overlay => overlay.map && overlay.content instanceof HTMLElement && overlay.content.classList.contains("map-info-card"))!;
+          (card.content as HTMLElement).querySelector<HTMLButtonElement>(".map-card-close")!.click();
+        });
+      } else {
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+          const map = window.__kakaoMapMock.map as unknown as {__listeners: Map<string, (() => void)[]>};
+          map.__listeners.get("click")!.forEach(listener => listener());
+        });
+      }
+      await expect.poll(activeCard).toBeNull();
+      await page.locator(".sheet-summary").click();
+      await expect(page.locator(".mobile-area-card")).toHaveCount(2);
+      await expect(page.locator(".mobile-area-list")).toContainText(place.name);
+      await page.getByRole("button", {name: "휴게소 목록 접기"}).click();
+      await clickMarker();
+      await expect.poll(activeCard).toBe(`${place.name} 요약`);
+      expect(await page.evaluate(() => window.__kakaoMapMock.markerCreates)).toBe(markerCount);
+    }
+    // 사용자가 지도를 이동했을 때는 여전히 새 범위로 필터링한다.
+    await page.evaluate(() => window.__kakaoMapMock.map!.moveBounds(37.7, 126.99, 37.8, 127.01));
+    await page.locator(".sheet-summary").click();
+    await expect(page.locator(".mobile-area-card")).toHaveCount(0);
+  });
+}
+
 test("모바일에서 연결 주유소가 한 곳이면 주유 탭에서 바로 지도 정보를 연다", async ({page, context}) => {
   const area = {...restAreaResponse.items[0], name: "E2E(부산)", routeName: "경부선", directionLabel: "부산 방향", latitude: 37.49, longitude: 127};
   const station = {...gasStationResponse.items[0], name: "E2E(부산)주유소", routeName: "경부선", direction: "부산", latitude: 37.4905, longitude: 127};
