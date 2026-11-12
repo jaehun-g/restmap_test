@@ -38,6 +38,7 @@ export type RestArea = {
   directionLabel: string | null;
   restAreaType: string | null;
   parkingCount: number | null;
+  largeParkingCount?: number | null;
   facilities: Record<FacilityKey, boolean | null>;
   foodMenuSummary?: FoodMenuSummary;
 };
@@ -136,6 +137,7 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
       longitude = null;
     }
     const parking = nullableNumber(row.parking_count);
+    const largeParking = nullableNumber(row.large_parking_count);
     items.push({
       id,
       stdRestCd: nullableText(row.std_rest_cd),
@@ -159,6 +161,8 @@ export function normalizeRestAreas(rows: Record<string, unknown>[]): Result<Rest
       restAreaType: nullableText(row.rest_area_type),
       parkingCount:
         parking !== null && Number.isSafeInteger(parking) && parking >= 0 ? parking : null,
+      largeParkingCount:
+        largeParking !== null && Number.isSafeInteger(largeParking) && largeParking >= 0 ? largeParking : null,
       facilities: Object.fromEntries(
         facilityDefinitions.map(([key]) => [key, nullableBoolean(row[key])]),
       ) as RestArea["facilities"],

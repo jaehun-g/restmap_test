@@ -60,6 +60,16 @@ function area(lounge: boolean | null, route: string | null): RestArea {
   return normalized.value[0];
 }
 
+test("대형 주차면은 확인된 경우에만 시설 배지로 표시한다", t => {
+  installDocument(t);
+  for (const [count, expected] of [[144, "대형주차 144면"], [0, "대형주차 0면"], [null, null]] as const) {
+    const item = {...area(false, null), facilities: {} as RestArea["facilities"], largeParkingCount: count};
+    const card = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
+    const badge = card.all().find(element => element.className === "large-parking-badge");
+    assert.equal(badge?.textContent ?? null, expected);
+  }
+});
+
 test("운영 상태는 휴게소 이름과 별도 줄에 표시한다", t => {
   installDocument(t);
   for (const [state, label] of [["suspended", "일시 운영중지"], ["review", "운영 확인 필요"]] as const) {

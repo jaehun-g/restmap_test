@@ -4,6 +4,14 @@ import { facilityDefinitions, hasCoordinates, highlightedFacilities, normalizeRe
 
 const row = { id: 1, name: "테스트 휴게소", latitude: "37.1234567", longitude: "127.7654321" };
 
+test("대형 주차면 수는 유효한 정수만 읽고 누락값은 미확인으로 둔다", () => {
+  for (const [input, expected] of [["144", 144], [0, 0], [null, null], [-1, null], ["1.5", null]] as const) {
+    const result = normalizeRestAreas([{...row, large_parking_count: input}]);
+    if (!result.ok) assert.fail(result.error.message);
+    assert.equal(result.value[0].largeParkingCount, expected);
+  }
+});
+
 test("주요 시설 배지는 제공이 확인된 라운지, 수면실, 샤워실만 표시한다", () => {
   const result = normalizeRestAreas([{...row, has_truck_lounge: 1, has_sleeping_room: 1, has_shower: 1, has_store: 1},
     {...row, id: 2, has_truck_lounge: 0, has_sleeping_room: null, has_shower: 1}]);

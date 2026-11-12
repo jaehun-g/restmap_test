@@ -94,11 +94,12 @@ export const databaseColumns = [
   "id",
   "std_rest_cd",
   "service_area_code",
+  "large_parking_count",
   ...scalarFields.map(field => field.column),
   ...facilityDefinitions.map(([key]) => key),
 ];
 export const restAreaDbColumn = (column: string) => `"lg_${column}"`;
-const optionalColumns = new Set(["operation_status", "operation_start_date", "operation_note", "operation_source", "operation_review_date"]);
+const optionalColumns = new Set(["operation_status", "operation_start_date", "operation_note", "operation_source", "operation_review_date", "large_parking_count"]);
 export const selectRestAreaColumns = `SELECT ${databaseColumns
   .map(column => optionalColumns.has(column) ? `to_jsonb(tb_lounge)->>'lg_${column}' AS "${column}"` : `${restAreaDbColumn(column)} AS "${column}"`)
   .join(", ")} FROM tb_lounge`;

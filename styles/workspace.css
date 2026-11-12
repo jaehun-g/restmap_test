@@ -400,6 +400,11 @@ input[type="checkbox"] {
   color: #68778b;
   font-size: var(--text-ui-10);
 }
+.detail-overview-tags .large-parking-badge,
+.map-card-facilities .large-parking-badge {
+  background: #edf7f2;
+  color: #34715a;
+}
 .detail-overview-tags .facility-highlight-has_truck_lounge,
 .map-card-facilities .facility-highlight-has_truck_lounge {
   background: #fff1db;

@@ -70,7 +70,7 @@ export function createMapCard(
   const otherCount = facilityDefinitions.filter(
     ([key]) => key !== "has_truck_lounge" && key !== "has_sleeping_room" && key !== "has_shower" && area.facilities[key] === true,
   ).length;
-  if (highlights.length || otherCount) {
+  if (highlights.length || otherCount || area.largeParkingCount != null) {
     const facilities = document.createElement("div");
     facilities.className = "facility-tags map-card-facilities";
     highlights.forEach(([key, label]) => {
@@ -79,6 +79,12 @@ export function createMapCard(
       badge.textContent = label;
       facilities.append(badge);
     });
+    if (area.largeParkingCount != null) {
+      const parking = document.createElement("span");
+      parking.className = "large-parking-badge";
+      parking.textContent = `대형주차 ${area.largeParkingCount.toLocaleString("ko-KR")}면`;
+      facilities.append(parking);
+    }
     if (otherCount) {
       const more = document.createElement("span");
       more.textContent = highlights.length ? `+${otherCount}개` : `편의시설 ${otherCount}개`;

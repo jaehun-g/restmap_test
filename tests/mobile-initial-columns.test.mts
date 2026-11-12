@@ -4,7 +4,7 @@ import {selectMobileRestAreaColumns} from "../lib/rest-area-fields.ts";
 import {selectMobileExStationColumns} from "../lib/ex-gas-stations.ts";
 
 test("모바일 초기 휴게소 조회는 지도와 필터 컬럼을 유지하고 상세 컬럼을 제외한다", () => {
-  for (const column of ["lg_id", "lg_name", "lg_latitude", "lg_longitude", "lg_route_name", "lg_has_truck_lounge", "lg_operation_status"])
+  for (const column of ["lg_id", "lg_name", "lg_latitude", "lg_longitude", "lg_route_name", "lg_has_truck_lounge", "lg_operation_status", "lg_large_parking_count"])
     assert.ok(selectMobileRestAreaColumns.includes(column), column);
   for (const column of ["lg_phone", "lg_parking_count", "lg_operation_note", "lg_operation_source"])
     assert.ok(!selectMobileRestAreaColumns.includes(column), column);

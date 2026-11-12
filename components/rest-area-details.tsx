@@ -68,6 +68,9 @@ export default function RestAreaDetails({
                   {area.restAreaType && <span>{area.restAreaType}</span>}
                 </>
               )}
+              {area.largeParkingCount != null && (
+                <span className="large-parking-badge">대형주차 {area.largeParkingCount.toLocaleString("ko-KR")}면</span>
+              )}
             </div>
           </div>
         </div>
