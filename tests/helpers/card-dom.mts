@@ -10,6 +10,8 @@ export class CardElement {
   children: CardElement[] = [];
   parent: CardElement | null = null;
   scrollTop = 0;
+  clientHeight = 200;
+  get scrollHeight() { return this.children.length * 48; }
   tabIndex = 0;
   focused = false;
   classList = {

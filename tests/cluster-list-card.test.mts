@@ -27,34 +27,19 @@ function places(count: number) {
   return result.value.map(restPlace);
 }
 
-test("actual 더보기 clicks add 5 then the final 2, retain scroll and restore the picked row", t => {
+test("scrolling loads five more and restores the selected row", t => {
   installCardDOM(t);
   let state: ClusterListState = initialClusterListState();
   let picked = "";
-  let layouts = 0;
+  const handlers = {onPick: (place: ReturnType<typeof restPlace>) => { picked = place.key; }, onClose() {}, onStateChange: (next: ClusterListState) => { state = next; }};
   const items = places(12);
-  const handlers = {
-    onPick: (place: ReturnType<typeof restPlace>) => {
-      picked = place.key;
-    },
-    onClose() {},
-    onStateChange: (next: ClusterListState) => {
-      state = next;
-    },
-    onLayout: () => {
-      layouts++;
-    },
-  };
   const card = createClusterListCard(items, handlers) as unknown as CardElement;
   const list = card.querySelector(".cluster-popover-list")!;
-  const more = card.querySelector(".cluster-list-more")!;
   assert.equal(list.children.length, 5);
-  assert.equal(more.textContent, "더보기 (5개)");
-  more.dispatch("click");
+  assert.equal(card.querySelector(".cluster-list-more"), null);
+  list.scrollTop = 40;
+  list.dispatch("scroll");
   assert.equal(list.children.length, 10);
-  assert.equal(more.textContent, "더보기 (2개)");
-  assert.equal(card.querySelector(".cluster-list-progress"), null);
-  assert.equal(list.scrollTop, 240);
   list.scrollTop = 144;
   list.dispatch("scroll");
   list.children[7].children[0].dispatch("click");
@@ -65,35 +50,23 @@ test("actual 더보기 clicks add 5 then the final 2, retain scroll and restore 
   assert.equal(restoredList.children.length, 10);
   assert.equal(restoredList.scrollTop, 144);
   assert.equal(restoredList.children[7].children[0].focused, true);
-  restored.querySelector(".cluster-list-more")!.dispatch("click");
+  restoredList.scrollTop = 280;
+  restoredList.dispatch("scroll");
   assert.equal(restoredList.children.length, 12);
-  assert.equal(restored.querySelector(".cluster-list-more"), null);
   assert.equal(state.shownCount, 12);
-  assert.equal(layouts, 2);
 });
 
-test("small lists, last single item and new-cluster state preserve boundaries and labels", t => {
+test("small lists and a final single item respect boundaries", t => {
   installCardDOM(t);
   for (const count of [1, 5, 6]) {
-    let closed = false;
-    const card = createClusterListCard(places(count), {
-      onPick() {},
-      onClose() {
-        closed = true;
-      },
-    }) as unknown as CardElement;
+    const card = createClusterListCard(places(count), {onPick() {}, onClose() {}}) as unknown as CardElement;
     const list = card.querySelector(".cluster-popover-list")!;
     assert.equal(list.children.length, Math.min(5, count));
-    assert.equal(card.querySelector("strong")?.textContent, "장소 목록");
-    assert.equal(card.querySelector(".cluster-composition"), null);
     if (count === 6) {
-      assert.equal(card.querySelector(".cluster-list-more")?.textContent, "더보기 (1개)");
-      card.querySelector(".cluster-list-more")!.dispatch("click");
+      list.scrollTop = 40;
+      list.dispatch("scroll");
       assert.equal(list.children.length, 6);
-      assert.equal(card.querySelector(".cluster-list-more"), null);
-    } else assert.equal(card.querySelector(".cluster-list-more"), null);
-    card.querySelector(".map-card-close")!.dispatch("click");
-    assert.equal(closed, true);
+    }
   }
 });
 

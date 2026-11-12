@@ -866,3 +866,5 @@ input[type="checkbox"] {
 .form-error {
   color: #ad655d !important;
 }
+
+.cluster-popover-list.is-scrollable { max-height: 200px; }

@@ -59,7 +59,14 @@ export function createClusterListCard(
     state = {...state, ...next};
     handlers.onStateChange?.({...state});
   };
-  list.addEventListener("scroll", () => updateState({scrollTop: list.scrollTop}));
+  list.addEventListener("scroll", () => {
+    updateState({scrollTop: list.scrollTop});
+    if (state.shownCount >= places.length || list.scrollHeight - list.scrollTop - list.clientHeight > 24) return;
+    const previousCount = state.shownCount;
+    updateState({shownCount: Math.min(places.length, previousCount + clusterListPreviewSize)});
+    visibleClusterListPlaces(places, state.shownCount).slice(previousCount).forEach(appendPlace);
+    handlers.onLayout?.();
+  });
   const appendPlace = (place: MapPlace) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
@@ -89,35 +96,11 @@ export function createClusterListCard(
   for (const place of visibleClusterListPlaces(places, state.shownCount)) {
     appendPlace(place);
   }
-  if (state.shownCount > 5) list.classList.add("is-expanded");
-  card.append(heading, list);
-  if (places.length > state.shownCount) {
-    const more = document.createElement("button");
-    more.type = "button";
-    more.className = "cluster-list-more";
-    const updateMoreLabel = () => {
-      more.textContent = `더보기 (${Math.min(clusterListPreviewSize, places.length - state.shownCount)}개)`;
-    };
-    updateMoreLabel();
-    more.addEventListener("click", event => {
-      event.stopPropagation();
-      const previousCount = state.shownCount;
-      updateState({shownCount: Math.min(places.length, previousCount + clusterListPreviewSize)});
-      visibleClusterListPlaces(places, state.shownCount).slice(previousCount).forEach(appendPlace);
-      list.classList.add("is-expanded");
-      const firstNew = list.children[previousCount] as HTMLElement | undefined;
-      if (firstNew)
-        list.scrollTop = firstNew.offsetTop - (list.children[0] as HTMLElement).offsetTop;
-      updateState({scrollTop: list.scrollTop});
-      if (state.shownCount === places.length) {
-        list.tabIndex = -1;
-        more.remove();
-        list.focus({preventScroll: true});
-      } else updateMoreLabel();
-      handlers.onLayout?.();
-    });
-    card.append(more);
+  if (places.length > clusterListPreviewSize) {
+    list.classList.add("is-scrollable");
+    list.tabIndex = 0;
   }
+  card.append(heading, list);
   if (handlers.onZoom) {
     const zoom = document.createElement("button");
     zoom.type = "button";

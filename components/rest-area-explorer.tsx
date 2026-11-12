@@ -5,6 +5,7 @@ import {FilterChip} from "@/components/ui/filter-chip";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
 import {useRestAreas} from "@/hooks/use-rest-areas";
 import {useSearchQuery} from "@/hooks/use-search-query";
+import {useInfiniteScroll} from "@/hooks/use-infinite-scroll";
 import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
@@ -202,6 +203,7 @@ export default function MobileExplorer({initialData}: {
       });
     return places;
   }, [visibleAreas, stationResults, location.position, placeView]);
+  const mobileList = useInfiniteScroll(listPlaces);
   const selected = visibleAreas.find(area => area.id === selectedId);
   const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
     [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
@@ -588,6 +590,7 @@ export default function MobileExplorer({initialData}: {
                   </div>
                   <div
                     className="mobile-area-list overflow-y-auto min-h-0 flex-1 overscroll-contain"
+                    onScroll={mobileList.onScroll}
                     aria-busy={loading}
                   >
                     {!resultCount && (loading || gas.loading || error || gas.error) ? (
@@ -614,7 +617,7 @@ export default function MobileExplorer({initialData}: {
                       </div>
                     ) : (
                       <ul>
-                        {listPlaces.map(place => {
+                        {mobileList.visibleItems.map(place => {
                           if (place.kind === "station") {
                             const station = place.record;
                             const distance = areaDistance(station, location.position);
