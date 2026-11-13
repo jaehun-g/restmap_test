@@ -615,7 +615,7 @@
       "display": "inline-block",
       "white-space": "nowrap",
       "padding": "3px 6px",
-      "border-radius": "4px",
+      "border-radius": "5px",
       "font-size": "var(--text-ui-10)"
     }
   },
@@ -835,7 +835,7 @@
       "border-radius": "6px",
       "background": "var(--color-surface)",
       "color": "var(--color-muted)",
-      "font-size": "var(--text-ui-10)"
+      "font-size": "var(--text-ui-12)"
     }
   },
   {
@@ -900,9 +900,9 @@
       "right": "0",
       "width": "260px",
       "color": "var(--color-danger)",
-      "background": "var(--color-white)",
+      "background": "var(--color-danger-soft)",
       "padding": "10px",
-      "border-radius": "5px",
+      "border-radius": "6px",
       "font-size": "var(--text-ui-10)",
       "z-index": "10"
     }

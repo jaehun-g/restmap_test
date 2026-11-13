@@ -89,7 +89,7 @@ export default function AdminAuthControl({
       )}
       {auth.error && !open && (
         <span
-          className="auth-error absolute top-[48px] right-[0] w-[260px] text-danger bg-white p-[10px] rounded-[5px] text-ui-10 z-[10]"
+          className="auth-error absolute top-[48px] right-[0] w-[260px] text-danger bg-danger-soft [border:1px_solid_var(--color-danger-line)] p-[10px] rounded-[6px] text-ui-10 z-[10] [box-shadow:0_4px_12px_#23416a14]"
           role="alert"
         >
           {auth.error}

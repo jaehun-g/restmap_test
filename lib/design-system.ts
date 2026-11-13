@@ -3,7 +3,7 @@ export function cn(...values: (string | false | null | undefined)[]) {
 }
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-[8px] rounded-[9px] border text-ui-14 font-semibold [transition:background_0.15s]";
+  "inline-flex items-center justify-center gap-[8px] rounded-[9px] border text-ui-14 font-semibold [transition:background_0.15s,border-color_0.15s,color_0.15s,box-shadow_0.15s]";
 const buttonVariants = {
   primary: "primary border-primary bg-primary text-white hover:bg-primary-dark",
   secondary: "secondary border-line bg-white text-ink hover:bg-surface",
@@ -20,12 +20,12 @@ export function buttonClasses(variant: ButtonVariant = "secondary", className?: 
   );
 }
 export const iconButtonClasses =
-  "icon-button inline-flex w-[40px] min-h-[40px] items-center justify-center rounded-[8px] border-0 bg-transparent text-muted hover:bg-surface hover:text-ink";
+  "icon-button inline-flex w-[40px] min-h-[40px] items-center justify-center rounded-[8px] border-0 bg-transparent text-muted [transition:background_0.15s,color_0.15s] hover:bg-surface hover:text-ink";
 
 const fieldVariants = {
   default:
-    "w-full min-h-[34px] rounded-[6px] border border-line bg-white px-[8px] py-[7px] text-ui-12 text-ink",
-  search: "min-w-0 flex-1 border-0 bg-transparent text-ui-14 text-ink outline-none",
+    "w-full min-h-[34px] rounded-[6px] border border-line bg-white px-[8px] py-[7px] text-ui-12 text-ink outline-none [transition:border-color_0.15s,box-shadow_0.15s] focus:border-focus focus:[box-shadow:0_0_0_2px_var(--color-focus-ring)]",
+  search: "min-w-0 flex-1 border-0 bg-transparent text-ui-12 text-ink outline-none",
 } as const;
 export type FieldVariant = keyof typeof fieldVariants;
 export function fieldClasses(variant: FieldVariant = "default", className?: string) {
@@ -60,7 +60,7 @@ export function dialogClasses(wide = false, className?: string) {
   return cn(
     "admin-detail-modal flex min-h-0 h-[min(760px,_calc(100dvh_-_56px))]",
     wide ? "w-[min(1240px,_calc(100vw_-_32px))]" : "w-[min(660px,_calc(100vw_-_56px))]",
-    "flex-col overflow-hidden rounded-[14px] bg-white [box-shadow:0_22px_70px_#07142666]",
+    "flex-col overflow-hidden rounded-[14px] bg-white outline-none [box-shadow:0_22px_70px_#07142666]",
     className,
   );
 }

@@ -231,7 +231,7 @@ export default function AdminRestAreaTable({
                     </td>
                     <td>
                       <span
-                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[4px] text-ui-10 ${hasCoordinates(area) ? "valid" : "missing"}`}
+                        className={`coordinate-badge inline-block whitespace-nowrap p-[3px_6px] rounded-[5px] text-ui-10 ${hasCoordinates(area) ? "valid" : "missing"}`}
                       >
                         {hasCoordinates(area) ? "등록" : "미등록 / 오류"}
                       </span>
