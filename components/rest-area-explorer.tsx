@@ -456,7 +456,7 @@ export default function MobileExplorer({initialData}: {
         </div>
         <section
           ref={sheetRef}
-          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_#e8edf4] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : expanded && panelExpanded ? "is-panel-full" : ""}`}
+          className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_var(--line)] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : expanded && panelExpanded ? "is-panel-full" : ""}`}
           onTouchStart={event => {
             const touch = event.touches[0];
             const scroll = (event.target as HTMLElement).closest<HTMLElement>(".detail-scroll, .mobile-area-list, .filter-sheet-scroll");
@@ -492,7 +492,7 @@ export default function MobileExplorer({initialData}: {
           }
         >
           <div
-            className="sheet-handle w-[30px] h-[4px] m-[9px_auto_2px] bg-[#dce2e9] rounded-[5px] shrink-0"
+            className="sheet-handle w-[30px] h-[4px] m-[9px_auto_2px] bg-line rounded-[5px] shrink-0"
             aria-hidden="true"
           />
           {!expanded ? (
@@ -563,7 +563,7 @@ export default function MobileExplorer({initialData}: {
                 <>
                   <div className="flex shrink-0 items-center justify-between px-[20px]">
                     <button
-                      className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-[#7b8aa0] text-ui-12"
+                      className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-muted text-ui-12"
                       onClick={() => {
                         setSelectedId(null);
                         setPanel("list");
@@ -641,7 +641,7 @@ export default function MobileExplorer({initialData}: {
                                   onClick={() => stationDetails(stationKey(station))}
                                   aria-label={`${station.name} 주유소 상세정보 보기`}
                                 >
-                                  <span className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 ${station.brand === "EX" ? "is-ex-station" : "is-station"}`}>
+                                  <span className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_var(--color-primary-line)] rounded-[50%] text-primary mt-[1px] shrink-0 ${station.brand === "EX" ? "is-ex-station" : "is-station"}`}>
                                     <Icon name="pin" size={19} />
                                   </span>
                                   <span className="mobile-area-info flex-1 min-w-0">
@@ -682,7 +682,7 @@ export default function MobileExplorer({initialData}: {
                                 aria-label={`${area.name} 상세정보 보기`}
                               >
                                 <span
-                                  className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_#d8e7ff] rounded-[50%] text-primary mt-[1px] shrink-0 ${area.facilities.has_truck_lounge === true ? "is-lounge" : ""}`}
+                                  className={`list-pin flex items-center justify-center w-[31px] h-[31px] [border:1.5px_solid_var(--color-primary-line)] rounded-[50%] text-primary mt-[1px] shrink-0 ${area.facilities.has_truck_lounge === true ? "is-lounge" : ""}`}
                                 >
                                   <Icon
                                     name={
@@ -697,7 +697,7 @@ export default function MobileExplorer({initialData}: {
                                       {area.name}
                                       {area.operationStatus === "suspended" && " · 일시 운영중지"}
                                       {area.operationStatus === "review" && " · 운영 확인 필요"}
-                                      {route && <span className="ml-[6px] text-ui-12 font-normal text-[#8592a3]">{route}</span>}
+                                      {route && <span className="ml-[6px] text-ui-12 font-normal text-muted">{route}</span>}
                                     </span>
                                     {distance !== null && (
                                       <small

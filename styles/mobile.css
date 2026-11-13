@@ -22,7 +22,7 @@
   @apply shrink-0;
 }
 .current-location-dot {
-  @apply block w-[19px] h-[19px] [border:3px_solid_#fff] rounded-[50%] bg-[#397af0] [box-shadow:0_0_0_6px_#397af025,_0_2px_6px_#1d416d45];
+  @apply block w-[19px] h-[19px] [border:3px_solid_#fff] rounded-[50%] bg-primary [box-shadow:0_0_0_6px_#397af025,_0_2px_6px_#1d416d45];
 }
 .mobile-map .map-placeholder {
   @apply gap-[10px] p-[15px];
@@ -61,10 +61,10 @@
   @apply block text-ui-14;
 }
 .sheet-summary small {
-  @apply block mt-[3px] text-ui-10 text-[#8591a1];
+  @apply block mt-[3px] text-ui-10 text-muted;
 }
 .sheet-summary > svg {
-  @apply ml-[auto] text-[#8b98aa];
+  @apply ml-[auto] text-muted;
 }
 .sheet-list-heading h2 {
   @apply text-ui-18 font-[700];
@@ -73,7 +73,7 @@
   @apply text-primary text-ui-14 pl-[3px];
 }
 .sheet-list-heading p {
-  @apply mt-[5px] text-ui-12 text-[#8b97a6];
+  @apply mt-[5px] text-ui-12 text-muted;
 }
 .mobile-area-list ul {
   @apply p-[0_20px];
@@ -82,22 +82,22 @@
   @apply [border-top:1px_solid_var(--line)];
 }
 .mobile-area-info > strong {
-  @apply flex justify-between items-center gap-[8px] text-ui-14 font-[650] text-[#303b4b];
+  @apply flex justify-between items-center gap-[8px] text-ui-14 font-[650] text-ink;
 }
 .mobile-area-info > strong > svg {
-  @apply text-[#a8b3c1] shrink-0;
+  @apply text-muted shrink-0;
 }
 .mobile-area-info > span {
-  @apply block mt-[6px] text-ui-10 text-[#8592a3];
+  @apply block mt-[6px] text-ui-10 text-muted;
 }
 .mobile-area-info .mobile-fuel-price {
-  @apply text-ui-12 font-[600] text-[#526b91];
+  @apply text-ui-12 font-[600] text-ink;
 }
 .mobile-area-info .facility-tags {
   @apply flex gap-[4px] flex-wrap mt-[9px];
 }
 .facility-tags > span {
-  @apply inline-block p-[2px_5px] rounded-[4px] bg-[#f0f6ff] text-[#6c86ac] text-ui-10;
+  @apply inline-block p-[2px_5px] rounded-[4px] bg-primary-soft text-primary text-ui-10;
 }
 .sheet-content > .detail-panel {
   @apply flex-1 min-h-0 h-auto;

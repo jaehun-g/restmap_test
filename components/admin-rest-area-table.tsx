@@ -62,7 +62,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           <button
-            className="table-area-name text-[#33445d] text-ui-12 font-[650] p-[2px_0] [border:0] bg-[transparent] text-left"
+            className="table-area-name text-ink text-ui-12 font-[650] p-[2px_0] [border:0] bg-[transparent] text-left"
             aria-pressed={selectedId === area.id}
             onClick={event => {
               event.stopPropagation();
@@ -71,7 +71,7 @@ export default function AdminRestAreaTable({
           >
             {area.name}
           </button>
-            <span className="table-meta block text-ui-10 mt-[5px] text-[#97a3b3]">
+            <span className="table-meta block text-ui-10 mt-[5px] text-muted">
               {area.phone || "전화번호 미등록"}
             </span>
         </>
@@ -80,7 +80,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           {area.routeName ?? (
-            <span className="missing-value text-[#b58a48] text-ui-10">미등록</span>
+            <span className="missing-value text-lounge text-ui-10">미등록</span>
           )}
           {area.routeNumber && <Badge variant="route">{area.routeNumber}</Badge>}
         </>
@@ -89,7 +89,7 @@ export default function AdminRestAreaTable({
       return (
         <>
           {area.directionLabel ?? "—"}
-            <span className="table-meta block text-ui-10 mt-[5px] text-[#97a3b3]">
+            <span className="table-meta block text-ui-10 mt-[5px] text-muted">
               {area.routeDirection ?? ""}
             </span>
         </>
@@ -102,8 +102,8 @@ export default function AdminRestAreaTable({
             value === true && key === "has_truck_lounge"
               ? "lounge-badge"
               : value === null
-                ? "missing-value text-[#b58a48] text-ui-10"
-                : "table-meta block text-ui-10 mt-[5px] text-[#97a3b3]"
+                ? "missing-value text-lounge text-ui-10"
+                : "table-meta block text-ui-10 mt-[5px] text-muted"
           }
         >
           {value === true ? "있음" : value === false ? "없음" : "미확인"}
@@ -241,7 +241,7 @@ export default function AdminRestAreaTable({
                 ))}
               </tbody>
             </table>
-            {visibleCount < rows.length && <div ref={sentinel} className="py-3 text-center text-xs text-slate-500" aria-live="polite">아래로 스크롤하면 목록을 더 불러옵니다</div>}
+            {visibleCount < rows.length && <div ref={sentinel} className="py-[12px] text-center text-ui-12 text-muted" aria-live="polite">아래로 스크롤하면 목록을 더 불러옵니다</div>}
           </div>
         </>
       )}

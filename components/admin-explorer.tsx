@@ -312,9 +312,9 @@ export default function AdminExplorer() {
   return (
     <main className="admin-shell min-w-[1080px] h-[100dvh] overflow-hidden p-[0_24px_18px] flex flex-col">
       <AdminRestAreaReview authenticated={auth.authenticated} />
-      <header className="admin-header h-[86px] flex items-center justify-between [border-bottom:1px_solid_#e3e8ef] gap-[25px]">
+      <header className="admin-header h-[86px] flex items-center justify-between [border-bottom:1px_solid_var(--line)] gap-[25px]">
         <div className="admin-brand flex items-center gap-[11px]">
-          <span className="brand-icon flex items-center justify-center w-[43px] h-[43px] rounded-[12px] bg-primary text-[#fff]">
+          <span className="brand-icon flex items-center justify-center w-[43px] h-[43px] rounded-[12px] bg-primary text-white">
             <Icon name="pin" size={24} />
           </span>
           <div>
@@ -383,7 +383,7 @@ export default function AdminExplorer() {
       />
       {notice && (
         <div
-          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#eef8f4] text-[#3a836e] [border:1px_solid_#d9ede5] rounded-[8px] text-ui-12"
+          className="save-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-station-soft text-station [border:1px_solid_var(--color-station-line)] rounded-[8px] text-ui-12"
           role="status"
         >
           <Icon name="check" size={17} />
@@ -395,7 +395,7 @@ export default function AdminExplorer() {
       )}
       {syncError && (
         <div
-          className="sync-error-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-[#fff7f5] text-[#b2645b] [border:1px_solid_#f0d6d1] rounded-[8px] text-ui-12"
+          className="sync-error-notice flex items-center gap-[8px] p-[8px_13px] mb-[12px] bg-danger-soft text-danger [border:1px_solid_var(--color-danger-line)] rounded-[8px] text-ui-12"
           role="alert"
         >
           {syncError}
@@ -542,7 +542,7 @@ export default function AdminExplorer() {
               />
             ) : selectedStation ? (
               <>
-                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-ui-10">
+                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-muted text-ui-10">
                   <span>
                     {selectedStation.brand === "EX" ? "EX 원본 키" : "GS 코드"}{" "}
                     {selectedStation.siteCode}
@@ -569,7 +569,7 @@ export default function AdminExplorer() {
               </>
             ) : selected ? (
               <>
-                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-[#9ba9ba] text-ui-10">
+                <div className="admin-detail-actions flex items-center justify-between p-[9px_18px] [border-bottom:1px_solid_var(--line)] shrink-0 text-muted text-ui-10">
                   <span>ID {selected.id}</span>
                   <Button
                     disabled={!auth.authenticated}
@@ -593,7 +593,7 @@ export default function AdminExplorer() {
                 </div>
               </>
             ) : (
-              <div className="detail-empty flex items-center justify-center gap-[15px] text-[#a3b3c7] h-full p-[25px]">
+              <div className="detail-empty flex items-center justify-center gap-[15px] text-muted h-full p-[25px]">
                 <Icon name="pin" size={26} />
                 <div>
                   <strong>휴게소 또는 주유소를 선택해주세요</strong>

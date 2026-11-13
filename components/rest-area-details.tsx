@@ -62,11 +62,11 @@ export default function RestAreaDetails({
   return (
     <section className={sharedClasses.detailPanel} aria-labelledby="detail-title">
       <div className="detail-handle hidden" aria-hidden="true" />
-      <div className="detail-heading flex justify-between items-start shrink-0 gap-[10px] p-[13px_20px_8px]">
+      <div className={sharedClasses.detailHeading}>
         <div className="min-w-0">
           <span className={sharedClasses.eyebrow}>휴게소 상세정보</span>
           <h2 id="detail-title">{area.name}</h2>
-          {area.operationStatus && area.operationStatus !== "open" && <p role="status" className="my-2 rounded bg-amber-50 p-2 text-sm text-amber-900">
+          {area.operationStatus && area.operationStatus !== "open" && <p role="status" className="my-[8px] rounded-[6px] [border:1px_solid_var(--color-lounge-line)] bg-lounge-soft p-[8px_10px] text-ui-12 text-lounge">
             {area.operationStatus === "suspended" ? "일시 운영중지" : area.operationStatus === "closed" ? "운영 종료" : "운영 상태 확인 필요"}{area.operationNote ? ` · ${area.operationNote}` : ""}
           </p>}
           <div className="detail-meta-row">

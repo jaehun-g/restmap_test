@@ -43,7 +43,7 @@
   button:focus-visible,
   a:focus-visible,
   [tabindex]:focus-visible {
-    @apply [outline:3px_solid_#78abff] outline-offset-[3px];
+    @apply [outline:3px_solid_var(--color-focus)] outline-offset-[3px];
   }
   svg {
     @apply shrink-0;

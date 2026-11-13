@@ -9,7 +9,12 @@ import ts from "typescript";
 import {compile} from "@tailwindcss/node";
 import {Scanner} from "@tailwindcss/oxide";
 import postcss, {type Rule} from "postcss";
-import {buttonClasses, fieldClasses} from "../lib/design-system.ts";
+import {
+  buttonClasses,
+  dialogBackdropClasses,
+  dialogClasses,
+  fieldClasses,
+} from "../lib/design-system.ts";
 
 const root = new URL("../", import.meta.url);
 const require = createRequire(import.meta.url);
@@ -120,7 +125,9 @@ test("shared control utilities compile and retain native control geometry", () =
     assert.equal(button.display, "inline-flex");
   }
   assert.equal(declarations(fieldClasses().split(" "))["min-height"], "34px");
-  assert.equal(rules.get(".lounge-toggle")?.["background-color"], "#f6f8fb");
+  assert.equal(declarations(dialogBackdropClasses.split(" ")).position, "fixed");
+  assert.equal(declarations(dialogClasses().split(" "))["border-radius"], "14px");
+  assert.equal(normalize(rules.get(".lounge-toggle")?.["background-color"] ?? ""), "#f3f5f8");
   assert.equal(rules.get(".map-card-back")?.width, "40px");
   assert.equal(rules.get(".map-card-close")?.width, "40px");
   assert.equal(rules.get(".cluster-popover-list")?.["overflow-y"], "auto");
@@ -166,6 +173,7 @@ test("native design system controls preserve form, accessibility and input attri
   const {Input, Select} = await loadUI("components/ui/field.tsx");
   const {Badge} = await loadUI("components/ui/badge.tsx");
   const {FilterChip} = await loadUI("components/ui/filter-chip.tsx");
+  const {Dialog} = await loadUI("components/ui/dialog.tsx");
   const html = renderToStaticMarkup(
     createElement(
       "form",
@@ -180,6 +188,7 @@ test("native design system controls preserve form, accessibility and input attri
       ),
       createElement(Badge, {variant: "route"}, "50"),
       createElement(FilterChip, {variant: "lounge", active: true, "aria-pressed": true}, "라운지"),
+      createElement(Dialog, {onClose() {}, wide: true}, "모달 본문"),
     ),
   );
   const saveButton = html.match(/<button[^>]*name="save"[^>]*>저장<\/button>/)?.[0] ?? "";
@@ -194,5 +203,6 @@ test("native design system controls preserve form, accessibility and input attri
   assert.match(html, /<option value="50" selected="">영동선/);
   assert.match(html, /route-number/);
   assert.match(html, /lounge-toggle on[^>]*aria-pressed="true"/);
-  assert.doesNotMatch(html, /\bvariant=|\bactive=/);
+  assert.match(html, /role="dialog"[^>]*tabindex="-1"[^>]*>모달 본문<\/div>/);
+  assert.doesNotMatch(html, /\bvariant=|\bactive=|\bwide=/);
 });

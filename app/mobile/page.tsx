@@ -12,7 +12,7 @@ export default function MobilePage() {
   return (
     <>
       <KakaoSdkPreload />
-      <Suspense fallback={<div className="mobile-shell flex items-center justify-center bg-[#f3f6fa] text-[#526b91]" role="status">휴게소·주유소를 불러오고 있어요</div>}>
+      <Suspense fallback={<div className="mobile-shell flex items-center justify-center bg-surface text-muted" role="status">휴게소·주유소를 불러오고 있어요</div>}>
         <MobileExplorer initialData={{restAreas: readRestAreas(), stations: readStations()}} />
       </Suspense>
     </>

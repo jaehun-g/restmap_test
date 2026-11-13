@@ -38,12 +38,12 @@ export default function AdminFilterBar({
       : "all";
   return (
     <section
-      className="admin-filter-bar mb-[16px] p-[13px_15px_9px] bg-white [border:1px_solid_#e2e8f0] rounded-[10px]"
+      className="admin-filter-bar mb-[16px] p-[13px_15px_9px] bg-white [border:1px_solid_var(--line)] rounded-[10px]"
       aria-label={includeStations ? "휴게소·주유소 검색·필터" : "휴게소 검색·필터"}
     >
       <div className="admin-filter-controls flex items-end gap-[10px] flex-wrap">
         <SearchBox search={search} disabled={disabled} includeStations={includeStations} />
-        <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
+        <label className="filter-select flex flex-col text-ui-10 text-muted gap-[3px]">
           노선
           <Select
             aria-label="노선 필터"
@@ -69,7 +69,7 @@ export default function AdminFilterBar({
             ))}
           </Select>
         </label>
-        <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
+        <label className="filter-select flex flex-col text-ui-10 text-muted gap-[3px]">
           방향
           <Select
             aria-label="방향 필터"
@@ -95,7 +95,7 @@ export default function AdminFilterBar({
               휴게소 편의시설{" "}
               {filters.facilities.length ? `(${filters.facilities.length})` : "전체"} ▾
             </summary>
-            <div className="facility-picker-options absolute z-[10] top-[42px] left-[0] w-[230px] grid grid-cols-[1fr_1fr] gap-[12px_8px] p-[15px] [border:1px_solid_#dde6f2] rounded-[9px] bg-white [box-shadow:0_4px_18px_#23416a1c]">
+            <div className="facility-picker-options absolute z-[10] top-[42px] left-[0] w-[230px] grid grid-cols-[1fr_1fr] gap-[12px_8px] p-[15px] [border:1px_solid_var(--line)] rounded-[9px] bg-white [box-shadow:0_4px_18px_#23416a1c]">
               <p>선택한 시설을 모두 포함</p>
               {selectableFacilities.map(([key, label]) => (
                 <label key={key}>
@@ -119,7 +119,7 @@ export default function AdminFilterBar({
           </details>
         )}
         {!hideRestFilters && (
-          <label className="filter-select flex flex-col text-ui-10 text-[#94a1b3] gap-[3px]">
+          <label className="filter-select flex flex-col text-ui-10 text-muted gap-[3px]">
             휴게소 라운지
             <Select
               aria-label="화물차 라운지 필터"

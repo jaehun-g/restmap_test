@@ -10,14 +10,27 @@
   --color-primary: #0865ff;
   --color-primary-dark: #0649ba;
   --color-primary-soft: #edf4ff;
+  --color-primary-line: #cde0ff;
   --color-ink: #202733;
   --color-muted: #77818f;
   --color-line: #e9edf2;
   --color-surface: #f3f5f8;
   --color-station: #15845c;
   --color-station-soft: #e7f5ed;
+  --color-station-line: #cfe5d9;
   --color-lounge: #c96e12;
   --color-lounge-soft: #fff3e4;
+  --color-lounge-line: #ffd8aa;
+  --color-danger: #b2645b;
+  --color-danger-soft: #fff7f5;
+  --color-danger-line: #f0d6d1;
+  --color-ex: #7c3aed;
+  --color-ex-soft: #f2ebff;
+  --color-shower: #116381;
+  --color-shower-soft: #e2f4fb;
+  --color-focus: #78abff;
+  --color-overlay: #fffffff2;
+  --color-backdrop: #12233b99;
   --font-sans:
     "Pretendard", "Noto Sans KR", "Malgun Gothic", -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;

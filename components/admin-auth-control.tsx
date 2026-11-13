@@ -34,7 +34,7 @@ export default function AdminAuthControl({
       )}
       {open && !auth.authenticated && (
         <form
-          className="auth-popover absolute z-[20] right-[0] top-[49px] w-[290px] p-[17px] bg-white [border:1px_solid_#dfe7f2] rounded-[12px] [box-shadow:0_6px_25px_#23416a20]"
+          className="auth-popover absolute z-[20] right-[0] top-[49px] w-[290px] p-[17px] bg-white [border:1px_solid_var(--line)] rounded-[12px] [box-shadow:0_6px_25px_#23416a20]"
           onSubmit={async event => {
             event.preventDefault();
             const ok = await auth.login(password);
@@ -89,7 +89,7 @@ export default function AdminAuthControl({
       )}
       {auth.error && !open && (
         <span
-          className="auth-error absolute top-[48px] right-[0] w-[260px] text-[#b2645b] bg-white p-[10px] rounded-[5px] text-ui-10 z-[10]"
+          className="auth-error absolute top-[48px] right-[0] w-[260px] text-danger bg-white p-[10px] rounded-[5px] text-ui-10 z-[10]"
           role="alert"
         >
           {auth.error}

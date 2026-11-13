@@ -7,8 +7,8 @@
 | 위치                    | 책임                                                             |
 | ----------------------- | ---------------------------------------------------------------- |
 | `styles/tokens.css`     | 색상·폰트의 단일 정의. Tailwind `@theme`와 기존 CSS 변수 별칭    |
-| `lib/design-system.ts`  | 버튼·입력·배지 변형 및 클래스 조합                               |
-| `components/ui/`        | `Button`, `IconButton`, `Input`, `Select`, `Badge`, `FilterChip` |
+| `lib/design-system.ts`  | 버튼·입력·배지·다이얼로그 변형 및 클래스 조합                    |
+| `components/ui/`        | `Button`, `IconButton`, `Input`, `Select`, `Badge`, `FilterChip`, `Dialog` |
 | `lib/shared-classes.ts` | 상세 패널, 필터 슬라이드, 편집 폼, 지도 버튼의 공통 레이아웃     |
 | `styles/base.css`       | base 레이어의 기본 요소·포커스·터치 설정                         |
 | `styles/map.css`        | 지도와 장소 상세의 하위 요소 스타일                              |
@@ -24,13 +24,16 @@
 
 색상을 바꿀 때는 `styles/tokens.css`를 수정합니다.
 
-- `primary`, `primary-dark`, `primary-soft`: 주 행동과 선택 상태
+- `primary`, `primary-dark`, `primary-soft`, `primary-line`: 주 행동과 선택 상태
 - `ink`, `muted`, `line`, `surface`: 본문, 보조 정보, 경계, 배경
-- `station`, `station-soft`: 주유소
-- `lounge`, `lounge-soft`: 화물차 라운지
+- `station`, `station-soft`, `station-line`: 주유소
+- `lounge`, `lounge-soft`, `lounge-line`: 화물차 라운지·주의 안내
+- `danger`, `danger-soft`, `danger-line`: 오류 및 경고 상태
+- `ex`, `ex-soft`, `shower`, `shower-soft`: 고속도로 주유소·샤워실 강조 배지
+- `focus`, `overlay`, `backdrop`: 포커스 링, 지도 오버레이, 모달 배경
 - `font-sans`: 공통 글꼴
 
-`bg-primary`, `text-muted`, `border-line`처럼 사용합니다. 기존 `--blue`, `--line` 등은 이 토큰의 별칭으로 연결됩니다. 지도·목록의 세부 보조색과 정확한 픽셀 치수는 기존 표현을 유지하기 위해 임의 값 유틸리티를 허용합니다.
+`bg-primary`, `text-muted`, `border-line`처럼 사용합니다. 기존 `--blue`, `--line` 등은 이 토큰의 별칭으로 연결됩니다. 정확한 픽셀 치수는 기존 표현을 유지하기 위해 임의 값 유틸리티를 허용합니다.
 
 ## 글자 크기
 
@@ -43,6 +46,7 @@ import {Button, IconButton} from "@/components/ui/button";
 import {Input, Select} from "@/components/ui/field";
 import {Badge} from "@/components/ui/badge";
 import {FilterChip} from "@/components/ui/filter-chip";
+import {Dialog} from "@/components/ui/dialog";
 
 <Button type="submit" variant="primary" disabled={saving}>저장</Button>
 <IconButton type="button" aria-label="닫기" onClick={onClose}>…</IconButton>
@@ -50,12 +54,14 @@ import {FilterChip} from "@/components/ui/filter-chip";
 <Select name="route" value={route} onChange={onRouteChange}>…</Select>
 <Badge variant="route">50</Badge>
 <FilterChip active={selected} aria-expanded={open} onClick={onOpen}>노선</FilterChip>
+<Dialog onClose={onClose} wide={false}>…</Dialog>
 ```
 
 - `Button`: `primary`, `secondary`(기본), `ghost`.
 - `Input`, `Select`: `default`, `search`. 네이티브 입력·선택 동작을 유지합니다.
-- `Badge`: `neutral`, `primary`, `station`, `lounge`, `route`.
+- `Badge`: `neutral`, `primary`, `station`, `lounge`, `danger`, `route`.
 - `FilterChip`: `default`, `lounge`. `active`는 선택된 조건을 표현합니다. 펼침 상태는 `aria-expanded`, 토글은 `aria-pressed`를 호출부에서 전달합니다.
+- `Dialog`: 모달 컨테이너와 배경 오버레이(`role="dialog"`, `aria-modal="true"`, Escape 및 배경 클릭 닫기)를 제공합니다.
 - `IconButton`: `aria-label`을 필수로 받습니다.
 - 기본 네이티브 속성, 이벤트, React 19의 `ref`를 전달합니다. 버튼의 기본 `type`을 변경하지 않으므로 새 폼에서는 제출 버튼과 일반 동작에 `type`을 명시하세요.
 - 링크를 버튼처럼 표시할 때는 `buttonClasses()`를 `Link`나 `a`에 사용합니다.
@@ -83,6 +89,6 @@ shadcn/ui는 완성된 컴포넌트 코드를 배포하는 방식입니다. 일�
 
 ## 검증
 
-변경 범위에 맞는 관련 테스트와 린트를 실행합니다. `tests/design-system.test.mts`는 실제 앱 소스 검색과 Tailwind 컴파일 결과를 스타일 기준과 비교하고 공통 컨트롤과 글자 크기를 검증합니다. 현재 전체 디자인 시스템 테스트의 이전 기준 중 `map-hint`는 사용처가 없어 실패하므로 기준 정리가 필요합니다.
+변경 범위에 맞는 관련 테스트와 린트를 실행합니다. `tests/design-system.test.mts`는 실제 앱 소스 검색과 Tailwind 컴파일 결과를 스타일 기준과 비교하고 공통 컨트롤과 글자 크기를 검증합니다.
 
 공통 컨트롤의 네이티브 폼 속성·암묵적 제출·접근성 속성·선택 상태는 서버 렌더링으로 검증합니다. 기존 지도·필터·카드 테스트도 유지합니다. 이 검증은 실제 브라우저의 픽셀·SDK 배치를 대신하지 않습니다. 모바일 320/375/430px·가로 화면에서 검색, 필터 시트, 라운지, 카드/더보기/뒤로가기와 관리자 표·편집 폼은 별도 화면 확인 대상입니다.

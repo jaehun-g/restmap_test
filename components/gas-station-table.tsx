@@ -131,7 +131,7 @@ export default function GasStationTable({
           >
             {station.name}
           </button>
-          <small className="block text-ui-10 text-[#637995]">{stationLabel(station)}</small>
+          <small className="block text-ui-10 text-muted">{stationLabel(station)}</small>
         </>
       );
     if (stationServices.some(service => service.key === key))
@@ -253,7 +253,7 @@ export default function GasStationTable({
                 ))}
               </tbody>
             </table>
-            {visibleCount < sorted.length && <div ref={sentinel} className="py-3 text-center text-xs text-slate-500" aria-live="polite">아래로 스크롤하면 목록을 더 불러옵니다</div>}
+            {visibleCount < sorted.length && <div ref={sentinel} className="py-[12px] text-center text-ui-12 text-muted" aria-live="polite">아래로 스크롤하면 목록을 더 불러옵니다</div>}
           </div>
         </>
       )}

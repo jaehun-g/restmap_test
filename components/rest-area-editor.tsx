@@ -153,7 +153,7 @@ export default function RestAreaEditor({
                       placeholder={"required" in field ? "필수" : "미등록"}
                     />}
                     {changed && (
-                      <small className="previous-value block text-[#a2adbd] text-ui-10 mt-[3px] [overflow-wrap:anywhere]">
+                      <small className="previous-value block text-muted text-ui-10 mt-[3px] [overflow-wrap:anywhere]">
                         기존: {before || "미등록"}
                       </small>
                     )}

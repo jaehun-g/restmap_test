@@ -22,7 +22,7 @@ export default function PlaceControls({
       }
     >
       <nav
-        className="place-tabs inline-flex p-[3px] gap-[3px] [border:1px_solid_#dde6f2] rounded-[10px] bg-white [box-shadow:0_2px_8px_#23416a10]"
+        className="place-tabs inline-flex p-[3px] gap-[3px] [border:1px_solid_var(--line)] rounded-[10px] bg-white [box-shadow:0_2px_8px_#23416a10]"
         aria-label="장소 보기"
       >
         {([
