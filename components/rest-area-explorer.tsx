@@ -10,20 +10,22 @@ import {useMapFitRequest} from "@/hooks/use-map-fit-request";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
 import {useGasStations} from "@/hooks/use-gas-stations";
 import {useMobileDetails} from "@/hooks/use-mobile-details";
-import type {RestAreaRecord} from "@/lib/rest-areas";
-import type {GasStation, GasStationRecord} from "@/lib/gas-stations";
+import {formatPlaceDistance, type NavigationTarget} from "@/lib/navigation";
+import type {PlaceSearchItem} from "@/lib/place-search";
+import {hasCoordinates, type RestAreaRecord} from "@/lib/rest-areas";
+import type {GasStationRecord} from "@/lib/gas-stations";
 import {stationQueryString} from "@/lib/gas-station-query";
 import {stationHours, stationKey, stationLabel} from "@/lib/gas-stations";
 import type {PlaceView} from "@/lib/map-places";
-import {mobilePlaceList, previewForRestArea} from "@/lib/mobile-place-list";
+import {mobilePlaceList} from "@/lib/mobile-place-list";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import {directionOptions, initialFilters} from "@/lib/rest-area-filters";
 import {filterFacilityPlaces, mobileSearchScope} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
-import {areaDistance, formatDistance, formatRadius, type GeoBounds} from "@/lib/geo-search";
-import {cardDisplayArea} from "@/lib/map-card-layout";
+import {areaDistance, formatRadius, type GeoBounds} from "@/lib/geo-search";
+import {cardDisplayArea, visibleChromeEdge} from "@/lib/map-card-layout";
 import {detailSheetSwipe} from "@/lib/mobile-sheet-gesture";
-import {facilityDefinitions, routeDescription} from "@/lib/rest-areas";
+import {prioritizedFacilities, routeDescription} from "@/lib/rest-areas";
 import type {InitialMapData} from "@/lib/initial-map-data";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
@@ -44,7 +46,7 @@ export default function MobileExplorer({initialData}: {
   const areas = useMemo(() => allAreas.filter(area => area.operationStatus !== "closed"), [allAreas]);
   const location = useMobileLocation();
   const view = useMapFitRequest();
-  const search = useSearchQuery(view.requestSearchFit);
+  const search = useSearchQuery(view.requestSearchFit, true);
   const [filters, setFilters] = useState(initialFilters);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   // 위치·줌 변경은 공통 목록을 필터링하고, 노선 검색만 서버의 근접 조건을 적용한다.
@@ -59,9 +61,10 @@ export default function MobileExplorer({initialData}: {
   const touchStart = useRef<{x: number; y: number; canCollapse: boolean} | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
-  const [previewStation, setPreviewStation] = useState<{
-    station: GasStation; restAreaId: number; filters: typeof filters; query: string; view: PlaceView;
-  } | null>(null);
+  const [selectedGeneralPlace, setSelectedGeneralPlace] = useState<PlaceSearchItem | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<NavigationTarget | null>(null);
+  const [directionsOpen, setDirectionsOpen] = useState(false);
+  const isDirectionsMode = directionsOpen || Boolean(navigationTarget);
   const panelRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -140,12 +143,30 @@ export default function MobileExplorer({initialData}: {
       window.visualViewport?.removeEventListener("scroll", measure);
     };
   }, []);
+  const readChrome = (element: HTMLElement | null | undefined) =>
+    element ? {hidden: element.hidden, rect: element.getBoundingClientRect()} : null;
   const cardViewport = useCallback((canvas: DOMRect) => {
     const screen = window.visualViewport;
+    const headerBottom = visibleChromeEdge(
+      [
+        readChrome(headerRef.current),
+        readChrome(shellRef.current?.querySelector<HTMLElement>(".directions-top-header")),
+      ],
+      "bottom",
+      canvas.top,
+    );
+    const sheetTop = visibleChromeEdge(
+      [
+        readChrome(sheetRef.current),
+        readChrome(shellRef.current?.querySelector<HTMLElement>(".directions-dock-container")),
+      ],
+      "top",
+      canvas.bottom,
+    );
     const area = cardDisplayArea(
       canvas,
-      headerRef.current?.getBoundingClientRect().bottom ?? canvas.top,
-      sheetRef.current?.getBoundingClientRect().top ?? canvas.bottom,
+      headerBottom,
+      sheetTop,
       screen
         ? {
             left: screen.offsetLeft,
@@ -163,15 +184,16 @@ export default function MobileExplorer({initialData}: {
   const updateViewport = useCallback((bounds: GeoBounds) => {
     setViewportBounds(current => current && current.south === bounds.south && current.west === bounds.west && current.north === bounds.north && current.east === bounds.east ? current : bounds);
   }, []);
-  const hasActiveFilter = Boolean(search.query.trim() || filters.routeName || filters.missingRoute || filters.direction || filters.facilities.length || filters.lounge !== "all" || placeView !== "all");
-  const searchScope = useMemo(() => mobileSearchScope(filters, search.query, placeView, viewportBounds), [filters, search.query, placeView, viewportBounds]);
+  const effectiveFilterQuery = selectedGeneralPlace ? "" : search.query;
+  const hasActiveFilter = Boolean(effectiveFilterQuery.trim() || filters.routeName || filters.missingRoute || filters.direction || filters.facilities.length || filters.lounge !== "all" || placeView !== "all");
+  const searchScope = useMemo(() => mobileSearchScope(filters, effectiveFilterQuery, placeView, viewportBounds), [filters, effectiveFilterQuery, placeView, viewportBounds]);
   const sourceFacilities = useMemo(() => mergeFacilityPlaces(areas, gas.stations), [areas, gas.stations]);
   const mergedFacilities = useMemo(
     () => filterFacilityPlaces(areas, gas.stations, {
-      filters, query: search.query, stationServices: [],
+      filters, query: effectiveFilterQuery, stationServices: [],
       scope: searchScope, position: location.position,
     }, sourceFacilities),
-    [areas, gas.stations, filters, search.query, searchScope, location.position, sourceFacilities],
+    [areas, gas.stations, filters, effectiveFilterQuery, searchScope, location.position, sourceFacilities],
   );
   const baseVisibleAreas = useMemo(
     () => mergedFacilities.facilities.map(({area}) => area),
@@ -179,12 +201,24 @@ export default function MobileExplorer({initialData}: {
   );
   const baseStations = mergedFacilities.stations;
   const baseLinkedStations = useMemo(
-    () => linkedStationsByArea(mergedFacilities.facilities, sourceFacilities.stations),
-    [mergedFacilities.facilities, sourceFacilities],
+    () =>
+      linkedStationsByArea(
+        isDirectionsMode ? sourceFacilities.facilities : mergedFacilities.facilities,
+        sourceFacilities.stations,
+      ),
+    [isDirectionsMode, sourceFacilities, mergedFacilities.facilities],
   );
-  const selectedBaseArea = baseVisibleAreas.find(area => area.id === selectedId);
-  const selectedBaseStation = baseStations.find(station => stationKey(station) === selectedStationId) ??
-    [...baseLinkedStations.values()].flat().find(station => stationKey(station) === selectedStationId);
+  const selectedBaseArea =
+    baseVisibleAreas.find(area => area.id === selectedId) ??
+    (isDirectionsMode && selectedId !== null
+      ? areas.find(area => area.id === selectedId)
+      : undefined);
+  const selectedBaseStation =
+    baseStations.find(station => stationKey(station) === selectedStationId) ??
+    [...baseLinkedStations.values()].flat().find(station => stationKey(station) === selectedStationId) ??
+    (isDirectionsMode && selectedStationId !== null
+      ? sourceFacilities.stations.find(station => stationKey(station) === selectedStationId)
+      : undefined);
   const restDetails = useMobileDetails("rest", selectedBaseArea && !selectedBaseArea.revision ? [selectedBaseArea.id] : []);
   const detailStations = selectedBaseArea ? baseLinkedStations.get(selectedBaseArea.id) ?? [] : selectedBaseStation ? [selectedBaseStation] : [];
   const stationDetailsData = useMobileDetails("station", detailStations.filter(station => station.brand === "EX" && !station.revision).map(station => station.id));
@@ -210,9 +244,33 @@ export default function MobileExplorer({initialData}: {
     return places;
   }, [visibleAreas, stationResults, location.position, placeView]);
   const mobileList = useInfiniteScroll(listPlaces);
-  const selected = visibleAreas.find(area => area.id === selectedId);
-  const selectedStation = stationResults.find(station => stationKey(station) === selectedStationId) ??
-    [...linkedStationsByRestId.values()].flat().find(station => stationKey(station) === selectedStationId);
+  const selected =
+    visibleAreas.find(area => area.id === selectedId) ??
+    (isDirectionsMode && selectedBaseArea
+      ? ((restDetails.items[selectedBaseArea.id] as RestAreaRecord | undefined) ?? selectedBaseArea)
+      : undefined);
+  const selectedStation = useMemo(
+    () =>
+      stationResults.find(station => stationKey(station) === selectedStationId) ??
+      [...linkedStationsByRestId.values()]
+        .flat()
+        .find(station => stationKey(station) === selectedStationId) ??
+      (isDirectionsMode && selectedBaseStation
+        ? {
+            ...selectedBaseStation,
+            ...((stationDetailsData.items[selectedBaseStation.id] as GasStationRecord | undefined) ??
+              {}),
+          }
+        : undefined),
+    [
+      stationResults,
+      linkedStationsByRestId,
+      selectedStationId,
+      isDirectionsMode,
+      selectedBaseStation,
+      stationDetailsData.items,
+    ],
+  );
   const mapAreas = useMemo(
     () => listPlaces.flatMap(place => place.kind === "rest" ? [place.record] : []),
     [listPlaces],
@@ -221,23 +279,10 @@ export default function MobileExplorer({initialData}: {
     () => listPlaces.flatMap(place => place.kind === "station" ? [place.record] : []),
     [listPlaces],
   );
-  const visiblePreviewStation = previewStation && previewStation.filters === filters &&
-    previewStation.query === search.query && previewStation.view === placeView ? previewStation.station : null;
-  const stalePreview = previewStation && !visiblePreviewStation ? previewStation : null;
-  const extraStation = stalePreview && selectedStationId === stationKey(stalePreview.station)
-    ? null : selectedStation ?? visiblePreviewStation;
-  const selectedMapStations = extraStation && !mapStations.some(station => stationKey(station) === stationKey(extraStation))
-    ? [...mapStations, extraStation] : mapStations;
-  useEffect(() => {
-    if (!stalePreview) return;
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      setSelectedStationId(current => current === stationKey(stalePreview.station) ? null : current);
-      setPreviewStation(null);
-    });
-    return () => { active = false; };
-  }, [stalePreview]);
+  const selectedMapStations =
+    selectedStation && !mapStations.some(station => stationKey(station) === stationKey(selectedStation))
+      ? [...mapStations, selectedStation]
+      : mapStations;
   const effectivePanel =
     panel === "detail" && !selected && !selectedStation && !loading && !gas.loading
       ? "list"
@@ -245,13 +290,11 @@ export default function MobileExplorer({initialData}: {
   const expanded = effectivePanel !== "collapsed";
   const resultCount = listPlaces.length;
   const select = useCallback((id: number | null) => {
-    if (id !== null) setPreviewStation(current => previewForRestArea(current, id));
     setSelectedStationId(null);
     setSelectedId(id);
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
-    setPreviewStation(current => previewForRestArea(current, id));
     setDetailExpanded(false);
     setSelectedStationId(null);
     setSelectedId(id);
@@ -262,14 +305,36 @@ export default function MobileExplorer({initialData}: {
     setDetailExpanded(false);
     setPanelExpanded(false);
   }, []);
+  const startNavigation = useCallback(
+    (target: NavigationTarget) => {
+      setDirectionsOpen(true);
+      setNavigationTarget(target);
+      setSelectedId(null);
+      setSelectedStationId(null);
+      setSelectedGeneralPlace(null);
+      collapse();
+    },
+    [collapse],
+  );
+  const handleNavigationChange = useCallback(
+    (next: NavigationTarget | null) => {
+      setNavigationTarget(next);
+      if (next) {
+        setDirectionsOpen(true);
+        collapse();
+      }
+    },
+    [collapse],
+  );
+  const clearGeneralPlace = useCallback(() => {
+    setSelectedGeneralPlace(null);
+  }, []);
   const selectStation = useCallback((id: string | null) => {
-    if (id !== null) setPreviewStation(current => current && stationKey(current.station) === id ? current : null);
     setSelectedId(null);
     setSelectedStationId(id);
     setPanel("collapsed");
   }, []);
   const stationDetails = useCallback((id: string) => {
-    setPreviewStation(current => current && stationKey(current.station) === id ? current : null);
     setDetailExpanded(false);
     setSelectedId(null);
     setSelectedStationId(id);
@@ -324,15 +389,14 @@ export default function MobileExplorer({initialData}: {
     setPanel(next);
   };
   const reset = () => {
-    setPreviewStation(null);
     search.clear(false);
     setFilters(initialFilters());
     setSelectedId(null);
     setSelectedStationId(null);
+    setSelectedGeneralPlace(null);
     setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
-    setPreviewStation(null);
     setFilters(current => ({...current, routeName: null, direction: null}));
     setSelectedId(null);
     setSelectedStationId(null);
@@ -343,13 +407,34 @@ export default function MobileExplorer({initialData}: {
       ref={shellRef}
     >
       <header
+        hidden={isDirectionsMode}
         className="mobile-header absolute inset-[0_0_auto] bg-[transparent] pointer-events-none z-[4] p-[calc(10px_+_env(safe-area-inset-top,_0px))_18px_12px]"
         ref={headerRef}
       >
         <h1 className={sharedClasses.screenReaderOnly}>
           휴게소·주유소 찾기
         </h1>
-        <SearchBox search={search} includeStations />
+        <SearchBox
+          search={search}
+          includeStations
+          areas={areas}
+          stations={gas.stations}
+          onSelectRestArea={id => {
+            setSelectedGeneralPlace(null);
+            select(id);
+          }}
+          onSelectStation={stationId => {
+            setSelectedGeneralPlace(null);
+            selectStation(stationId);
+          }}
+          onSelectGeneralPlace={place => {
+            setSelectedId(null);
+            setSelectedStationId(null);
+            setSelectedGeneralPlace(place);
+            collapse();
+          }}
+          onClearGeneralPlace={() => setSelectedGeneralPlace(null)}
+        />
         <div className="mobile-filters flex items-center flex-nowrap gap-[6px] m-[8px_-18px_0] p-[2px_18px_6px] overflow-x-auto whitespace-nowrap [scrollbar-width:none] [scroll-padding:0_18px]">
           <FilterChip
             active={Boolean(filters.routeName)}
@@ -386,7 +471,6 @@ export default function MobileExplorer({initialData}: {
             onClick={() => {
               const next = placeView === "ex" ? "all" : "ex";
               setPlaceView(next);
-              setPreviewStation(null);
               if (next === "ex") setFilters(current => ({...current, facilities: [], lounge: "all"}));
               setSelectedId(null);
               setSelectedStationId(null);
@@ -427,7 +511,6 @@ export default function MobileExplorer({initialData}: {
             fitRequest={view.fitRequest}
             searchFitPlaces={listPlaces}
             selectedStationId={selectedStation ? stationKey(selectedStation) : null}
-            pinnedStationId={visiblePreviewStation ? stationKey(visiblePreviewStation) : null}
             onStationSelect={selectStation}
             onStationDetails={stationDetails}
             areasLoading={loading}
@@ -438,7 +521,6 @@ export default function MobileExplorer({initialData}: {
             }}
             selectedRouteName={filters.routeName}
             onClearRoute={clearRoute}
-            onLocate={() => setPreviewStation(null)}
             onViewportChange={updateViewport}
             onMapClick={() => {
               if (expanded && (effectivePanel === "detail" ? !detailExpanded : !panelExpanded)) collapse();
@@ -450,12 +532,24 @@ export default function MobileExplorer({initialData}: {
             showCard={!expanded}
             dataVersion={data?.fetchedAt ?? gas.data?.fetchedAt}
             cardViewport={cardViewport}
-            viewportVersion={`${effectivePanel}:${viewportRevision}`}
+            viewportVersion={`${effectivePanel}:${isDirectionsMode}:${viewportRevision}`}
             mobileLocation={location}
+            navigationTarget={navigationTarget}
+            onNavigationChange={handleNavigationChange}
+            directionsOpen={isDirectionsMode}
+            onDirectionsOpenChange={open => {
+              setDirectionsOpen(open);
+              if (!open) setNavigationTarget(null);
+            }}
+            allRestAreas={areas}
+            allStations={gas.stations}
+            selectedGeneralPlace={selectedGeneralPlace}
+            onClearGeneralPlace={clearGeneralPlace}
           />
         </div>
         <section
           ref={sheetRef}
+          hidden={Boolean(isDirectionsMode && !expanded)}
           className={`mobile-sheet absolute bottom-[0] w-full shrink-0 h-[calc(84px_+_env(safe-area-inset-bottom,_0px))] max-h-[max(120px,_calc(100%_-_var(--mobile-header-height,_150px)_-_230px))] flex flex-col [border-top:1px_solid_var(--line)] rounded-[18px_18px_0_0] bg-white z-[4] [box-shadow:0_-5px_15px_#2a477908] pb-[env(safe-area-inset-bottom,_0px)] ${expanded ? "is-open" : ""} ${effectivePanel === "detail" ? (detailExpanded ? "is-detail-full" : "is-detail-preview") : expanded && panelExpanded ? "is-panel-full" : ""}`}
           onTouchStart={event => {
             const touch = event.touches[0];
@@ -471,7 +565,8 @@ export default function MobileExplorer({initialData}: {
             if (!start || !touch) return;
             const action = detailSheetSwipe(start, {x: touch.clientX, y: touch.clientY}, effectivePanel === "detail" ? detailExpanded : panelExpanded);
             if (effectivePanel === "collapsed") {
-              if (action === "expand") open("list", summaryRef.current ?? event.currentTarget);
+              if (!selectedGeneralPlace && action === "expand")
+                open("list", summaryRef.current ?? event.currentTarget);
               return;
             }
             if (action === "close") collapse();
@@ -491,42 +586,91 @@ export default function MobileExplorer({initialData}: {
                   : "휴게소 목록"
           }
         >
-          <div
-            className="sheet-handle w-[30px] h-[4px] m-[9px_auto_2px] bg-line rounded-[5px] shrink-0"
-            aria-hidden="true"
-          />
+          {(expanded || !selectedGeneralPlace) && (
+            <div
+              className="sheet-handle w-[30px] h-[4px] m-[9px_auto_2px] bg-line rounded-[5px] shrink-0"
+              aria-hidden="true"
+            />
+          )}
           {!expanded ? (
-            <button
-              ref={summaryRef}
-              className="sheet-summary flex items-center gap-[12px] w-full p-[13px_20px_14px] [border:0] bg-[transparent] text-left text-ink"
-              onClick={event => open("list", event.currentTarget)}
-              aria-expanded={false}
-            >
-              <span className="summary-list-icon w-[36px] h-[36px] flex items-center justify-center rounded-[11px] bg-primary-soft text-primary shrink-0">
-                <Icon name="list" size={21} />
-              </span>
-              <span>
-                <strong>
-                  {loading
-                    ? "휴게소를 찾고 있어요"
-                    : error
-                      ? "휴게소 조회 확인"
-                      : `${placeView === "rest" ? "휴게소" : placeView === "ex" ? "고속도로 주유소" : "휴게소·주유소"} ${resultCount}곳`}
-                </strong>
-                {(error || !filters.routeName) && <small>
-                  {error
-                    ? "목록에서 조회 상태를 확인해주세요"
-                    : search.query.trim()
-                        ? "전체 지역 검색"
-                      : location.requesting
-                        ? "현재 위치를 확인하고 있어요"
-                        : hasActiveFilter ? "전체 지역 검색" : location.locationRadius
-                          ? `현재 지도 영역 · 내 위치 기준 ${formatRadius(location.locationRadius.radiusMeters)}`
-                          : "현재 지도 영역"}
-                </small>}
-              </span>
-              <Icon name="chevronUp" size={20} />
-            </button>
+            selectedGeneralPlace ? (
+              <div
+                className="sheet-general-place flex items-center gap-[10px] w-full my-auto p-[14px_16px]"
+                role="region"
+                aria-label={`${selectedGeneralPlace.name} 길찾기`}
+              >
+                <span className="summary-list-icon w-[36px] h-[36px] flex items-center justify-center rounded-[11px] bg-primary-soft text-primary shrink-0">
+                  <Icon name="pin" size={20} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <strong className="block truncate text-ui-14 font-[750] text-ink">
+                    {selectedGeneralPlace.name}
+                  </strong>
+                  <small className="block mt-[2px] truncate text-ui-12 text-muted">
+                    {selectedGeneralPlace.address &&
+                    selectedGeneralPlace.address !== selectedGeneralPlace.name
+                      ? selectedGeneralPlace.address
+                      : "선택한 위치"}
+                  </small>
+                </div>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    const place = selectedGeneralPlace;
+                    setSelectedGeneralPlace(null);
+                    startNavigation({
+                      key: place.id,
+                      name: place.name,
+                      latitude: place.latitude,
+                      longitude: place.longitude,
+                    });
+                  }}
+                >
+                  <Icon name="car" size={16} />
+                  길찾기
+                </Button>
+                <IconButton
+                  type="button"
+                  aria-label="선택 위치 닫기"
+                  onClick={() => setSelectedGeneralPlace(null)}
+                >
+                  <Icon name="close" size={18} />
+                </IconButton>
+              </div>
+            ) : (
+              <button
+                ref={summaryRef}
+                className="sheet-summary flex items-center gap-[12px] w-full p-[13px_20px_14px] [border:0] bg-[transparent] text-left text-ink"
+                onClick={event => open("list", event.currentTarget)}
+                aria-expanded={false}
+              >
+                <span className="summary-list-icon w-[36px] h-[36px] flex items-center justify-center rounded-[11px] bg-primary-soft text-primary shrink-0">
+                  <Icon name="list" size={21} />
+                </span>
+                <span>
+                  <strong>
+                    {loading
+                      ? "휴게소를 찾고 있어요"
+                      : error
+                        ? "휴게소 조회 확인"
+                        : `${placeView === "rest" ? "휴게소" : placeView === "ex" ? "고속도로 주유소" : "휴게소·주유소"} ${resultCount}곳`}
+                  </strong>
+                  {(error || !filters.routeName) && <small>
+                    {error
+                      ? "목록에서 조회 상태를 확인해주세요"
+                      : search.query.trim()
+                          ? "전체 지역 검색"
+                        : location.requesting
+                          ? "현재 위치를 확인하고 있어요"
+                          : hasActiveFilter ? "전체 지역 검색" : location.locationRadius
+                            ? `현재 지도 영역 · 내 위치 기준 ${formatRadius(location.locationRadius.radiusMeters)}`
+                            : "현재 지도 영역"}
+                  </small>}
+                </span>
+                <Icon name="chevronUp" size={20} />
+              </button>
+            )
           ) : (
             <div
               ref={panelRef}
@@ -558,6 +702,19 @@ export default function MobileExplorer({initialData}: {
                   onClose={collapse}
                   routeName={filters.routeName}
                   preview={!detailExpanded}
+                  userPosition={location.position}
+                  onNavigate={
+                    hasCoordinates(selectedStation)
+                      ? () =>
+                          startNavigation({
+                            key: `station:${stationKey(selectedStation)}`,
+                            name: selectedStation.name,
+                            latitude: selectedStation.latitude,
+                            longitude: selectedStation.longitude,
+                            stationId: stationKey(selectedStation),
+                          })
+                      : undefined
+                  }
                 />
               ) : effectivePanel === "detail" && selected ? (
                 <>
@@ -576,13 +733,27 @@ export default function MobileExplorer({initialData}: {
                       <Icon name="close" />
                     </IconButton>
                   </div>
-                  <RestAreaDetails area={selected} onClose={collapse} audience="mobile" stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => {
-                    setPreviewStation({station, restAreaId: selected.id, filters, query: search.query, view: placeView});
-                    setSelectedId(null);
-                    setSelectedStationId(stationKey(station));
-                    setDetailExpanded(false);
-                    setPanel("collapsed");
-                  }} preview={!detailExpanded} onExpand={() => setDetailExpanded(true)} />
+                  <RestAreaDetails
+                    area={selected}
+                    onClose={collapse}
+                    audience="mobile"
+                    stations={linkedStationsByRestId.get(selected.id)}
+                    preview={!detailExpanded}
+                    onExpand={() => setDetailExpanded(true)}
+                    userPosition={location.position}
+                    onNavigate={
+                      hasCoordinates(selected)
+                        ? () =>
+                            startNavigation({
+                              key: `rest:${selected.id}`,
+                              name: selected.name,
+                              latitude: selected.latitude,
+                              longitude: selected.longitude,
+                              restAreaId: selected.id,
+                            })
+                        : undefined
+                    }
+                  />
                 </>
               ) : (
                 <>
@@ -593,7 +764,7 @@ export default function MobileExplorer({initialData}: {
                       </h2>
                       <p>
                         {location.position
-                          ? "내 위치에서 가까운 순 · 직선거리"
+                          ? "내 위치에서 가까운 순"
                           : "원하는 휴게소를 선택하세요."}
                       </p>
                     </div>
@@ -633,7 +804,7 @@ export default function MobileExplorer({initialData}: {
                         {mobileList.visibleItems.map(place => {
                           if (place.kind === "station") {
                             const station = place.record;
-                            const distance = areaDistance(station, location.position);
+                            const distance = formatPlaceDistance(station, location.position);
                             return (
                               <li key={place.key}>
                                 <button
@@ -650,8 +821,11 @@ export default function MobileExplorer({initialData}: {
                                         {station.name}
                                       </span>
                                       {distance !== null && (
-                                        <small className="mobile-area-distance shrink-0 text-primary text-ui-12 font-[600]">
-                                          {formatDistance(distance)}
+                                        <small
+                                          className="mobile-area-distance shrink-0 text-primary text-ui-12 font-[600]"
+                                          aria-label={distance.detailText}
+                                        >
+                                          {distance.badgeText}
                                         </small>
                                       )}
                                       <Icon name="chevron" size={16} />
@@ -669,11 +843,9 @@ export default function MobileExplorer({initialData}: {
                           const area = place.record;
                           const linkedStations = linkedStationsByRestId.get(area.id) ?? [];
                           const hasPrices = linkedStations.some(station => station.prices?.gasoline || station.prices?.diesel);
-                          const available = facilityDefinitions.filter(
-                            ([key]) => area.facilities[key] === true,
-                          );
+                          const available = prioritizedFacilities(area);
                           const route = routeDescription(area, "mobile");
-                          const distance = areaDistance(area, location.position);
+                          const distance = formatPlaceDistance(area, location.position);
                           return (
                             <li key={place.key}>
                               <button
@@ -702,9 +874,9 @@ export default function MobileExplorer({initialData}: {
                                     {distance !== null && (
                                       <small
                                         className="mobile-area-distance shrink-0 text-primary text-ui-12 font-[600]"
-                                        aria-label={`내 위치에서 직선거리 ${formatDistance(distance)}`}
+                                        aria-label={distance.detailText}
                                       >
-                                        {formatDistance(distance)}
+                                        {distance.badgeText}
                                       </small>
                                     )}
                                     <Icon name="chevron" size={16} />
@@ -718,7 +890,7 @@ export default function MobileExplorer({initialData}: {
                                   )}
                                   <span className="facility-tags">
                                     {available.slice(0, 3).map(([key, label]) => (
-                                      <span key={key}>{label}</span>
+                                      <span key={key} className={`facility-highlight-${key}`}>{label}</span>
                                     ))}
                                     {available.length > 3 && <span>+{available.length - 3}</span>}
                                   </span>

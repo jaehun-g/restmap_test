@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { facilityDefinitions, hasCoordinates, highlightedFacilities, normalizeRestAreas, nullableBoolean } from "../lib/rest-areas.ts";
+import { facilityDefinitions, hasCoordinates, highlightedFacilities, prioritizedFacilities, normalizeRestAreas, nullableBoolean } from "../lib/rest-areas.ts";
 
 const row = { id: 1, name: "테스트 휴게소", latitude: "37.1234567", longitude: "127.7654321" };
 
@@ -18,6 +18,25 @@ test("주요 시설 배지는 제공이 확인된 라운지, 수면실, 샤워�
   if (!result.ok) assert.fail(result.error.message);
   assert.deepEqual(highlightedFacilities(result.value[0]).map(([, label]) => label), ["화물차 라운지", "수면실", "샤워실"]);
   assert.deepEqual(highlightedFacilities(result.value[1]).map(([, label]) => label), ["샤워실"]);
+});
+
+test("목록의 세 배지는 주요 시설부터 채우고 나머지 시설 개수는 중복 없이 유지한다", () => {
+  const result = normalizeRestAreas([
+    {...row, has_truck_lounge: 1, has_sleeping_room: 1, has_shower: 1, has_gas_station: 1, has_lpg_station: 1},
+    {...row, id: 2, has_truck_lounge: 0, has_sleeping_room: null, has_shower: 1, has_gas_station: 1, has_lpg_station: 1, has_store: 1},
+    {...row, id: 3, has_gas_station: 1, has_store: 1},
+    {...row, id: 4},
+  ]);
+  if (!result.ok) assert.fail(result.error.message);
+  const allHighlights = prioritizedFacilities(result.value[0]);
+  assert.deepEqual(allHighlights.slice(0, 3).map(([, label]) => label), ["화물차 라운지", "수면실", "샤워실"]);
+  assert.equal(allHighlights.length - 3, 2);
+  assert.equal(new Set(allHighlights.map(([key]) => key)).size, allHighlights.length);
+  const partial = prioritizedFacilities(result.value[1]);
+  assert.deepEqual(partial.slice(0, 3).map(([, label]) => label), ["샤워실", "주유소", "LPG 충전소"]);
+  assert.equal(partial.length - 3, 1);
+  assert.deepEqual(prioritizedFacilities(result.value[2]).map(([, label]) => label), ["주유소", "매점"]);
+  assert.deepEqual(prioritizedFacilities(result.value[3]), []);
 });
 
 test("Cafe24 binary-collation UTF-8 text fields decode to Korean strings", () => {

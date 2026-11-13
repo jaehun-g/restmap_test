@@ -15,7 +15,8 @@ import {
 } from "@/lib/rest-area-filters";
 import type {SortField} from "@/lib/rest-area-fields";
 import {createEditorDraft, editorIsDirty, type EditorDraft} from "@/lib/rest-area-editor";
-import type {RestAreaRecord} from "@/lib/rest-areas";
+import {hasCoordinates, type RestAreaRecord} from "@/lib/rest-areas";
+import type {NavigationTarget} from "@/lib/navigation";
 import KakaoMap from "./kakao-map";
 import RestAreaDetails from "./rest-area-details";
 import RestAreaEditor from "./rest-area-editor";
@@ -33,6 +34,8 @@ import GasStationTable from "./gas-station-table";
 import GasStationDetails from "./gas-station-details";
 import GasStationEditor from "./gas-station-editor";
 import {useMobileLocation} from "@/hooks/use-mobile-location";
+import {useDrivingRoute} from "@/hooks/use-driving-route";
+import {findRestAreasAlongDrivingRoute} from "@/lib/directions";
 import {filterFacilityPlaces} from "@/lib/facility-filters";
 import {linkedStationsByArea, mergeFacilityPlaces} from "@/lib/facility-places";
 import AdminDetailModal from "./admin-detail-modal";
@@ -55,6 +58,7 @@ export default function AdminExplorer() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [direction, setDirection] = useState<"asc" | "desc">("asc");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<NavigationTarget | null>(null);
   const [editing, setEditing] = useState<{
     base: RestAreaRecord;
     draft: EditorDraft;
@@ -94,6 +98,19 @@ export default function AdminExplorer() {
     [mergedFacilities.facilities, sourceFacilities],
   );
   const selectedStation = selectedStationId === null ? undefined : allStations.stations.find(station => stationKey(station) === selectedStationId);
+  const activeTarget = selectedStation ?? selected ?? null;
+  const driving = useDrivingRoute(
+    location.position,
+    activeTarget,
+    Boolean(location.position && activeTarget),
+  );
+  const routeRestAreas = useMemo(
+    () =>
+      driving.route
+        ? findRestAreasAlongDrivingRoute(driving.route, areas, 1500, selected?.id ?? null)
+        : [],
+    [driving.route, areas, selected?.id],
+  );
   const restListRows = useMemo(() => {
     const query = restListQuery.trim().toLocaleLowerCase("ko-KR");
     const matching = query ? areas.filter(area => `${area.name} ${area.routeName ?? ""} ${area.directionLabel ?? ""} ${area.phone ?? ""} ${area.stdRestCd ?? ""}`.toLocaleLowerCase("ko-KR").includes(query)) : areas;
@@ -433,6 +450,9 @@ export default function AdminExplorer() {
               dataVersion={`${data?.fetchedAt ?? ""}|${gas.data?.fetchedAt ?? ""}`}
               onFullscreen={() => void toggleMapFullscreen()}
               fullscreen={mapFullscreen}
+              navigationTarget={navigationTarget}
+              onNavigationChange={setNavigationTarget}
+              allRestAreas={areas}
             />
           </div>
         </section>
@@ -564,6 +584,26 @@ export default function AdminExplorer() {
                     onClose={close}
                     audience="admin"
                     routeName={filters.routeName}
+                    userPosition={location.position}
+                    routeRestAreas={routeRestAreas}
+                    onSelectRestArea={details}
+                    onNavigate={
+                      hasCoordinates(selectedStation)
+                        ? () => {
+                            setNavigationTarget({
+                              key: `station:${stationKey(selectedStation)}`,
+                              name: selectedStation.name,
+                              latitude: selectedStation.latitude,
+                              longitude: selectedStation.longitude,
+                              stationId: stationKey(selectedStation),
+                            });
+                            setDetailModal(false);
+                            if (!location.position && !location.requesting) {
+                              location.locate();
+                            }
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               </>
@@ -585,11 +625,36 @@ export default function AdminExplorer() {
                   </Button>
                 </div>
                 <div className="admin-detail-body min-h-0 flex-1">
-                  <RestAreaDetails area={selected} onClose={close} stations={linkedStationsByRestId.get(selected.id)} onStationMap={station => {
-                    if (!mayLeave()) return;
-                    selectStation(stationKey(station));
-                    setDetailModal(false);
-                  }} />
+                  <RestAreaDetails
+                    area={selected}
+                    onClose={close}
+                    stations={linkedStationsByRestId.get(selected.id)}
+                    onStationMap={station => {
+                      if (!mayLeave()) return;
+                      selectStation(stationKey(station));
+                      setDetailModal(false);
+                    }}
+                    userPosition={location.position}
+                    routeRestAreas={routeRestAreas}
+                    onSelectRestArea={details}
+                    onNavigate={
+                      hasCoordinates(selected)
+                        ? () => {
+                            setNavigationTarget({
+                              key: `rest:${selected.id}`,
+                              name: selected.name,
+                              latitude: selected.latitude,
+                              longitude: selected.longitude,
+                              restAreaId: selected.id,
+                            });
+                            setDetailModal(false);
+                            if (!location.position && !location.requesting) {
+                              location.locate();
+                            }
+                          }
+                        : undefined
+                    }
+                  />
                 </div>
               </>
             ) : (

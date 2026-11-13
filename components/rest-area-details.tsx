@@ -6,6 +6,9 @@ import {IconButton} from "@/components/ui/button";
 import {facilityDefinitions, hasCoordinates, highlightedFacilities, type FacilityKey, type RestArea, routeDescription} from "@/lib/rest-areas";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
+import {formatDistance, type GeoPoint} from "@/lib/geo-search";
+import type {RouteRestAreaMatch} from "@/lib/directions";
+import {formatPlaceDistance} from "@/lib/navigation";
 import FoodMenuSection from "@/components/food-menu-section";
 import Icon from "./icon";
 
@@ -33,6 +36,10 @@ export default function RestAreaDetails({
   onStationMap,
   preview = false,
   onExpand,
+  userPosition = null,
+  routeRestAreas = [],
+  onSelectRestArea,
+  onNavigate,
 }: {
   area: RestArea;
   onClose: () => void;
@@ -41,16 +48,21 @@ export default function RestAreaDetails({
   onStationMap?: (station: GasStation) => void;
   preview?: boolean;
   onExpand?: () => void;
+  userPosition?: GeoPoint | null;
+  routeRestAreas?: readonly RouteRestAreaMatch[];
+  onSelectRestArea?: (id: number) => void;
+  onNavigate?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("시설");
+  const distanceSummary = formatPlaceDistance(area, userPosition);
+  const canNavigate = Boolean(onNavigate && hasCoordinates(area));
+  const handleNavigate = () => {
+    onNavigate?.();
+  };
   const linkedStations = stations.filter(station => station.brand === "EX");
-  const directStation = audience === "mobile" && linkedStations.length === 1 &&
-    hasCoordinates(linkedStations[0]) && onStationMap ? linkedStations[0] : null;
+  const showStationOverviewLink =
+    audience === "admin" ? linkedStations.length > 0 : linkedStations.length > 1;
   const selectTab = (next: Tab) => {
-    if (next === "주유" && directStation && onStationMap) {
-      onStationMap(directStation);
-      return;
-    }
     setTab(next);
     onExpand?.();
   };
@@ -63,9 +75,22 @@ export default function RestAreaDetails({
     <section className={sharedClasses.detailPanel} aria-labelledby="detail-title">
       <div className="detail-handle hidden" aria-hidden="true" />
       <div className={sharedClasses.detailHeading}>
-        <div className="min-w-0">
-          <span className={sharedClasses.eyebrow}>휴게소 상세정보</span>
-          <h2 id="detail-title">{area.name}</h2>
+        <div className="min-w-0 flex-1">
+          {audience === "admin" && <span className={sharedClasses.eyebrow}>휴게소 상세정보</span>}
+          <div className="detail-title-row">
+            <h2 id="detail-title">{area.name}</h2>
+            {canNavigate && (
+              <button
+                type="button"
+                className="detail-navigate-button"
+                onClick={handleNavigate}
+                aria-label="길찾기"
+                title="길찾기"
+              >
+                <Icon name="directions" size={18} />
+              </button>
+            )}
+          </div>
           {area.operationStatus && area.operationStatus !== "open" && <p role="status" className="my-[8px] rounded-[6px] [border:1px_solid_var(--color-lounge-line)] bg-lounge-soft p-[8px_10px] text-ui-12 text-lounge">
             {area.operationStatus === "suspended" ? "일시 운영중지" : area.operationStatus === "closed" ? "운영 종료" : "운영 상태 확인 필요"}{area.operationNote ? ` · ${area.operationNote}` : ""}
           </p>}
@@ -73,19 +98,23 @@ export default function RestAreaDetails({
             <p className="detail-route-line">
               {routeDescription(area, audience) || "노선 정보 없음"}
             </p>
-            <div className="detail-overview-tags">
-              {audience === "mobile" ? highlightedFacilities(area).map(([key, label]) => (
-                <span key={key} className={`facility-highlight-${key}`}>{label}</span>
-              )) : (
-                <>
-                  <span>주차 {area.parkingCount === null ? "정보 없음" : `${area.parkingCount.toLocaleString("ko-KR")}대`}</span>
-                  {area.restAreaType && <span>{area.restAreaType}</span>}
-                </>
-              )}
-              {area.largeParkingCount != null && (
-                <span className="large-parking-badge">대형주차 {area.largeParkingCount.toLocaleString("ko-KR")}면</span>
-              )}
-            </div>
+            {distanceSummary && (
+              <span
+                className="detail-distance-text"
+                aria-label={distanceSummary.detailText}
+              >
+                {distanceSummary.badgeText}
+              </span>
+            )}
+          </div>
+          <div className="detail-overview-tags mt-[8px]">
+            {highlightedFacilities(area).map(([key, label]) => (
+              <span key={key} className={`facility-highlight-${key}`}>{label}</span>
+            ))}
+            {audience === "admin" && area.restAreaType && <span>{area.restAreaType}</span>}
+            {area.largeParkingCount != null && (
+              <span className="large-parking-badge">대형주차 {area.largeParkingCount.toLocaleString("ko-KR")}면</span>
+            )}
           </div>
         </div>
         {audience === "admin" && (
@@ -108,12 +137,35 @@ export default function RestAreaDetails({
             {diesel.partial && <small>일부 가격 미확인</small>}
           </span>
         </div>
-        {linkedStations.length > 0 && (
-          <button type="button" className="detail-station-link" onClick={() => selectTab("주유")}>
-            {directStation ? "주유소 지도에서 보기 →" : `주유소 ${linkedStations.length}곳 · 방향별 가격 확인 →`}
-          </button>
+        {showStationOverviewLink && (
+          <div className="detail-overview-actions">
+            <button type="button" className="detail-station-link" onClick={() => selectTab("주유")}>
+              {`주유소 ${linkedStations.length}곳 · 방향별 가격 확인 →`}
+            </button>
+          </div>
         )}
       </div>
+
+      {audience !== "mobile" && routeRestAreas.length > 0 && (
+        <div className="detail-route-areas" aria-label="이동 경로상 휴게소">
+          <span className="detail-route-areas-label">
+            이동 경로상 휴게소 {routeRestAreas.length}곳
+          </span>
+          <div className="detail-route-areas-list">
+            {routeRestAreas.map(match => (
+              <button
+                key={match.area.id}
+                type="button"
+                className="detail-route-area-chip"
+                onClick={() => onSelectRestArea?.(match.area.id)}
+              >
+                <span>{match.area.name}</span>
+                <small>{formatDistance(match.alongMeters)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="detail-tabs shrink-0" role="tablist" aria-label="휴게소 상세정보">
         {(["시설", "음식", "주유"] as const).map(item => (
@@ -180,7 +232,7 @@ export default function RestAreaDetails({
                   <article key={station.siteCode} className="station-price-section">
                     <h3>{station.name}</h3>
                     <p>{station.direction ? `${station.direction.replace(/방향/g, "").trim()} 방향` : "방향 정보 없음"}</p>
-                    {onStationMap && (
+                    {audience !== "mobile" && onStationMap && (
                       <button type="button" className="detail-station-link" onClick={() => onStationMap(station)}>
                         지도에서 보기 →
                       </button>

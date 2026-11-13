@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createMapCard} from "../lib/map-card.ts";
+import {createGeneralPlaceMapCard} from "../lib/place-map-card.ts";
 import {normalizeRestAreas, type RestArea} from "../lib/rest-areas.ts";
 import {createStationMapCard} from "../lib/station-map-card.ts";
 import {normalizeGasStations} from "../lib/gas-stations.ts";
@@ -63,10 +64,11 @@ function area(lounge: boolean | null, route: string | null): RestArea {
 test("대형 주차면은 확인된 경우에만 시설 배지로 표시한다", t => {
   installDocument(t);
   for (const [count, expected] of [[144, "대형주차 144면"], [0, "대형주차 0면"], [null, null]] as const) {
-    const item = {...area(false, null), facilities: {} as RestArea["facilities"], largeParkingCount: count};
+    const item = {...area(false, null), facilities: {} as RestArea["facilities"], parkingCount: 200, largeParkingCount: count};
     const card = createMapCard(item, "mobile", () => {}, () => {}) as unknown as ElementDouble;
     const badge = card.all().find(element => element.className === "large-parking-badge");
     assert.equal(badge?.textContent ?? null, expected);
+    assert.ok(!card.all().some(element => /^주차 /.test(element.textContent)));
   }
 });
 
@@ -229,4 +231,98 @@ test("summary bodies scroll independently of header/footer and station text rema
   assert.equal(station.querySelector(".map-card-hours")?.textContent, "09:00–22:00");
   station.querySelector(".map-card-details")!.dispatch("click");
   assert.equal(opened, 1);
+});
+
+test("인포윈도우에 거리 텍스트와 길찾기 동작을 연결할 수 있다", t => {
+  installCardDOM(t);
+  let navigated = 0;
+  let opened = 0;
+  const card = createMapCard(
+    area(true, "경부선"),
+    "mobile",
+    () => {},
+    () => {
+      opened++;
+    },
+    [],
+    {
+      distanceText: "15.8 km",
+      onNavigate: () => {
+        navigated++;
+      },
+    },
+  ) as unknown as CardElement;
+  assert.deepEqual(
+    card.children.map(child => child.className),
+    ["map-card-heading", "map-card-body", "map-card-actions"],
+  );
+  assert.equal(card.querySelector(".map-card-distance")?.textContent, "15.8 km");
+  const body = card.querySelector(".map-card-body")!;
+  const meta = card.querySelector(".map-card-meta")!;
+  assert.deepEqual(meta.children.map(child => child.className), ["map-card-route", "map-card-distance"]);
+  assert.ok(body.children.indexOf(meta) < body.children.indexOf(card.querySelector(".map-card-facilities")!));
+  card.querySelector(".map-card-navigate")!.dispatch("click");
+  card.querySelector(".map-card-details")!.dispatch("click");
+  assert.equal(navigated, 1);
+  assert.equal(opened, 1);
+
+  let placeNavigated = 0;
+  const generalCard = createGeneralPlaceMapCard(
+    {
+      id: "kakao:1001",
+      name: "쿠팡 안성4물류센터",
+      address: "경기 안성시 죽산면 장능리 726",
+      category: "물류,유통",
+      phone: "031-000-0000",
+      latitude: 37.05,
+      longitude: 127.42,
+    },
+    () => {},
+    {
+      distanceText: "38.4 km",
+      onNavigate: () => {
+        placeNavigated++;
+      },
+    },
+  ) as unknown as CardElement;
+  assert.deepEqual(
+    generalCard.children.map(child => child.className),
+    ["map-card-heading", "map-card-body", "map-card-details"],
+  );
+  assert.equal(
+    generalCard.querySelector(".map-card-address")?.textContent,
+    "물류,유통 · 경기 안성시 죽산면 장능리 726",
+  );
+  assert.equal(generalCard.querySelector(".map-card-hours")?.textContent, "031-000-0000");
+  generalCard.querySelector(".map-card-details")!.dispatch("click");
+  assert.equal(placeNavigated, 1);
+
+  const rerouteCard = createMapCard(
+    area(true, "경부선"),
+    "mobile",
+    () => {},
+    () => {},
+    [],
+    {
+      distanceText: "42.3 km",
+      label: "목적지 변경",
+      onNavigate: () => {},
+    },
+  ) as unknown as CardElement;
+  assert.equal(rerouteCard.querySelector(".map-card-distance")?.textContent, "42.3 km");
+  assert.equal(rerouteCard.querySelector(".map-card-navigate")?.textContent, "목적지 변경");
+
+  const activeDestCard = createMapCard(
+    area(true, "경부선"),
+    "mobile",
+    () => {},
+    () => {},
+    [],
+    {
+      distanceText: "85.1 km",
+      active: true,
+    },
+  ) as unknown as CardElement;
+  assert.equal(activeDestCard.querySelector(".map-card-navigate"), null);
+  assert.equal(activeDestCard.querySelector(".map-card-details")?.textContent, "상세보기 →");
 });

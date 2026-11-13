@@ -174,14 +174,27 @@ test("클러스터는 화면상 가까운 표시 단위 두 개부터 묶는다"
   installCardDOM(t);
   const {sdk, map} = mockKakao();
   let options: {gridSize: number; minClusterSize: number; minLevel: number} | undefined;
+  let updatedLevel: number | undefined;
+  let updatedGridSize: number | undefined;
   sdk.MarkerClusterer = class {
     constructor(value: typeof options) { options = value; }
-    addMarkers() {} addMarker() {} removeMarker() {} redraw() {} setMinLevel() {} clear() {}
+    addMarkers() {} addMarker() {} removeMarker() {} redraw() {}
+    setMinLevel(level: number) { updatedLevel = level; }
+    setGridSize(size: number) { updatedGridSize = size; }
+    clear() {}
   } as unknown as NonNullable<KakaoMaps["MarkerClusterer"]>;
   const layer = createPlaceMarkers(sdk, map, [], () => {}, label);
   assert.equal(options?.gridSize, 48);
   assert.equal(options?.minClusterSize, 2);
   assert.equal(options?.minLevel, 7);
+  layer.setRouteMode(true);
+  assert.equal(updatedLevel, 10);
+  assert.equal(updatedGridSize, 28);
+  assert.equal(options?.minClusterSize, 2);
+  layer.setRouteMode(false);
+  assert.equal(updatedLevel, 7);
+  assert.equal(updatedGridSize, 48);
+  assert.equal(options?.minClusterSize, 2);
   layer.dispose();
 });
 
@@ -668,8 +681,9 @@ test("cluster list returns with count, scroll and focus intact; close resets the
   state.clicks[0]();
   dom.flush();
   let listCard = currentCard();
-  listCard.querySelector(".cluster-list-more")!.dispatch("click");
   const list = listCard.querySelector(".cluster-popover-list")!;
+  list.scrollTop = 40;
+  list.dispatch("scroll");
   list.scrollTop = 192;
   list.dispatch("scroll");
   const key = list.children[7].children[0].getAttribute("data-place-key");
@@ -774,4 +788,168 @@ test("zoom completion restores an offscreen selected anchor once, without moving
   state.idle[0]();
   assert.equal(state.panned, 2, "pan idle must not start a recentering loop");
   markers.dispose();
+});
+
+test("setRouteMode(true) preserves current zoom level when clicking an individual marker", () => {
+  const {sdk, map, state} = mockKakao();
+  const list = areas();
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    [restPlace(list[0])],
+    () => {},
+    () => label(),
+  );
+  layer.setRouteMode(true);
+  state.clicks[0]();
+  assert.deepEqual(state.levels, [], "route mode marker click must keep current zoom");
+  layer.setRouteMode(false);
+  state.clicks[0]();
+  assert.equal(state.levels.length, 1, "normal mode marker click zooms in as before");
+  layer.dispose();
+});
+
+test("route mode distinguishes cluster click (zoom expand) from individual click (preserve zoom)", t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const list = areas().slice(0, 2);
+  let clusterClickHandler: ((cluster: unknown) => void) | undefined;
+  const addedMarkers: unknown[] = [];
+  sdk.MarkerClusterer = class {
+    addMarkers(markers: unknown[]) {
+      addedMarkers.push(...markers);
+    }
+    addMarker(marker: unknown) {
+      addedMarkers.push(marker);
+    }
+    removeMarker() {}
+    redraw() {}
+    setMinLevel() {}
+    setGridSize() {}
+    clear() {}
+  } as unknown as NonNullable<KakaoMaps["MarkerClusterer"]>;
+  const origAddListener = sdk.event.addListener;
+  sdk.event.addListener = ((target: unknown, name: string, cb: (...args: unknown[]) => void) => {
+    if (name === "clusterclick") clusterClickHandler = cb;
+    return origAddListener(target as Parameters<typeof origAddListener>[0], name, cb);
+  }) as typeof sdk.event.addListener;
+
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    list.map(restPlace),
+    () => {},
+    () => label(),
+  );
+  const fakeCluster = {
+    getMarkers: () => addedMarkers,
+    getBounds: () => ({
+      getSouthWest: () => new sdk.LatLng(36, 127),
+      getNorthEast: () => new sdk.LatLng(37, 128),
+    }),
+  };
+
+  const levelCalls: Array<{
+    level: number;
+    options?: {animate?: boolean | {duration?: number}; anchor?: unknown};
+  }> = [];
+  const origSetLevel = map.setLevel;
+  map.setLevel = ((level, options) => {
+    levelCalls.push({level, options});
+    origSetLevel(level, options);
+  }) as typeof map.setLevel;
+
+  layer.setRouteMode(true);
+  assert.ok(clusterClickHandler);
+  clusterClickHandler!(fakeCluster);
+  assert.equal(levelCalls.length, 1, "route mode cluster click smoothly zooms in instead of snapping");
+  assert.equal(levelCalls[0].level, 5);
+  assert.equal(levelCalls[0].options?.animate, true);
+  assert.ok(levelCalls[0].options?.anchor);
+  assert.equal(
+    state.content.some(item => item instanceof CardElement && item.className.includes("cluster-popover")),
+    false,
+    "cluster popover must not open when cluster expands in route mode",
+  );
+
+  // Normal mode still opens cluster popover list instead of auto-expanding
+  layer.setRouteMode(false);
+  clusterClickHandler!({
+    ...fakeCluster,
+  });
+  assert.equal(levelCalls.length, 1, "normal mode cluster click keeps level and opens popover");
+  assert.equal(
+    state.content.some(item => item instanceof CardElement && item.className.includes("cluster-popover")),
+    true,
+  );
+  layer.dispose();
+});
+
+test("다중 클러스터 인포윈도우는 클릭 직후 map click 및 주변 마커 업데이트에도 닫히지 않고 유지된다", async t => {
+  installCardDOM(t);
+  const {sdk, map, state} = mockKakao();
+  const list = normalizeRestAreas([
+    {id: 1, name: "A", latitude: "37", longitude: "127", has_truck_lounge: 1},
+    {id: 2, name: "B", latitude: "37.01", longitude: "127.01", has_truck_lounge: 0},
+    {id: 4, name: "C", latitude: "36.2", longitude: "128.2", has_truck_lounge: 0},
+  ]);
+  if (!list.ok) assert.fail(list.error.message);
+  let clusteredHandler: ((clusters: unknown[]) => void) | undefined;
+  const addedMarkers: unknown[] = [];
+  sdk.MarkerClusterer = class {
+    addMarkers(markers: unknown[]) { addedMarkers.push(...markers); }
+    addMarker(marker: unknown) { addedMarkers.push(marker); }
+    removeMarker() {}
+    redraw() {}
+    setMinLevel() {}
+    setGridSize() {}
+    clear() {}
+  } as unknown as NonNullable<KakaoMaps["MarkerClusterer"]>;
+  const origAddListener = sdk.event.addListener;
+  sdk.event.addListener = ((target: unknown, name: string, cb: (...args: unknown[]) => void) => {
+    if (name === "clustered") clusteredHandler = cb;
+    return origAddListener(target as Parameters<typeof origAddListener>[0], name, cb);
+  }) as typeof sdk.event.addListener;
+
+  const layer = createPlaceMarkers(
+    sdk,
+    map,
+    list.value.slice(0, 2).map(restPlace),
+    () => {},
+    () => label(),
+  );
+  let clusterDom: CardElement | null = null;
+  const fakeCluster = {
+    getMarkers: () => addedMarkers,
+    getBounds: () => ({
+      getSouthWest: () => new sdk.LatLng(37, 127),
+      getNorthEast: () => new sdk.LatLng(37.01, 127.01),
+    }),
+    getClusterMarker: () => ({
+      setContent(el: unknown) { clusterDom = el as CardElement; },
+    }),
+  };
+  clusteredHandler!([fakeCluster]);
+  assert.ok(clusterDom);
+  const pin = clusterDom as CardElement;
+  pin.dispatch("touchend");
+  state.mapClicks.forEach(cb => cb());
+  pin.dispatch("click");
+  const hiddenRightAfterOpen = state.hidden;
+  state.mapClicks.forEach(cb => cb());
+
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(state.shown, 1, "cluster popover must open once");
+  assert.equal(state.hidden, hiddenRightAfterOpen, "follow-up map click must not dismiss cluster popover");
+  assert.ok(
+    state.content.at(-1) instanceof CardElement &&
+      (state.content.at(-1) as CardElement).className.includes("cluster-popover"),
+    "cluster popover content must remain active",
+  );
+
+  // Unrelated marker added elsewhere on map update should not close or rebuild the open popover
+  layer.update(list.value.map(restPlace));
+  assert.equal(state.shown, 1);
+  assert.equal(state.hidden, hiddenRightAfterOpen);
+  layer.dispose();
 });

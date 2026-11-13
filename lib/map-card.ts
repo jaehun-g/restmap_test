@@ -1,6 +1,7 @@
 import {facilityDefinitions, highlightedFacilities, routeDescription, type RestArea} from "./rest-areas.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
 import type {GasStation} from "./gas-stations.ts";
+import type {MapCardNavigation} from "./navigation.ts";
 import {restAreaPriceSummary} from "./rest-area-prices.ts";
 
 export function createMapCard(
@@ -9,6 +10,7 @@ export function createMapCard(
   onClose: () => void,
   onDetails: () => void,
   stations: readonly GasStation[] = [],
+  navigation?: MapCardNavigation,
 ): HTMLElement {
   const card = document.createElement("section");
   card.className = "map-info-card";
@@ -53,12 +55,21 @@ export function createMapCard(
     body.append(prices);
   }
   const route = routeDescription(area, audience);
+  const meta = document.createElement("div");
+  meta.className = "map-card-meta";
   if (route) {
     const text = document.createElement("p");
     text.className = "map-card-route";
     text.textContent = route;
-    body.append(text);
+    meta.append(text);
   }
+  if (navigation?.distanceText) {
+    const distance = document.createElement("p");
+    distance.className = "map-card-distance";
+    distance.textContent = navigation.distanceText;
+    meta.append(distance);
+  }
+  if (route || navigation?.distanceText) body.append(meta);
   const lounge = area.facilities.has_truck_lounge;
   if (lounge !== true && audience === "admin") {
     const badge = document.createElement("span");
@@ -100,6 +111,22 @@ export function createMapCard(
     event.stopPropagation();
     onDetails();
   });
-  card.append(body, details);
+  if (navigation?.onNavigate) {
+    const onNavigate = navigation.onNavigate;
+    const actions = document.createElement("div");
+    actions.className = "map-card-actions";
+    const navigate = document.createElement("button");
+    navigate.className = navigation.active ? "map-card-navigate active" : "map-card-navigate";
+    navigate.type = "button";
+    navigate.textContent = navigation.label ?? (navigation.active ? "길찾기 종료" : "길찾기");
+    navigate.addEventListener("click", event => {
+      event.stopPropagation();
+      onNavigate();
+    });
+    actions.append(navigate, details);
+    card.append(body, actions);
+  } else {
+    card.append(body, details);
+  }
   return card;
 }

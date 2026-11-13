@@ -10,6 +10,9 @@ import {
   type GasStationRecord,
 } from "@/lib/gas-stations";
 import {hasCoordinates} from "@/lib/rest-areas";
+import {formatDistance, type GeoPoint} from "@/lib/geo-search";
+import type {RouteRestAreaMatch} from "@/lib/directions";
+import {formatPlaceDistance} from "@/lib/navigation";
 import Icon from "./icon";
 export default function GasStationDetails({
   station,
@@ -17,12 +20,20 @@ export default function GasStationDetails({
   audience = "mobile",
   routeName,
   preview = false,
+  userPosition = null,
+  routeRestAreas = [],
+  onSelectRestArea,
+  onNavigate,
 }: {
   station: GasStationRecord;
   onClose: () => void;
   audience?: "mobile" | "admin";
   routeName?: string | null;
   preview?: boolean;
+  userPosition?: GeoPoint | null;
+  routeRestAreas?: readonly RouteRestAreaMatch[];
+  onSelectRestArea?: (id: number) => void;
+  onNavigate?: () => void;
 }) {
   const [detail, setDetail] = useState<GasStationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,21 +66,71 @@ export default function GasStationDetails({
   const phone = station.phone?.replace(/[^\d+]/g, "");
   const prices = stationPriceItems(station);
   const priceTime = station.priceUpdatedAt ? new Date(station.priceUpdatedAt) : null;
+  const distanceSummary = formatPlaceDistance(station, userPosition);
+  const canNavigate = Boolean(onNavigate && hasCoordinates(station));
+  const handleNavigate = () => {
+    onNavigate?.();
+  };
   return (
     <section className={sharedClasses.detailPanel} aria-labelledby="station-detail-title">
       <div className={sharedClasses.detailHeading}>
-        <div>
-          <span className={sharedClasses.eyebrow}>{stationLabel(station)}</span>
-          <h2 id="station-detail-title">{station.name}</h2>
+        <div className="min-w-0 flex-1">
+          {(audience === "admin" || station.brand !== "EX") && (
+            <span className={sharedClasses.eyebrow}>{stationLabel(station)}</span>
+          )}
+          <div className="detail-title-row">
+            <h2 id="station-detail-title">{station.name}</h2>
+            {canNavigate && (
+              <button
+                type="button"
+                className="detail-navigate-button"
+                onClick={handleNavigate}
+                aria-label="길찾기"
+                title="길찾기"
+              >
+                <Icon name="directions" size={18} />
+              </button>
+            )}
+          </div>
+          {distanceSummary && (
+            <div className="detail-meta-row mt-[6px]">
+              <span
+                className="detail-distance-text"
+                aria-label={distanceSummary.detailText}
+              >
+                {distanceSummary.badgeText}
+              </span>
+            </div>
+          )}
         </div>
         <IconButton aria-label="주유소 상세정보 닫기" onClick={onClose}>
           <Icon name="close" />
         </IconButton>
       </div>
+      {audience !== "mobile" && routeRestAreas.length > 0 && (
+        <div className="detail-route-areas" aria-label="이동 경로상 휴게소">
+          <span className="detail-route-areas-label">
+            이동 경로상 휴게소 {routeRestAreas.length}곳
+          </span>
+          <div className="detail-route-areas-list">
+            {routeRestAreas.map(match => (
+              <button
+                key={match.area.id}
+                type="button"
+                className="detail-route-area-chip"
+                onClick={() => onSelectRestArea?.(match.area.id)}
+              >
+                <span>{match.area.name}</span>
+                <small>{formatDistance(match.alongMeters)}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className={sharedClasses.detailScroll}>
         {routeName && station.brand === "GS" && (
           <p className="station-route-note text-station bg-station-soft rounded-[8px] p-[10px] text-ui-12 leading-[1.6]">
-            {routeName} 주변 2km · 직선거리 기준
+            {routeName} 주변 2km
             <br />
             고속도로 내부 또는 진입 가능 여부는 확인이 필요합니다.
           </p>

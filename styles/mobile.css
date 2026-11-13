@@ -38,6 +38,7 @@
 }
 .mobile-sheet.is-open {
   @apply h-[min(50dvh,_540px)];
+  z-index: 8;
 }
 .mobile-sheet.is-detail-preview {
   height: auto;
@@ -51,11 +52,14 @@
   padding-top: env(safe-area-inset-top, 0px);
   border-radius: 0;
 }
-.mobile-map .location-control {
-  @apply bottom-[calc(105px_+_env(safe-area-inset-bottom,_0px))];
-}
-.mobile-map .map-legend {
+.mobile-map .map-bottom-controls {
   @apply bottom-[calc(94px_+_env(safe-area-inset-bottom,_0px))];
+}
+.mobile-map .map-bottom-controls.is-directions-open {
+  @apply bottom-[calc(24px_+_env(safe-area-inset-bottom,_0px))];
+}
+.mobile-map .map-bottom-controls.is-directions-dock {
+  @apply bottom-[calc(198px_+_env(safe-area-inset-bottom,_0px))];
 }
 .sheet-summary strong {
   @apply block text-ui-14;

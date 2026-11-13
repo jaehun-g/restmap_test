@@ -127,7 +127,7 @@ test("shared control utilities compile and retain native control geometry", () =
   assert.equal(declarations(fieldClasses().split(" "))["min-height"], "34px");
   assert.equal(declarations(dialogBackdropClasses.split(" ")).position, "fixed");
   assert.equal(declarations(dialogClasses().split(" "))["border-radius"], "14px");
-  assert.equal(normalize(rules.get(".lounge-toggle")?.["background-color"] ?? ""), "#f3f5f8");
+  assert.equal(normalize(rules.get(".lounge-toggle")?.["background-color"] ?? ""), "#fff");
   assert.equal(rules.get(".map-card-back")?.width, "40px");
   assert.equal(rules.get(".map-card-close")?.width, "40px");
   assert.equal(rules.get(".cluster-popover-list")?.["overflow-y"], "auto");

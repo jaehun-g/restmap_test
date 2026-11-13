@@ -131,6 +131,25 @@ const paths = {
   ),
   chevron: <path d="m8 5 7 7-7 7" />,
   chevronUp: <path d="m6 15 6-6 6 6" />,
+  car: (
+    <>
+      <path d="M5 17h14v-5l-2-5H7l-2 5v5ZM5 17v2M19 17v2" />
+      <circle cx="7.5" cy="14.5" r="1" />
+      <circle cx="16.5" cy="14.5" r="1" />
+    </>
+  ),
+  directions: (
+    <>
+      <path d="M6 19v-6a4 4 0 0 1 4-4h8" />
+      <path d="m14 5 4 4-4 4" />
+    </>
+  ),
+  swap: (
+    <>
+      <path d="M7 4v16M7 4 3 8M7 4l4 4" />
+      <path d="M17 20V4M17 20l-4-4M17 20l4-4" />
+    </>
+  ),
 } as const;
 
 export default function Icon({

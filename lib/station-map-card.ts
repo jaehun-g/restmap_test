@@ -1,9 +1,11 @@
 import {stationHours, stationLabel, stationPriceItems, type GasStation} from "./gas-stations.ts";
 import {setMapCardIcon} from "./map-card-icon.ts";
+import type {MapCardNavigation} from "./navigation.ts";
 export function createStationMapCard(
   station: GasStation,
   onClose: () => void,
   onDetails: () => void,
+  navigation?: MapCardNavigation,
 ): HTMLElement {
   const card = document.createElement("section");
   card.className = "map-info-card station-map-card";
@@ -28,13 +30,15 @@ export function createStationMapCard(
   card.append(heading);
   const body = document.createElement("div");
   body.className = "map-card-body";
+  const meta = document.createElement("div");
+  meta.className = "map-card-meta";
   const sourceText = [station.brand === "EX" ? null : stationLabel(station), station.services.cargo ? "화물 특화" : null]
     .filter(Boolean).join(" · ");
   if (sourceText) {
     const source = document.createElement("p");
     source.className = "map-card-route";
     source.textContent = sourceText;
-    body.append(source);
+    meta.append(source);
   }
   if (station.routeName || station.direction) {
     const route = document.createElement("p");
@@ -42,8 +46,15 @@ export function createStationMapCard(
     route.textContent = [station.routeName, station.direction ? `${station.direction} 방향` : null]
       .filter(Boolean)
       .join(" · ");
-    body.append(route);
+    meta.append(route);
   }
+  if (navigation?.distanceText) {
+    const distance = document.createElement("p");
+    distance.className = "map-card-distance";
+    distance.textContent = navigation.distanceText;
+    meta.append(distance);
+  }
+  if (sourceText || station.routeName || station.direction || navigation?.distanceText) body.append(meta);
   const address = document.createElement("p");
   address.textContent = [station.address, station.detailAddress].filter(Boolean).join(" ");
   address.className = "map-card-address";
@@ -80,6 +91,22 @@ export function createStationMapCard(
     event.stopPropagation();
     onDetails();
   });
-  card.append(body, details);
+  if (navigation?.onNavigate) {
+    const onNavigate = navigation.onNavigate;
+    const actions = document.createElement("div");
+    actions.className = "map-card-actions";
+    const navigate = document.createElement("button");
+    navigate.className = navigation.active ? "map-card-navigate active" : "map-card-navigate";
+    navigate.type = "button";
+    navigate.textContent = navigation.label ?? (navigation.active ? "길찾기 종료" : "길찾기");
+    navigate.addEventListener("click", event => {
+      event.stopPropagation();
+      onNavigate();
+    });
+    actions.append(navigate, details);
+    card.append(body, actions);
+  } else {
+    card.append(body, details);
+  }
   return card;
 }

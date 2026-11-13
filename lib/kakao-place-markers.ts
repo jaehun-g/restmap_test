@@ -133,6 +133,7 @@ export function createPlaceMarkers(
     frame: number | null = null,
     activeKey: string | null = null;
   let pinnedKey: string | null = null;
+  let routeClusterMode = false;
   let allowAdjustment = true;
   let zoomPending = false;
   // Kakao Maps can emit its map click immediately after a marker/overlay click.
@@ -142,14 +143,14 @@ export function createPlaceMarkers(
   function suppressFollowUpMapClick() {
     if (pendingMapClick !== null) clearTimeout(pendingMapClick);
     pendingMapClick = null;
-    suppressMapClickUntil = Date.now() + 250;
+    suppressMapClickUntil = Date.now() + 350;
     sdk.event.preventMap?.();
   }
   const isLounge = (place: MapPlace) =>
     place.kind === "rest" && place.record.facilities.has_truck_lounge === true;
   const baseZ = (place: MapPlace) => (isLounge(place) ? 3 : place.kind === "rest" ? 2 : 1);
   function protectMapInteraction(content: HTMLElement) {
-    for (const name of ["mousedown", "touchstart", "click"])
+    for (const name of ["mousedown", "touchstart", "touchend", "click"])
       content.addEventListener?.(name, suppressFollowUpMapClick, {capture: true});
     content.addEventListener?.("wheel", event => {
       event.stopPropagation();
@@ -206,6 +207,47 @@ export function createPlaceMarkers(
       (Math.abs(ne.getLat() - sw.getLat()) >= 1e-8 || Math.abs(ne.getLng() - sw.getLng()) >= 1e-8)
     );
   }
+  function expandBounds(bounds: KakaoBounds) {
+    const level = map.getLevel();
+    if (level <= 1) return;
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const anchor = new sdk.LatLng(
+      (sw.getLat() + ne.getLat()) / 2,
+      (sw.getLng() + ne.getLng()) / 2,
+    );
+    const mapBounds = map.getBounds?.();
+    let steps = 1;
+    if (mapBounds) {
+      const mapSw = mapBounds.getSouthWest();
+      const mapNe = mapBounds.getNorthEast();
+      const viewLat = Math.max(1e-7, mapNe.getLat() - mapSw.getLat()) * 0.72;
+      const viewLng = Math.max(1e-7, mapNe.getLng() - mapSw.getLng()) * 0.72;
+      const boxLat = Math.max(1e-7, ne.getLat() - sw.getLat());
+      const boxLng = Math.max(1e-7, ne.getLng() - sw.getLng());
+      steps = Math.max(
+        1,
+        Math.min(2, Math.floor(Math.log2(Math.min(viewLat / boxLat, viewLng / boxLng)))),
+      );
+    }
+    const nextLevel = Math.max(1, level - steps);
+    runProgrammaticMapAction(() => {
+      closeList();
+      clearCard();
+      map.setLevel(nextLevel, {animate: true, anchor});
+    }, nextLevel !== level);
+  }
+  function pickPlace(place: MapPlace) {
+    const expectZoomChange =
+      !routeClusterMode &&
+      hasCoordinates(place.record) &&
+      map.getLevel() > CLUSTER_MIN_LEVEL - 1;
+    runProgrammaticMapAction(() => {
+      if (!routeClusterMode) zoomToPlace(place);
+      select(place.key, true, true);
+    }, expectZoomChange);
+    onSelect(place);
+  }
   function showList(items: MapPlace[], center: KakaoLatLng, bounds: KakaoBounds) {
     const restore = items === listItems;
     closeListOverlay();
@@ -218,15 +260,7 @@ export function createPlaceMarkers(
     const content = createClusterListCard(
       items,
       {
-        onPick: place => {
-          const expectZoomChange =
-            hasCoordinates(place.record) && map.getLevel() > CLUSTER_MIN_LEVEL - 1;
-          runProgrammaticMapAction(() => {
-            zoomToPlace(place);
-            select(place.key, true, true);
-          }, expectZoomChange);
-          onSelect(place);
-        },
+        onPick: pickPlace,
         onClose: closeList,
         onStateChange: state => {
           if (listCard === content) listState = state;
@@ -235,16 +269,7 @@ export function createPlaceMarkers(
           allowAdjustment = true;
           scheduleAdjustment();
         },
-        onZoom: canZoom(bounds)
-          ? () => {
-              runProgrammaticMapAction(() => {
-                closeList();
-                const level = map.getLevel();
-                map.setBounds(bounds, 65, 45, 65, 45);
-                if (map.getLevel() >= level) map.setLevel(Math.max(1, level - 1));
-              }, true);
-            }
-          : undefined,
+        onZoom: canZoom(bounds) ? () => expandBounds(bounds) : undefined,
       },
       listState,
     );
@@ -547,14 +572,7 @@ export function createPlaceMarkers(
         created.click = single
           ? () => {
               suppressFollowUpMapClick();
-              const current = created.places[0];
-              const expectZoomChange =
-                hasCoordinates(current.record) && map.getLevel() > CLUSTER_MIN_LEVEL - 1;
-              runProgrammaticMapAction(() => {
-                zoomToPlace(current);
-                select(current.key);
-              }, expectZoomChange);
-              onSelect(current);
+              pickPlace(created.places[0]);
             }
           : () => {
               suppressFollowUpMapClick();
@@ -590,8 +608,14 @@ export function createPlaceMarkers(
       );
       if (!items.length) closeList();
       else {
+        const listItemsChanged =
+          items.length !== listItems.length ||
+          items.some(
+            (item, index) =>
+              item.key !== listItems![index].key || item.record !== listItems![index].record,
+          );
         listItems = items;
-        if (listOpen && listCenter && listBounds && (changed || dataChanged))
+        if (listOpen && listCenter && listBounds && listItemsChanged)
           showList(items, listCenter, listBounds);
       }
     }
@@ -612,9 +636,13 @@ export function createPlaceMarkers(
     const items = sortPlacesForList(members(cluster)),
       bounds = cluster.getBounds();
     if (!items.length) return;
+    onClear?.();
+    if (routeClusterMode && canZoom(bounds)) {
+      expandBounds(bounds);
+      return;
+    }
     const sw = bounds.getSouthWest(),
       ne = bounds.getNorthEast();
-    onClear?.();
     showList(
       items,
       new sdk.LatLng((sw.getLat() + ne.getLat()) / 2, (sw.getLng() + ne.getLng()) / 2),
@@ -635,6 +663,7 @@ export function createPlaceMarkers(
         "aria-label",
         `${summary.total}개 장소: 휴게소 ${summary.rest}, 주유소 ${summary.station}${summary.lounge ? `, 라운지 ${summary.lounge}` : ""}. 목록 보기`,
       );
+      protectMapInteraction(content);
       content.addEventListener("click", event => {
         event.stopPropagation();
         clusterClick(cluster);
@@ -686,6 +715,14 @@ export function createPlaceMarkers(
         clusterer.removeMarker(next.marker, true);
         next.marker.setMap(map);
       }
+      clusterer.redraw();
+    },
+    setRouteMode(active: boolean) {
+      if (routeClusterMode === active) return;
+      routeClusterMode = active;
+      if (!clusterer) return;
+      clusterer.setMinLevel(active ? 10 : 7);
+      clusterer.setGridSize?.(active ? 28 : 48);
       clusterer.redraw();
     },
     suspendCardAdjustment() {

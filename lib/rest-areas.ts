@@ -59,6 +59,16 @@ export function highlightedFacilities(area: RestArea) {
   ] as const).filter(([key]) => area.facilities[key] === true);
 }
 
+export function prioritizedFacilities(area: RestArea) {
+  const highlights = highlightedFacilities(area);
+  return [
+    ...highlights,
+    ...facilityDefinitions.filter(
+      ([key]) => area.facilities[key] === true && !highlights.some(([highlight]) => highlight === key),
+    ),
+  ];
+}
+
 export function visibleFacilities(area: RestArea, audience: "admin" | "mobile") {
   return facilityDefinitions.filter(
     ([key]) => audience === "admin" || key !== "has_truck_lounge" || area.facilities[key] !== null,
