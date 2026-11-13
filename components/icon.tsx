@@ -68,6 +68,47 @@ const paths = {
     </>
   ),
   bolt: <path d="m13 2-9 12h7l-1 8 10-13h-7z" />,
+  repair: (
+    <>
+      <path d="M14 6a5 5 0 0 0-6 6L3 17a2 2 0 0 0 3 3l5-5a5 5 0 0 0 6-6l-3 3-3-3z" />
+      <circle cx="5" cy="18" r=".5" />
+    </>
+  ),
+  carWash: (
+    <>
+      <path d="M4 16h16l-1-4-2-3H7l-2 3-1 4ZM4 16v3M20 16v3M7 16v2M17 16v2M6 13h.5M17.5 13h.5" />
+      <path d="M8 3v2M12 2v3M16 3v2" />
+    </>
+  ),
+  shower: (
+    <>
+      <path d="M5 10a7 7 0 0 1 12 0H5ZM11 3V2M8 14v1M12 14v1M16 14v1M8 19v1M12 19v1M16 19v1" />
+    </>
+  ),
+  bed: (
+    <>
+      <path d="M3 19V9M3 16h18v3M21 16v-4a2 2 0 0 0-2-2h-7v6M3 13h9" />
+      <circle cx="7" cy="10" r="2" />
+    </>
+  ),
+  laundry: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M4 7h16M7 5h.5M10 5h.5" />
+      <circle cx="12" cy="14" r="4" />
+      <path d="M9 14c1-1 2-1 3 0s2 1 3 0" />
+    </>
+  ),
+  restaurant: (
+    <>
+      <path d="M5 3v7M8 3v7M11 3v7a3 3 0 0 1-6 0M8 13v8M18 21V3c-2 1-3 4-3 7v3h3" />
+    </>
+  ),
+  store: (
+    <>
+      <path d="M4 10v10h16V10M3 7l2-4h14l2 4v2a2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0 2 2 0 0 1-4 0V7ZM9 20v-6h6v6" />
+    </>
+  ),
   restroom: (
     <>
       <circle cx="8" cy="5" r="2" />

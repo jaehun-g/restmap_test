@@ -1,15 +1,29 @@
 "use client";
 
-import {useState} from "react";
+import {useState, type ComponentProps} from "react";
 import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton} from "@/components/ui/button";
-import {facilityDefinitions, hasCoordinates, highlightedFacilities, type RestArea, routeDescription} from "@/lib/rest-areas";
+import {facilityDefinitions, hasCoordinates, highlightedFacilities, type FacilityKey, type RestArea, routeDescription} from "@/lib/rest-areas";
 import {stationPriceItems, type GasStation} from "@/lib/gas-stations";
 import {restAreaPriceSummary} from "@/lib/rest-area-prices";
 import FoodMenuSection from "@/components/food-menu-section";
 import Icon from "./icon";
 
 type Tab = "시설" | "음식" | "주유";
+const facilityIcons: Record<FacilityKey, ComponentProps<typeof Icon>["name"]> = {
+  has_truck_lounge: "truck",
+  has_gas_station: "fuel",
+  has_lpg_station: "fuel",
+  has_ev_charger: "bolt",
+  has_repair_shop: "repair",
+  has_car_wash: "carWash",
+  has_shower: "shower",
+  has_sleeping_room: "bed",
+  has_laundry: "laundry",
+  has_restaurant: "restaurant",
+  has_store: "store",
+  has_restroom: "restroom",
+};
 
 export default function RestAreaDetails({
   area,
@@ -136,20 +150,7 @@ export default function RestAreaDetails({
                 {provided.map(([key, label]) => (
                   <li key={key}>
                     <span className="detail-facility-icon">
-                      <Icon
-                        name={
-                          key === "has_truck_lounge"
-                            ? "truck"
-                            : key.includes("gas") || key.includes("lpg")
-                              ? "fuel"
-                              : key.includes("ev")
-                                ? "bolt"
-                                : key.includes("restroom")
-                                  ? "restroom"
-                                  : "info"
-                        }
-                        size={20}
-                      />
+                      <Icon name={facilityIcons[key]} size={20} />
                     </span>
                     <span>{label}</span>
                   </li>
