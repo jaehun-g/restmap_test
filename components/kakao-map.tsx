@@ -71,6 +71,7 @@ export default function KakaoMap({
   onFullscreen,
   fullscreen = false,
   linkedStationsByRestId,
+  onMapClick,
 }: {
   areas: RestArea[];
   selectedId: number | null;
@@ -102,7 +103,10 @@ export default function KakaoMap({
   onFullscreen?: () => void;
   fullscreen?: boolean;
   linkedStationsByRestId?: ReadonlyMap<number, GasStation[]>;
+  onMapClick?: () => void;
 }) {
+  const mapClickRef = useRef(onMapClick);
+  useEffect(() => { mapClickRef.current = onMapClick; }, [onMapClick]);
   const container = useRef<HTMLDivElement>(null);
   const topbar = useRef<HTMLDivElement>(null);
   const legend = useRef<HTMLDivElement>(null);
@@ -285,6 +289,7 @@ export default function KakaoMap({
       runProgrammaticMapAction,
       true,
       () => container.current!.getBoundingClientRect(),
+      () => mapClickRef.current?.(),
     );
     layer.current = current;
     return () => {

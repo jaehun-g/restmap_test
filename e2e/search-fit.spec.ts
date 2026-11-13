@@ -15,6 +15,32 @@ async function mockMapData(page: Page) {
   await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
 }
 
+test("지도 빈 영역을 누르면 절반 높이 시트가 접히고 전체 높이는 유지된다", async ({page}) => {
+  await mockMapData(page);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  const sheet = page.locator(".mobile-sheet");
+  const clickMap = () => page.evaluate(() => window.__kakaoMapMock.map!.click());
+  await page.locator(".sheet-summary").click();
+  await expect(sheet).toHaveClass(/is-open/);
+  await clickMap();
+  await expect(page.locator(".sheet-summary")).toBeVisible();
+  await page.getByRole("button", {name: "전체 노선", exact: true}).click();
+  await clickMap();
+  await expect(page.locator(".sheet-summary")).toBeVisible();
+  await page.locator(".sheet-summary").click();
+  await page.locator(".mobile-area-card").first().click();
+  await expect(sheet).toHaveClass(/is-detail-preview/);
+  await clickMap();
+  await expect(page.locator(".sheet-summary")).toBeVisible();
+  await page.locator(".sheet-summary").click();
+  await sheet.dispatchEvent("touchstart", {touches: [{identifier: 1, clientX: 100, clientY: 600}]});
+  await sheet.dispatchEvent("touchend", {changedTouches: [{identifier: 1, clientX: 100, clientY: 500}]});
+  await expect(sheet).toHaveClass(/is-panel-full/);
+  await clickMap();
+  await expect(sheet).toHaveClass(/is-panel-full/);
+});
+
 for (const audience of ["mobile", "admin"] as const) test(`${audience} 지도에서 위성 보기를 전환하고 내 위치는 아이콘으로 표시한다`, async ({page}) => {
   await mockMapData(page);
   await page.route("**/api/admin/session", route => route.fulfill({json: {configured: false, authenticated: false, expiresAt: null}}));

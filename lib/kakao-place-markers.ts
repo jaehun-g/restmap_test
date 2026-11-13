@@ -45,6 +45,7 @@ export function createPlaceMarkers(
   runProgrammaticMapAction: (action: () => void, expectZoomChange?: boolean) => void = action => action(),
   clusterEnabled = true,
   canvasViewport?: () => DOMRect,
+  onMapClick?: () => void,
 ) {
   const above = placement === "above";
   const cardArea = (view: DOMRect) => {
@@ -185,6 +186,7 @@ export function createPlaceMarkers(
       if (disposed || Date.now() <= suppressMapClickUntil) return;
       closeList();
       closeCardFromMap();
+      onMapClick?.();
     }, 0);
   }
   /** 목록에서 장소를 고르면 그 장소를 중심으로 개별 마커 레벨까지 확대합니다. 이미 더 확대돼 있으면 유지합니다. */

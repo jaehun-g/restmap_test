@@ -521,6 +521,28 @@ test("지도 클릭이 마커 클릭보다 먼저 발생해도 마커 선택을 
   assert.equal(cleared, 0);
   layer.dispose();
 });
+
+test("지도 빈 영역만 클릭 콜백을 호출하고 마커 클릭은 제외한다", async () => {
+  const {sdk, map, state} = mockKakao();
+  let mapClicks = 0;
+  const layer = createPlaceMarkers(sdk, map, areas().slice(0, 1).map(restPlace),
+    () => {}, label, undefined, undefined, "below", undefined, true, undefined,
+    () => { mapClicks++; });
+  state.mapClicks[0]();
+  state.clicks[0]();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(mapClicks, 0);
+  layer.dispose();
+
+  const next = mockKakao();
+  const nextLayer = createPlaceMarkers(next.sdk, next.map, [],
+    () => {}, label, undefined, undefined, "below", undefined, true, undefined,
+    () => { mapClicks++; });
+  next.state.mapClicks[0]();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(mapClicks, 1);
+  nextLayer.dispose();
+});
 test("fit handles multiple markers, a single marker and empty results", () => {
   const {sdk, map, state} = mockKakao();
   createRestAreaMarkers(sdk, map, areas(), () => {}, label).fit();

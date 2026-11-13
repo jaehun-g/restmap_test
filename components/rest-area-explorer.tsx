@@ -440,6 +440,9 @@ export default function MobileExplorer({initialData}: {
             onClearRoute={clearRoute}
             onLocate={() => setPreviewStation(null)}
             onViewportChange={updateViewport}
+            onMapClick={() => {
+              if (expanded && (effectivePanel === "detail" ? !detailExpanded : !panelExpanded)) collapse();
+            }}
             selectedId={loading ? selectedId : (selected?.id ?? null)}
             onSelect={select}
             onDetails={details}
