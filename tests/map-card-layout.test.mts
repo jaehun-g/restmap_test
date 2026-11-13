@@ -6,6 +6,7 @@ import {
   cardPanOffset,
   cardSizeLimit,
   mapCardOverlayArea,
+  visibleChromeEdge,
 } from "../lib/map-card-layout.ts";
 
 const rect = (left: number, top: number, width: number, height: number) => ({
@@ -62,4 +63,35 @@ test("administrator card viewport excludes map notices and bottom legend, retain
     mapCardOverlayArea(canvas, rect(900, 300, 420, 360), rect(900, 600, 100, 20)).height,
     0,
   );
+});
+
+test("directions mode ignores hidden header and sheet rects so marker cards stay visible", () => {
+  const canvas = rect(0, 0, 390, 844);
+  const headerBottom = visibleChromeEdge(
+    [
+      {hidden: true, rect: rect(0, 0, 0, 0)},
+      {hidden: false, rect: rect(10, 10, 370, 118)},
+    ],
+    "bottom",
+    canvas.top,
+  );
+  const sheetTop = visibleChromeEdge(
+    [
+      {hidden: true, rect: rect(0, 0, 0, 0)},
+      {hidden: false, rect: rect(0, 660, 390, 184)},
+    ],
+    "top",
+    canvas.bottom,
+  );
+  const area = cardDisplayArea(canvas, headerBottom, sheetTop);
+  assert.deepEqual(area, rect(0, 136, 390, 514));
+  assert.equal(cardSizeLimit(area, 120).hidden, false);
+
+  // When directions dock is not open yet, bottom falls back to canvas bottom
+  const openBottom = visibleChromeEdge(
+    [{hidden: true, rect: rect(0, 0, 0, 0)}, null],
+    "top",
+    canvas.bottom,
+  );
+  assert.equal(openBottom, 844);
 });

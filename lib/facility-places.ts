@@ -1,5 +1,5 @@
 import {distanceMeters} from "./geo-search.ts";
-import type {GasStation} from "./gas-stations.ts";
+import {stationKey, type GasStation} from "./gas-stations.ts";
 import {canonicalHighwayRouteName} from "./highway-route-name.ts";
 import {hasCoordinates, type RestArea} from "./rest-areas.ts";
 import {verifiedRestAreaStations, verifiedStationAreaLinks} from "./verified-rest-area-stations.ts";
@@ -149,4 +149,24 @@ export function linkedStationsByArea<T extends GasStation, A extends RestArea>(
     if (station.linkedRestAreaId !== null) linked.get(station.linkedRestAreaId)?.push(station);
   }
   return linked;
+}
+
+/**
+ * 경로에 표시되는 휴게소에 종속된 EX 주유소 마커는 단독 주유소 마커 목록에서 제외합니다.
+ */
+export function excludeLinkedRouteStations<T extends GasStation, A extends RestArea>(
+  routeAreas: readonly A[],
+  routeStations: readonly T[],
+  allAreas: readonly A[],
+  allStations: readonly T[],
+): T[] {
+  const merged = mergeFacilityPlaces([...allAreas], [...allStations]);
+  const routeAreaIds = new Set(routeAreas.map(area => area.id));
+  const linkedByKey = new Map(
+    merged.stations.map(station => [stationKey(station), station.linkedRestAreaId]),
+  );
+  return routeStations.filter(station => {
+    const linkedId = linkedByKey.get(stationKey(station)) ?? null;
+    return linkedId === null || !routeAreaIds.has(linkedId);
+  });
 }

@@ -304,6 +304,13 @@ export function createLocationMapLayer(
       } else {
         circle?.setMap(null);
         radiusLabel.setMap(null);
+        if (routeMode && request && memory.cameraSequence !== request.sequence) {
+          memory.cameraSequence = request.sequence;
+          programmatic(() => {
+            map.panTo(new sdk.LatLng(request.center.latitude, request.center.longitude));
+          });
+          callbacks.cameraReady(request.sequence, map.getLevel());
+        }
       }
     },
     fitInitialResults(fit: () => void) {

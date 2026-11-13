@@ -7,6 +7,24 @@ export type ScreenRect = {
   height: number;
 };
 
+export type ChromeBoundary = {
+  hidden?: boolean;
+  rect: ScreenRect;
+};
+
+/** 숨김(`hidden`) 또는 높이가 0인 오버레이를 건너뛰고 실제 표시 중인 영역 경계를 고릅니다. */
+export function visibleChromeEdge(
+  candidates: readonly (ChromeBoundary | null | undefined)[],
+  edge: "top" | "bottom",
+  fallback: number,
+): number {
+  for (const candidate of candidates) {
+    if (!candidate || candidate.hidden || candidate.rect.height <= 0) continue;
+    return candidate.rect[edge];
+  }
+  return fallback;
+}
+
 /** 검색·필터·슬라이드와 키보드가 차지하지 않는 화면 영역입니다. */
 export function cardDisplayArea(
   canvas: ScreenRect,

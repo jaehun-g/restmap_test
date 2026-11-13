@@ -26,7 +26,10 @@ export interface KakaoMap {
   panBy(x: number, y: number): void;
   getCenter(): KakaoLatLng;
   getBounds(): KakaoBounds;
-  setLevel(level: number): void;
+  setLevel(
+    level: number,
+    options?: {animate?: boolean | {duration?: number}; anchor?: KakaoLatLng},
+  ): void;
   getLevel(): number;
   setBounds(
     bounds: KakaoBounds,
@@ -84,10 +87,37 @@ export interface KakaoClusterer {
   removeMarker(marker: KakaoMarker, nodraw?: boolean): void;
   redraw(): void;
   setMinLevel(level: number): void;
+  setGridSize?(size: number): void;
   clear(): void;
 }
 
+export interface KakaoMapsGeocoder {
+  coord2Address(
+    lng: number,
+    lat: number,
+    callback: (
+      result: Array<{
+        road_address?: {address_name?: string} | null;
+        address?: {address_name?: string} | null;
+      }>,
+      status: string,
+    ) => void,
+  ): void;
+  coord2RegionCode?(
+    lng: number,
+    lat: number,
+    callback: (
+      result: Array<{address_name?: string; region_type?: string}>,
+      status: string,
+    ) => void,
+  ): void;
+}
+
 export interface KakaoMaps {
+  services?: {
+    Status: {OK: string};
+    Geocoder?: new () => KakaoMapsGeocoder;
+  };
   MapTypeId: {ROADMAP: number; HYBRID: number};
   MarkerClusterer?: new (options: {
     map: KakaoMap;
@@ -138,17 +168,18 @@ export interface KakaoMaps {
     strokeColor: string;
     strokeOpacity: number;
     strokeStyle: string;
+    clickable?: boolean;
     zIndex: number;
   }) => KakaoPolyline;
   event: {
     preventMap?(): void;
     addListener<T = never>(
-      target: KakaoMarker | KakaoMap | KakaoClusterer,
+      target: KakaoMarker | KakaoMap | KakaoClusterer | KakaoPolyline,
       name: string,
       callback: (event: T) => void,
     ): void;
     removeListener<T = never>(
-      target: KakaoMarker | KakaoMap | KakaoClusterer,
+      target: KakaoMarker | KakaoMap | KakaoClusterer | KakaoPolyline,
       name: string,
       callback: (event: T) => void,
     ): void;
@@ -164,7 +195,7 @@ declare global {
 let loading: Promise<KakaoMaps> | null = null;
 
 export function kakaoSdkUrl(appKey: string) {
-  return `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=clusterer`;
+  return `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=clusterer,services`;
 }
 
 export function loadKakaoMaps(appKey: string): Promise<KakaoMaps> {
