@@ -152,7 +152,7 @@ export function linkedStationsByArea<T extends GasStation, A extends RestArea>(
 }
 
 /**
- * 경로에 표시되는 휴게소에 종속된 EX 주유소 마커는 단독 주유소 마커 목록에서 제외합니다.
+ * 경로 주변 휴게소에 종속된 EX 주유소 마커는 단독 주유소 마커 목록에서 제외합니다.
  */
 export function excludeLinkedRouteStations<T extends GasStation, A extends RestArea>(
   routeAreas: readonly A[],

@@ -2,6 +2,7 @@ import {distanceMeters, isGeoPoint, type GeoBounds, type GeoPoint} from "./geo-s
 import type {HighwayCoordinate} from "./highway-routes.ts";
 import {expandedBounds} from "./route-proximity.ts";
 import {hasCoordinates, type RestArea, type Result} from "./rest-areas.ts";
+import {isBidirectionalDirection} from "./facility-places.ts";
 
 export type DrivingRoute = {
   id: string;
@@ -360,6 +361,7 @@ export function findItemsAlongDrivingRoute<
   route: Pick<DrivingRoute, "bounds" | "path">,
   items: readonly T[],
   maxDistanceMeters = 1500,
+  allowLeft?: (item: T) => boolean,
 ): Array<{item: T; alongMeters: number; offsetMeters: number}> {
   if (route.path.length < 2) return [];
   const routeEnvelope = expandedBounds(route.bounds, maxDistanceMeters + 200);
@@ -402,6 +404,7 @@ export function findItemsAlongDrivingRoute<
     const point = {latitude: item.latitude, longitude: item.longitude};
     let bestOffset = Infinity;
     let bestAlong = 0;
+    let bestIsRight = false;
     for (const segment of segments) {
       const bounds = segment.bounds;
       if (
@@ -414,9 +417,11 @@ export function findItemsAlongDrivingRoute<
       }
       const startDistance = distanceMeters(segment.start, point);
       if (segment.length < 1e-6) {
+        if (allowLeft && !allowLeft(item)) continue;
         if (startDistance < bestOffset) {
           bestOffset = startDistance;
           bestAlong = segment.startAlong;
+          bestIsRight = true;
         }
         continue;
       }
@@ -434,9 +439,10 @@ export function findItemsAlongDrivingRoute<
       if (distance < bestOffset) {
         bestOffset = distance;
         bestAlong = segment.startAlong + clampedAlong;
+        bestIsRight = Math.sin(angle) >= -1e-12;
       }
     }
-    if (bestOffset <= maxDistanceMeters + 1e-6) {
+    if (bestOffset <= maxDistanceMeters + 1e-6 && (!allowLeft || bestIsRight || allowLeft(item))) {
       matches.push({
         item,
         alongMeters: Math.round(bestAlong),
@@ -460,7 +466,11 @@ export function findRestAreasAlongDrivingRoute(
     excludeRestAreaId != null
       ? areas.filter(area => area.id !== excludeRestAreaId)
       : areas;
-  return findItemsAlongDrivingRoute(route, filtered, maxDistanceMeters).map(
+  return findItemsAlongDrivingRoute(route, filtered, maxDistanceMeters, area =>
+    isBidirectionalDirection(area.directionLabel) ||
+    isBidirectionalDirection(area.routeDirection) ||
+    [...area.name.matchAll(/[（(]([^()（）]*)[）)]/g)].some(match => isBidirectionalDirection(match[1])),
+  ).map(
     ({item, alongMeters, offsetMeters}) => ({
       area: item,
       alongMeters,

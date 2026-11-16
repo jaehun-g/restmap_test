@@ -279,10 +279,15 @@ export default function KakaoMap({
       const sourceStations = allStations ?? stations;
       const areaMatches = routeRestAreas[navDriving.selectedIndex]?.matches ?? [];
       const routeAreas = areaMatches.map(match => restPlace(match.area));
+      const nearbyAreas = findItemsAlongDrivingRoute(
+        navDriving.route,
+        sourceAreas.filter(area => area.operationStatus !== "closed"),
+        1500,
+      );
       const stationMatches = findItemsAlongDrivingRoute(navDriving.route, sourceStations, 1500);
       const standaloneRouteStations = new Set(
         excludeLinkedRouteStations(
-          areaMatches.map(match => match.area),
+          nearbyAreas.map(match => match.item),
           stationMatches.map(match => match.item),
           sourceAreas,
           sourceStations,

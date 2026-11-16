@@ -201,6 +201,23 @@ test("주행 경로 폴리라인을 따라 반경 내 휴게소를 출발지 진
   );
 });
 
+test("진행 방향 오른쪽과 양방향 휴게소만 경로 반경 안에서 표시한다", () => {
+  const areas = normalizeRestAreas([
+    {id: 1, name: "동쪽", latitude: 37.25, longitude: 127.105},
+    {id: 2, name: "서쪽", latitude: 37.25, longitude: 127.095},
+    {id: 3, name: "공용", direction_label: "양방향", latitude: 37.26, longitude: 127.095},
+    {id: 4, name: "공용2", route_direction: "양방향", latitude: 37.27, longitude: 127.095},
+    {id: 5, name: "공용3(통합)", latitude: 37.28, longitude: 127.095},
+    {id: 6, name: "먼 공용", direction_label: "양방향", latitude: 37.25, longitude: 128},
+    {id: 7, name: "경로 위", latitude: 37.29, longitude: 127.1},
+  ]);
+  if (!areas.ok) assert.fail(areas.error.message);
+  const path: [number, number][] = [[37.2, 127.1], [37.2, 127.1], [37.3, 127.1]];
+  const route = {path, bounds: {south: 37.2, north: 37.3, west: 127.1, east: 127.1}};
+  assert.deepEqual(findRestAreasAlongDrivingRoute(route, areas.value).map(({area}) => area.id), [1, 3, 4, 5, 7]);
+  assert.deepEqual(findRestAreasAlongDrivingRoute({...route, path: [...path].reverse()}, areas.value).map(({area}) => area.id), [7, 5, 4, 3, 2]);
+});
+
 test("경유 개수는 출발·도착과 폐쇄 휴게소를 제외하고 지도에는 출발·도착을 유지한다", () => {
   const normalized = normalizeRestAreas([
     {id: 1, name: "출발 휴게소", latitude: 37.2, longitude: 127.1},
@@ -327,4 +344,21 @@ test("경로상 주유소 마커 목록에서 경로상 휴게소에 종속된 E
     filtered.map(item => item.name),
     ["독립 GS 주유소"],
   );
+});
+
+test("왼쪽 휴게소가 제외되어도 연결된 주유소는 경로 마커에 남지 않는다", () => {
+  const areas = normalizeRestAreas([
+    {id: 1, name: "시험(서울 방향)", route_name: "경부선", direction_label: "서울 방향", latitude: 37.25, longitude: 127.095},
+  ]);
+  const stations = normalizeExGasStations([
+    {id: 1, source_key: "ex-test", service_area_name: "시험(서울)주유소", route_name: "경부선", direction: "서울방향", latitude: 37.2501, longitude: 127.095},
+    {id: 2, source_key: "ex-independent", service_area_name: "독립주유소", route_name: "경부선", direction: "서울방향", latitude: 37.251, longitude: 127.095},
+  ]);
+  if (!areas.ok || !stations.ok) assert.fail("fixture normalization failed");
+  const route = {path: [[37.2, 127.1], [37.3, 127.1]] as [number, number][], bounds: {south: 37.2, north: 37.3, west: 127.1, east: 127.1}};
+  assert.equal(findRestAreasAlongDrivingRoute(route, areas.value).length, 0);
+  const nearbyAreas = findItemsAlongDrivingRoute(route, areas.value).map(match => match.item);
+  const nearbyStations = findItemsAlongDrivingRoute(route, stations.value).map(match => match.item);
+  const visible = excludeLinkedRouteStations(nearbyAreas, nearbyStations, areas.value, stations.value);
+  assert.deepEqual(visible.map(station => station.siteCode), ["ex-independent"]);
 });
