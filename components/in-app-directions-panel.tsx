@@ -3,6 +3,8 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import {Button, IconButton} from "@/components/ui/button";
 import type {DrivingRoute, RouteRestAreaMatch} from "@/lib/directions";
+import {directionsErrorPresentation} from "@/lib/directions-errors";
+import {sharedClasses} from "@/lib/shared-classes";
 import {formatDistance, type GeoPoint} from "@/lib/geo-search";
 import {
   formatDurationParts,
@@ -38,6 +40,7 @@ export default function InAppDirectionsPanel({
   onSelectRoute,
   loading,
   error,
+  errorCode,
   tooClose = false,
   onRetry,
   allRestAreas = [],
@@ -56,6 +59,7 @@ export default function InAppDirectionsPanel({
   onSelectRoute: (index: number) => void;
   loading: boolean;
   error: string | null;
+  errorCode?: string | null;
   tooClose?: boolean;
   onRetry: () => void;
   allRestAreas?: readonly RestArea[];
@@ -272,6 +276,7 @@ export default function InAppDirectionsPanel({
   };
 
   const selectedMatches = restAreasByRoute[selectedIndex] ?? [];
+  const errorPresentation = directionsErrorPresentation(tooClose ? "DIRECTIONS_TOO_CLOSE" : errorCode);
   const preferredOption = useMemo(
     () => navigationProviderOptions.find(opt => opt.id === preferredProvider) ?? null,
     [preferredProvider],
@@ -580,13 +585,30 @@ export default function InAppDirectionsPanel({
               </div>
             ) : error ? (
               <div className="directions-floating-status" role="status">
-                <p>{error}</p>
-                {!tooClose && (
-                  <Button type="button" variant="secondary" onClick={onRetry}>
-                    <Icon name="refresh" size={15} />
-                    다시 탐색
-                  </Button>
-                )}
+                <span className={sharedClasses.stateIcon} aria-hidden="true">
+                  <Icon name="info" size={24} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <strong className="block text-ui-14 font-[700] text-ink">{errorPresentation.title}</strong>
+                  <p className="mt-1 leading-[1.5]">{error}</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {(errorPresentation.action === "origin" || errorPresentation.action === "destination") && (
+                      <Button type="button" variant="primary" onClick={() => {
+                        const field = errorPresentation.action === "origin" ? "origin" : "dest";
+                        setActiveField(field);
+                        (field === "origin" ? originInputRef : destInputRef).current?.focus();
+                      }}>
+                        {errorPresentation.action === "origin" ? "출발지 변경" : "목적지 변경"}
+                      </Button>
+                    )}
+                    {errorPresentation.retry && (
+                      <Button type="button" variant="secondary" onClick={onRetry}>
+                        <Icon name="refresh" size={15} />
+                        다시 탐색
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               <div

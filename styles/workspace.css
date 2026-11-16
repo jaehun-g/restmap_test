@@ -785,7 +785,7 @@ input[type="checkbox"] {
   @apply flex flex-col w-full pointer-events-none;
 }
 .directions-floating-status {
-  @apply pointer-events-auto flex items-center justify-between gap-[10px] mx-[12px] mb-[10px] p-[12px_14px] rounded-[12px] bg-white [border:1px_solid_var(--line)] [box-shadow:0_4px_14px_#12233b22] text-ui-12 text-muted;
+  @apply pointer-events-auto flex items-start gap-[12px] mx-[12px] mb-[calc(10px_+_env(safe-area-inset-bottom,_0px))] p-[14px] rounded-[12px] bg-white [border:1px_solid_var(--line)] [box-shadow:0_4px_14px_#12233b22] text-ui-12 text-muted;
 }
 .directions-popup-sheet {
   @apply pointer-events-auto flex flex-col gap-[8px] mx-[12px] mb-[8px] p-[12px] rounded-[12px] bg-white [border:1px_solid_var(--line)] [box-shadow:0_6px_20px_#12233b26];

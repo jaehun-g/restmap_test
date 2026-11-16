@@ -1065,6 +1065,7 @@ export default function KakaoMap({
           onSelectRoute={navDriving.selectRoute}
           loading={navDriving.loading}
           error={navDriving.error}
+          errorCode={navDriving.errorCode}
           tooClose={navDriving.tooClose}
           onRetry={navDriving.retry}
           allRestAreas={allRestAreas ?? areas}

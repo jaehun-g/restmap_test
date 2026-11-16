@@ -24,6 +24,7 @@ import {excludeLinkedRouteStations} from "../lib/facility-places.ts";
 import {normalizeExGasStations} from "../lib/ex-gas-stations.ts";
 import {normalizeGasStations} from "../lib/gas-stations.ts";
 import {normalizeRestAreas} from "../lib/rest-areas.ts";
+import {directionsErrorPresentation} from "../lib/directions-errors.ts";
 
 test("네비게이션 앱별 연결 URL(T맵, 카카오내비, 네이버지도, 카카오맵)을 생성한다", () => {
   const target = {name: "죽전휴게소(서울)", latitude: 37.3324, longitude: 127.1045};
@@ -149,6 +150,37 @@ test("도로 좌표가 없거나 한 점뿐인 응답은 경로로 사용하지 
     }]});
     assert.equal(result.ok, false);
   }
+});
+
+test("카카오 경로 실패 코드를 상황별 오류와 변경 동작으로 변환한다", () => {
+  for (const [resultCode, expectedCode, action, retry] of [
+    [1, "DIRECTIONS_NO_ROUTE", "destination", true],
+    [101, "DIRECTIONS_WAYPOINT_ROAD", "none", false],
+    [102, "DIRECTIONS_ORIGIN_ROAD", "origin", false],
+    [103, "DIRECTIONS_DESTINATION_ROAD", "destination", false],
+    [104, "DIRECTIONS_TOO_CLOSE", "destination", false],
+    [105, "DIRECTIONS_ORIGIN_INCIDENT", "origin", true],
+    [106, "DIRECTIONS_DESTINATION_INCIDENT", "destination", true],
+    [107, "DIRECTIONS_WAYPOINT_INCIDENT", "none", true],
+    [999, "DIRECTIONS_UNKNOWN", "none", true],
+  ] as const) {
+    const result = parseKakaoDirectionsRoutes({routes: [{result_code: resultCode, result_msg: "외부 오류"}]});
+    assert.equal(result.ok, false);
+    if (result.ok) assert.fail("오류여야 합니다");
+    assert.equal(result.error.code, expectedCode);
+    assert.equal(directionsErrorPresentation(result.error.code).action, action);
+    assert.equal(directionsErrorPresentation(result.error.code).retry, retry);
+    assert.notEqual(result.error.message, "외부 오류");
+  }
+});
+
+test("대안 중 실패한 경로가 있어도 유효한 경로를 표시한다", () => {
+  const result = parseKakaoDirectionsRoutes({routes: [
+    {result_code: 103, result_msg: "목적지 주변 도로 없음"},
+    {result_code: 0, summary: {distance: 10000, duration: 600}, sections: [{roads: [{vertexes: [127, 37, 127.1, 37.1]}]}]},
+  ]});
+  assert.ok(result.ok);
+  assert.equal(result.value.length, 1);
 });
 
 test("거리와 시간이 비슷한 대안도 카카오 응답 순서대로 유지한다", () => {

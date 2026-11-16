@@ -70,3 +70,32 @@ for (const viewport of [{width: 320, height: 568}, {width: 375, height: 812}, {w
     await expect(page.locator(".sheet-summary")).toBeVisible();
   });
 }
+
+test("길찾기 오류에 맞는 안내와 출발지·목적지 변경을 제공한다", async ({page, context}) => {
+  await page.setViewportSize({width: 375, height: 812});
+  await page.addInitScript({content: installKakaoMapsMock});
+  await page.route("**/api/rest-areas**", route => route.fulfill({json: restAreaResponse}));
+  await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
+  await page.route("**/api/places?**", route => route.fulfill({json: {items: [{id: "destination", name: "검증 목적지", address: "서울시 목적지", category: "장소", latitude: 37.4, longitude: 127}]}}));
+  let error = {code: "DIRECTIONS_DESTINATION_ROAD", message: "목적지 주변에서 도로를 찾지 못했습니다."};
+  await page.route("**/api/directions?**", route => route.fulfill({status: 422, json: {error}}));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 37.5, longitude: 127});
+  await page.goto("/mobile");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.mapCreates)).toBeGreaterThan(0);
+  await page.getByRole("searchbox").fill("검증 목적지");
+  await page.getByRole("listbox", {name: "통합 검색 자동완성"}).getByRole("button", {name: /검증 목적지/}).click();
+  await page.getByRole("region", {name: "검증 목적지 길찾기"}).getByRole("button", {name: "길찾기", exact: true}).click();
+  await expect(page.getByText("목적지 주변 도로를 찾지 못했어요")).toBeVisible();
+  await expect(page.getByRole("button", {name: "다시 탐색"})).toHaveCount(0);
+  await page.getByRole("button", {name: "목적지 변경"}).click();
+  await expect(page.getByRole("searchbox", {name: "목적지"})).toBeFocused();
+  error = {code: "DIRECTIONS_ORIGIN_INCIDENT", message: "출발지 주변에 교통 장애가 있습니다."};
+  await page.getByRole("searchbox", {name: "목적지"}).fill("");
+  await page.getByRole("searchbox", {name: "목적지"}).fill("검증 목적지");
+  await page.getByRole("listbox", {name: "장소 검색 결과"}).getByRole("button", {name: /검증 목적지/}).click();
+  await expect(page.getByText("출발지 주변에 교통 장애가 있어요")).toBeVisible();
+  await expect(page.getByRole("button", {name: "다시 탐색"})).toBeVisible();
+  await page.getByRole("button", {name: "출발지 변경"}).click();
+  await expect(page.getByRole("searchbox", {name: "출발지"})).toBeFocused();
+});

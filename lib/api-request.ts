@@ -46,6 +46,7 @@ export async function readJsonRequest(request: Request): Promise<Result<unknown>
 }
 
 export function errorStatus(code: string) {
+  if (code.startsWith("DIRECTIONS_")) return 422;
   if (code === "VALIDATION_ERROR") return 400;
   if (code === "UNAUTHORIZED") return 401;
   if (code === "FORBIDDEN") return 403;

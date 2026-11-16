@@ -8,6 +8,7 @@ import {
   type DrivingRoute,
 } from "@/lib/directions";
 import {distanceMeters, isGeoPoint, type GeoPoint} from "@/lib/geo-search";
+import type {DirectionsError} from "@/lib/directions-errors";
 
 const clientRouteCache = new Map<string, DrivingRoute[]>();
 const emptyRoutes: DrivingRoute[] = [];
@@ -47,7 +48,7 @@ export function useDrivingRoute(
     key: string;
     attempt: number;
     routes: DrivingRoute[];
-    error: string | null;
+    error: DirectionsError | null;
   } | null>(null);
 
   const cached = key ? (clientRouteCache.get(key) ?? null) : null;
@@ -82,7 +83,7 @@ export function useDrivingRoute(
         const body = (await response.json()) as {
           route?: DrivingRoute;
           routes?: DrivingRoute[];
-          error?: {message?: string};
+          error?: {code?: string; message?: string};
         };
         const resolved = Array.isArray(body.routes) && body.routes.length > 0
           ? body.routes
@@ -90,7 +91,11 @@ export function useDrivingRoute(
             ? [body.route]
             : [];
         if (!response.ok || resolved.length === 0) {
-          throw new Error(body.error?.message || "실도로 경로를 불러오지 못했습니다.");
+          if (!controller.signal.aborted) setFetched({
+            key, attempt, routes: emptyRoutes,
+            error: {code: body.error?.code || "UPSTREAM_ERROR", message: body.error?.message || "실도로 경로를 불러오지 못했습니다."},
+          });
+          return;
         }
         clientRouteCache.set(key, resolved);
         if (!controller.signal.aborted) {
@@ -103,8 +108,8 @@ export function useDrivingRoute(
             key,
             attempt,
             routes: emptyRoutes,
-            error:
-              reason instanceof Error ? reason.message : "실도로 경로를 불러오지 못했습니다.",
+            error: {code: "UPSTREAM_ERROR", message:
+              reason instanceof Error ? reason.message : "실도로 경로를 불러오지 못했습니다."},
           });
         }
       });
@@ -118,8 +123,8 @@ export function useDrivingRoute(
       ? selection.index
       : 0;
   const route = routes[selectedIndex] ?? routes[0] ?? null;
-  const error = tooClose
-    ? tooCloseDirectionsMessage
+  const routeError = tooClose
+    ? {code: "DIRECTIONS_TOO_CLOSE", message: tooCloseDirectionsMessage}
     : isCurrent
       ? fetched!.error
       : null;
@@ -133,8 +138,9 @@ export function useDrivingRoute(
       if (key) setSelection({key, index});
     },
     loading,
-    error,
-    tooClose: tooClose || error === tooCloseDirectionsMessage,
+    error: routeError?.message ?? null,
+    errorCode: routeError?.code ?? null,
+    tooClose: tooClose || routeError?.message === tooCloseDirectionsMessage,
     retry: () => setAttempt(value => value + 1),
   };
 }

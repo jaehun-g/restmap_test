@@ -3,6 +3,7 @@ import type {HighwayCoordinate} from "./highway-routes.ts";
 import {expandedBounds} from "./route-proximity.ts";
 import {hasCoordinates, type RestArea, type Result} from "./rest-areas.ts";
 import {isBidirectionalDirection} from "./facility-places.ts";
+import {kakaoDirectionsError, type DirectionsError} from "./directions-errors.ts";
 
 export type DrivingRoute = {
   id: string;
@@ -150,13 +151,11 @@ export function parseKakaoDirectionsRoutes(
   }
 
   const parsedRoutes: DrivingRoute[] = [];
-  let firstErrorMsg: string | null = null;
+  let firstError: DirectionsError | null = null;
 
   for (const raw of rawRoutes as RawRoute[]) {
     if (typeof raw?.result_code === "number" && raw.result_code !== 0) {
-      if (!firstErrorMsg && typeof raw.result_msg === "string" && raw.result_msg.trim()) {
-        firstErrorMsg = raw.result_msg.trim();
-      }
+      firstError ??= kakaoDirectionsError(raw.result_code);
       continue;
     }
     const distance = Number(raw?.summary?.distance);
@@ -217,10 +216,7 @@ export function parseKakaoDirectionsRoutes(
   if (parsedRoutes.length === 0) {
     return {
       ok: false,
-      error: {
-        code: "NOT_FOUND",
-        message: firstErrorMsg ?? "도로 경로를 찾을 수 없습니다.",
-      },
+      error: firstError ?? {code: "UPSTREAM_ERROR", message: "도로 경로 정보를 확인할 수 없습니다. 잠시 후 다시 탐색해 주세요."},
     };
   }
 
