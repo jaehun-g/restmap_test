@@ -29,6 +29,8 @@
 
 ### 4. 현재 구현: 거리와 주행 방향 오른쪽 판별
 
+<!-- 경로 선분은 kakaomobility api의 response중 vertexes응답에서 온다. X,Y좌표로 구성된 1차원 배열 -->
+
 기존의 1,500m 거리 조건을 유지하면서, 각 휴게소와 가장 가까운 경로 선분의 진행 방향을 기준으로 오른쪽 여부를 계산한다. 양방향 휴게소는 좌우와 관계없이 거리 조건을 통과하면 포함한다. 추가 API 요청 없이 기존 좌표를 사용한다.
 
 - **문제 상황:** 가까운 다른 도로의 선분을 기준으로 판별하거나, 휴게소 대표 좌표가 진입로와 떨어진 경우 잘못 포함하거나 제외할 수 있다. 방향 정보가 누락된 양방향 휴게소도 한쪽 방향 시설처럼 처리될 수 있다.
@@ -69,8 +71,7 @@ function bearing(from: GeoPoint, to: GeoPoint) {
   const right = radians(to.latitude);
   return Math.atan2(
     Math.sin(delta) * Math.cos(right),
-    Math.cos(left) * Math.sin(right) -
-      Math.sin(left) * Math.cos(right) * Math.cos(delta),
+    Math.cos(left) * Math.sin(right) - Math.sin(left) * Math.cos(right) * Math.cos(delta),
   );
 }
 ```
