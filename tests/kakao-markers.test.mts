@@ -30,6 +30,7 @@ function mockKakao() {
     levels: [] as number[],
     images: [] as string[],
     sizes: [] as number[][],
+    appliedSizes: [] as number[][],
     ids: [] as string[],
     content: [] as unknown[],
     clickable: [] as boolean[],
@@ -69,8 +70,10 @@ function mockKakao() {
   }
   class MarkerImage {
     path: string;
+    size: Size;
     constructor(path: string, size: Size) {
       this.path = path;
+      this.size = size;
       state.sizes.push([size.width, size.height]);
     }
   }
@@ -87,6 +90,7 @@ function mockKakao() {
     }
     setImage(image: MarkerImage) {
       state.ids.push(image.path);
+      state.appliedSizes.push([image.size.width, image.size.height]);
     }
     setZIndex() {}
   }
@@ -160,6 +164,24 @@ function areas(): RestArea[] {
   if (!result.ok) assert.fail(result.error.message);
   return result.value;
 }
+
+test("길찾기 축소 시 선택 마커는 유지하고 나머지 마커 크기를 조절한다", () => {
+  const {sdk, map, state} = mockKakao();
+  let level = 6;
+  map.getLevel = () => level;
+  const layer = createPlaceMarkers(sdk, map, areas().slice(0, 2).map(restPlace), () => {}, label);
+  layer.setRouteMode(true);
+  layer.select("rest:1", false, false);
+  state.appliedSizes.length = 0;
+  level = 10;
+  state.zoom.forEach(callback => callback());
+  assert.deepEqual(state.appliedSizes, [[36, 42], [20, 23.75]]);
+  state.appliedSizes.length = 0;
+  level = 6;
+  state.zoom.forEach(callback => callback());
+  assert.deepEqual(state.appliedSizes, [[36, 42], [32, 38]]);
+  layer.dispose();
+});
 const label = () => ({}) as HTMLElement;
 
 test("모바일 정보창은 높이가 달라져도 CSS 기준으로 마커 위에 배치한다", t => {

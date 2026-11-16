@@ -58,19 +58,20 @@ export function createPlaceMarkers(
     if (above) target.classList.add("placement-above");
   };
   const markerImages = new Map<string, KakaoMarkerImage>();
-  const image = (path: string, active = false) => {
-    let cached = markerImages.get(path);
+  const image = (path: string, active = false, scale = 1) => {
+    const key = `${path}:${scale}`;
+    let cached = markerImages.get(key);
     if (cached) return cached;
-    cached = new sdk.MarkerImage(path, new sdk.Size(active ? 36 : 32, active ? 42 : 38), {
-      offset: new sdk.Point(active ? 18 : 16, active ? 41 : 37),
+    cached = new sdk.MarkerImage(path, new sdk.Size((active ? 36 : 32) * scale, (active ? 42 : 38) * scale), {
+      offset: new sdk.Point((active ? 18 : 16) * scale, (active ? 41 : 37) * scale),
     });
-    markerImages.set(path, cached);
+    markerImages.set(key, cached);
     return cached;
   };
-  const normal = image("/marker.svg"),
-    active = image("/marker-selected.svg", true);
-  const lounge = image("/marker-lounge.svg"),
-    loungeActive = image("/marker-lounge-selected.svg", true);
+  image("/marker.svg");
+  image("/marker-selected.svg", true);
+  image("/marker-lounge.svg");
+  image("/marker-lounge-selected.svg", true);
   const overlay = new sdk.CustomOverlay({
     content: "",
     clickable: true,
@@ -390,7 +391,7 @@ export function createPlaceMarkers(
       keepVisible();
     });
   }
-  const zoomChanged = () => { zoomPending = true; };
+  const zoomChanged = () => { zoomPending = true; refreshMarkerSizes(); };
   sdk.event.addListener(map, "zoom_changed", zoomChanged);
   sdk.event.addListener(map, "idle", mapIdle);
   sdk.event.addListener(map, "click", handleMapClick);
@@ -402,37 +403,42 @@ export function createPlaceMarkers(
     }
   };
   if (typeof window !== "undefined") window.addEventListener("keydown", escape);
-  const placeImage = (place: MapPlace, selected: boolean) =>
-    place.kind === "station"
-      ? place.record.brand === "EX"
-        ? image(selected ? "/marker-ex-station-selected.svg" : "/marker-ex-station.svg", selected)
-        : image(selected ? "/marker-station-selected.svg" : "/marker-station.svg", selected)
-      : isLounge(place)
-        ? selected
-          ? loungeActive
-          : lounge
-        : selected
-          ? active
-          : normal;
+  const markerScale = () => !routeClusterMode || map.getLevel() < 7 ? 1 : map.getLevel() < 10 ? 0.75 : 0.625;
+  const placeImage = (place: MapPlace, selected: boolean) => {
+    const base = place.kind === "station"
+      ? place.record.brand === "EX" ? "/marker-ex-station" : "/marker-station"
+      : isLounge(place) ? "/marker-lounge" : "/marker";
+    return image(`${base}${selected ? "-selected" : ""}.svg`, selected, selected ? 1 : markerScale());
+  };
   const groupImages = new Map<string, KakaoMarkerImage>();
   const pinKind = (items: MapPlace[]) =>
     items.every(place => place.kind === "station" && place.record.brand === "EX")
       ? ("exStation" as const)
       : pinKindFor(placeSummary(items));
-  const groupImage = (grouped: MapPlace[]) => {
+  const groupImage = (grouped: MapPlace[], selected = false) => {
     const kind = pinKind(grouped);
-    const cacheKey = `${kind}:${grouped.length}`;
+    const scale = selected ? 1 : markerScale();
+    const cacheKey = `${kind}:${grouped.length}:${scale}`;
     let image = groupImages.get(cacheKey);
     if (!image) {
       image = new sdk.MarkerImage(
         placePinImageUrl(kind, grouped.length),
-        new sdk.Size(PIN_WIDTH, PIN_HEIGHT),
-        {offset: new sdk.Point(PIN_ANCHOR_X, PIN_ANCHOR_Y)},
+        new sdk.Size(PIN_WIDTH * scale, PIN_HEIGHT * scale),
+        {offset: new sdk.Point(PIN_ANCHOR_X * scale, PIN_ANCHOR_Y * scale)},
       );
       groupImages.set(cacheKey, image);
     }
     return image;
   };
+  function refreshMarkerSizes() {
+    const selected = activeKey === null ? undefined : unitOfPlace.get(activeKey);
+    units.forEach(unit => {
+      const isSelected = unit === selected;
+      unit.marker.setImage(unit.places.length === 1
+        ? placeImage(unit.places[0], isSelected)
+        : groupImage(unit.places, isSelected));
+    });
+  }
   const unitZ = (grouped: MapPlace[]) => Math.max(...grouped.map(baseZ));
   function groupClick(unit: Unit) {
     const center = new sdk.LatLng(unit.latitude, unit.longitude);
@@ -478,7 +484,7 @@ export function createPlaceMarkers(
     else if (listOpen) closeListOverlay();
     units.forEach(unit => {
       const isSelected = unit === selected;
-      if (unit.places.length === 1) unit.marker.setImage(placeImage(unit.places[0], isSelected));
+      unit.marker.setImage(unit.places.length === 1 ? placeImage(unit.places[0], isSelected) : groupImage(unit.places, isSelected));
       unit.marker.setZIndex(isSelected ? 4 : unitZ(unit.places));
     });
     const selectedPlace = key === null ? undefined : placeByKey.get(key);
@@ -657,6 +663,8 @@ export function createPlaceMarkers(
       const kind = pinKind(items);
       const content = document.createElement("div");
       content.className = "place-cluster-pin";
+      content.style.transformOrigin = `${PIN_ANCHOR_X}px ${PIN_ANCHOR_Y}px`;
+      content.style.transform = `translate(8px, -21px) scale(${markerScale()})`;
       content.setAttribute("role", "button");
       content.tabIndex = 0;
       content.setAttribute(
@@ -720,6 +728,7 @@ export function createPlaceMarkers(
     setRouteMode(active: boolean) {
       if (routeClusterMode === active) return;
       routeClusterMode = active;
+      refreshMarkerSizes();
       if (!clusterer) return;
       clusterer.setMinLevel(active ? 10 : 7);
       clusterer.setGridSize?.(active ? 28 : 48);
