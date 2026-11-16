@@ -112,6 +112,12 @@ export default function MobileExplorer({initialData}: {
     if (!header || !shell) return;
     let signature = "";
     const measure = () => {
+      const screen = window.visualViewport;
+      if (screen && Math.abs(screen.scale - 1) < 0.01) {
+        const visibleBottom = screen.offsetTop + screen.height;
+        const shellTop = shell.getBoundingClientRect().top;
+        shell.style.setProperty("--mobile-visual-height", `${Math.max(0, visibleBottom - Math.max(0, shellTop))}px`);
+      }
       shell.style.setProperty(
         "--mobile-header-height",
         `${header.getBoundingClientRect().height}px`,

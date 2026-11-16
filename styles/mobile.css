@@ -1,7 +1,39 @@
 /* Mobile user route: map with a bottom list/detail sheet. */
 .mobile-shell {
-  height: 100vh;
-  height: 100dvh;
+  height: min(100vh, var(--mobile-visual-height, 100vh));
+  height: min(100dvh, var(--mobile-visual-height, 100dvh));
+  min-height: 0;
+}
+.mobile-shell input:not([type="checkbox"]),
+.mobile-shell textarea,
+.mobile-shell select {
+  font-size: 16px;
+}
+.mobile-shell .search-box input,
+.mobile-shell .search-box input:focus,
+.mobile-shell .directions-place-input,
+.mobile-shell .directions-place-input:focus {
+  min-width: 0;
+  font-size: 16px;
+}
+.mobile-shell .directions-input-wrap {
+  min-width: 0;
+}
+.mobile-shell .directions-place-input {
+  flex: 1 1 0%;
+}
+.mobile-shell .directions-search-dropdown {
+  max-height: min(260px, 40vh, max(0px, calc(var(--mobile-visual-height, 100vh) - 160px)));
+  max-height: min(260px, 40dvh, max(0px, calc(var(--mobile-visual-height, 100dvh) - 160px)));
+}
+.mobile-shell .directions-carousel {
+  min-width: 0;
+  max-width: 100%;
+}
+.mobile-shell .directions-dock-container {
+  max-height: calc(100% - 136px - env(safe-area-inset-top, 0px));
+  overflow-y: auto;
+  pointer-events: auto;
 }
 .mobile-header > * {
   @apply pointer-events-auto;
