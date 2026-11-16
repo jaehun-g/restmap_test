@@ -10,9 +10,14 @@ export type DrivingRoute = {
   summaryRoad: string | null;
   distanceMeters: number;
   durationSeconds: number;
+  tollFare?: number | null;
   bounds: GeoBounds;
   path: HighwayCoordinate[];
+  trafficSegments?: TrafficSegment[];
 };
+
+export type TrafficState = 0 | 1 | 2 | 3 | 4 | 6;
+export type TrafficSegment = {path: HighwayCoordinate[]; state: TrafficState; speed: number | null};
 
 export type RouteRestAreaMatch = {
   area: RestArea;
@@ -91,12 +96,14 @@ type RawRoad = {
   name?: unknown;
   distance?: unknown;
   vertexes?: unknown;
+  traffic_state?: unknown;
+  traffic_speed?: unknown;
 };
 
 type RawRoute = {
   result_code?: unknown;
   result_msg?: unknown;
-  summary?: {distance?: unknown; duration?: unknown};
+  summary?: {distance?: unknown; duration?: unknown; fare?: {toll?: unknown} | null};
   sections?: Array<{roads?: RawRoad[]}>;
 };
 
@@ -158,19 +165,31 @@ export function parseKakaoDirectionsRoutes(
       continue;
     }
     const path: HighwayCoordinate[] = [];
+    const trafficSegments: TrafficSegment[] = [];
     const sections = Array.isArray(raw.sections) ? raw.sections : [];
     for (const section of sections) {
       const roads = Array.isArray(section?.roads) ? section.roads : [];
       for (const road of roads) {
         const vertexes = road?.vertexes;
         if (!Array.isArray(vertexes)) continue;
+        const roadPath: HighwayCoordinate[] = [];
         for (let index = 0; index + 1 < vertexes.length; index += 2) {
           const lng = Number(vertexes[index]);
           const lat = Number(vertexes[index + 1]);
           if (!isGeoPoint({latitude: lat, longitude: lng})) continue;
+          const roadPrev = roadPath[roadPath.length - 1];
+          if (!roadPrev || Math.abs(roadPrev[0] - lat) >= 1e-7 || Math.abs(roadPrev[1] - lng) >= 1e-7)
+            roadPath.push([lat, lng]);
           const prev = path[path.length - 1];
           if (prev && Math.abs(prev[0] - lat) < 1e-7 && Math.abs(prev[1] - lng) < 1e-7) continue;
           path.push([lat, lng]);
+        }
+        if (roadPath.length >= 2) {
+          const state = typeof road.traffic_state === "number" && [0, 1, 2, 3, 4, 6].includes(road.traffic_state)
+            ? road.traffic_state as TrafficState : 0;
+          const speed = typeof road.traffic_speed === "number" && Number.isFinite(road.traffic_speed) && road.traffic_speed >= 0
+            ? road.traffic_speed : null;
+          trafficSegments.push({path: roadPath, state, speed});
         }
       }
     }
@@ -180,15 +199,6 @@ export function parseKakaoDirectionsRoutes(
     const roundedDur = Math.round(duration);
     const summaryRoad = extractMajorRoadName(sections);
 
-    // 완전히 동일한 경로 중복 제거
-    const isDuplicate = parsedRoutes.some(
-      existing =>
-        Math.abs(existing.distanceMeters - roundedDist) < 50 &&
-        Math.abs(existing.durationSeconds - roundedDur) < 15 &&
-        existing.summaryRoad === summaryRoad,
-    );
-    if (isDuplicate) continue;
-
     const index = parsedRoutes.length;
     parsedRoutes.push({
       id: `route-${index}`,
@@ -196,8 +206,11 @@ export function parseKakaoDirectionsRoutes(
       summaryRoad,
       distanceMeters: roundedDist,
       durationSeconds: roundedDur,
+      tollFare: typeof raw.summary?.fare?.toll === "number" && Number.isFinite(raw.summary.fare.toll) && raw.summary.fare.toll >= 0
+        ? raw.summary.fare.toll : null,
       bounds: computeBounds(path),
       path,
+      trafficSegments,
     });
   }
 
@@ -304,6 +317,7 @@ export async function fetchDrivingRoutes(
   url.searchParams.set("destination", `${destination.longitude},${destination.latitude}`);
   url.searchParams.set("priority", "RECOMMEND");
   url.searchParams.set("alternatives", "true");
+  url.searchParams.set("car_type", "3");
 
   try {
     const response = await fetchImpl(url, {

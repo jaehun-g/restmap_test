@@ -98,7 +98,7 @@ test("길찾기 쿼리 파라미터와 카카오모빌리티 대안 경로 목�
     routes: [
       {
         result_code: 0,
-        summary: {distance: 15840, duration: 842},
+        summary: {distance: 15840, duration: 842, fare: {toll: 12300}},
         sections: [
           {
             roads: [
@@ -113,7 +113,7 @@ test("길찾기 쿼리 파라미터와 카카오모빌리티 대안 경로 목�
       },
       {
         result_code: 0,
-        summary: {distance: 17200, duration: 780},
+        summary: {distance: 17200, duration: 780, fare: {toll: 0}},
         sections: [
           {
             roads: [
@@ -133,8 +133,10 @@ test("길찾기 쿼리 파라미터와 카카오모빌리티 대안 경로 목�
     assert.equal(parsed.value.length, 2);
     assert.equal(parsed.value[0].label, "추천 경로");
     assert.equal(parsed.value[0].summaryRoad, "경부고속도로");
+    assert.equal(parsed.value[0].tollFare, 12300);
     assert.equal(parsed.value[1].label, "최단시간");
     assert.equal(parsed.value[1].summaryRoad, "용인서울고속도로");
+    assert.equal(parsed.value[1].tollFare, 0);
   }
 });
 
@@ -147,6 +149,58 @@ test("도로 좌표가 없거나 한 점뿐인 응답은 경로로 사용하지 
     }]});
     assert.equal(result.ok, false);
   }
+});
+
+test("거리와 시간이 비슷한 대안도 카카오 응답 순서대로 유지한다", () => {
+  const routes = [127.1, 127.11, 127.12].map((longitude, index) => ({
+    result_code: 0,
+    summary: {distance: 10000 + index * 10, duration: 600 + index * 2},
+    sections: [{roads: [{name: "경부고속도로", distance: 10000, vertexes: [127, 37, longitude, 37.1]}]}],
+  }));
+  const result = parseKakaoDirectionsRoutes({routes});
+  assert.ok(result.ok);
+  assert.equal(result.value.length, 3);
+  assert.ok(result.value.every(route => route.tollFare === null));
+  assert.deepEqual(result.value.map(route => route.path[1][1]), [127.1, 127.11, 127.12]);
+});
+
+test("카카오 길찾기는 대형차 기준으로 통행료를 요청한다", async () => {
+  const previousKey = process.env.KAKAO_REST_API_KEY;
+  process.env.KAKAO_REST_API_KEY = "test-api-key";
+  try {
+    let requestUrl = "";
+    const result = await fetchDrivingRoutes(
+      {latitude: 35.32123, longitude: 127.32123},
+      {latitude: 35.92123, longitude: 127.92123},
+      async input => {
+        requestUrl = String(input);
+        return Response.json({routes: [{result_code: 0, summary: {distance: 10000, duration: 600, fare: {toll: 4200}},
+          sections: [{roads: [{vertexes: [127.32123, 35.32123, 127.92123, 35.92123]}]}]}]});
+      },
+    );
+    assert.ok(result.ok);
+    assert.equal(new URL(requestUrl).searchParams.get("car_type"), "3");
+    assert.equal(result.value[0].tollFare, 4200);
+  } finally {
+    if (previousKey === undefined) delete process.env.KAKAO_REST_API_KEY;
+    else process.env.KAKAO_REST_API_KEY = previousKey;
+  }
+});
+
+test("도로별 좌표와 교통 상태를 보존하고 알 수 없는 상태는 정보 없음으로 처리한다", () => {
+  const result = parseKakaoDirectionsRoutes({routes: [{result_code: 0,
+    summary: {distance: 10000, duration: 600}, sections: [{roads: [
+      {vertexes: [127, 37, 127.1, 37.1], traffic_state: 1, traffic_speed: 15},
+      {vertexes: [127.1, 37.1, 127.2, 37.2], traffic_state: 4, traffic_speed: 80},
+      {vertexes: [127.2, 37.2, 127.3, 37.3], traffic_state: 999},
+    ]}],
+  }]});
+  assert.ok(result.ok);
+  assert.deepEqual(result.value[0].trafficSegments, [
+    {path: [[37, 127], [37.1, 127.1]], state: 1, speed: 15},
+    {path: [[37.1, 127.1], [37.2, 127.2]], state: 4, speed: 80},
+    {path: [[37.2, 127.2], [37.3, 127.3]], state: 0, speed: null},
+  ]);
 });
 
 test("경로 조회 응답에 도로 좌표가 없으면 출발·도착 직선으로 대체하지 않는다", async () => {

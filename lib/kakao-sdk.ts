@@ -74,6 +74,7 @@ export interface KakaoCircle {
 
 export interface KakaoPolyline {
   setMap(map: KakaoMap | null): void;
+  setOptions(options: {strokeWeight: number}): void;
 }
 
 export interface KakaoCluster {

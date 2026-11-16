@@ -117,7 +117,9 @@ export const installKakaoMapsMock = `
       InfoWindow: class { setContent() {} open() {} close() {} },
       CustomOverlay: Overlay,
       Circle,
-      Polyline: class extends Overlay {},
+      Polyline: class extends Overlay {
+        setOptions(options) { this.options = {...this.options, ...options}; }
+      },
       load: callback => callback(),
       event: {
         addListener(target, name, callback) {

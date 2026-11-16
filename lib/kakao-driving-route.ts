@@ -1,6 +1,8 @@
 import type {DrivingRoute} from "./directions.ts";
 import type {KakaoMap, KakaoMaps, KakaoOverlay, KakaoPolyline} from "./kakao-sdk.ts";
 
+const trafficColors = {0: "#64748b", 1: "#dc2626", 2: "#ea580c", 3: "#ca8a04", 4: "#16a34a", 6: "#9333ea"} as const;
+
 export function createDrivingRouteLayer(
   sdk: KakaoMaps,
   map: KakaoMap,
@@ -8,9 +10,22 @@ export function createDrivingRouteLayer(
 ) {
   let activeRoutes: readonly DrivingRoute[] = [];
   let activeIndex = -1;
-  let lines: {line: KakaoPolyline; click?: () => void}[] = [];
+  let lines: {line: KakaoPolyline; kind: "casing" | "stroke" | "alternativeCasing" | "alternative"; click?: () => void}[] = [];
   let endpointOverlays: KakaoOverlay[] = [];
   let disposed = false;
+
+  function strokeWeight(kind: (typeof lines)[number]["kind"]) {
+    const level = map.getLevel();
+    const selected = level <= 3 ? 12 : level <= 6 ? 10 : level <= 9 ? 8 : 7;
+    if (kind === "casing") return selected + 4;
+    if (kind === "alternativeCasing") return selected + 2;
+    return kind === "alternative" ? selected - 2 : selected;
+  }
+
+  const zoomChanged = () => {
+    for (const item of lines) item.line.setOptions({strokeWeight: strokeWeight(item.kind)});
+  };
+  sdk.event.addListener(map, "zoom_changed", zoomChanged);
 
   function clear() {
     for (const item of lines) {
@@ -44,7 +59,7 @@ export function createDrivingRouteLayer(
         const casing = new sdk.Polyline({
           map,
           path,
-          strokeWeight: 8,
+          strokeWeight: strokeWeight("alternativeCasing"),
           strokeColor: "#ffffff",
           strokeOpacity: 0.8,
           strokeStyle: "solid",
@@ -53,7 +68,7 @@ export function createDrivingRouteLayer(
         const stroke = new sdk.Polyline({
           map,
           path,
-          strokeWeight: 5,
+          strokeWeight: strokeWeight("alternative"),
           strokeColor: "#94a3b8",
           strokeOpacity: 0.85,
           strokeStyle: "solid",
@@ -65,7 +80,7 @@ export function createDrivingRouteLayer(
           onSelectRoute?.(index);
         };
         sdk.event.addListener(stroke, "click", click);
-        lines.push({line: casing}, {line: stroke, click});
+        lines.push({line: casing, kind: "alternativeCasing"}, {line: stroke, kind: "alternative", click});
       });
 
       const selected = routes[resolvedIndex];
@@ -75,10 +90,11 @@ export function createDrivingRouteLayer(
         ];
         lines.push(
           {
+            kind: "casing",
             line: new sdk.Polyline({
               map,
               path,
-              strokeWeight: 9,
+              strokeWeight: strokeWeight("casing"),
               strokeColor: "#ffffff",
               strokeOpacity: 0.85,
               strokeStyle: "solid",
@@ -86,17 +102,31 @@ export function createDrivingRouteLayer(
             }),
           },
           {
+            kind: "stroke",
             line: new sdk.Polyline({
               map,
               path,
-              strokeWeight: 5,
-              strokeColor: "#0865ff",
+              strokeWeight: strokeWeight("stroke"),
+              strokeColor: trafficColors[0],
               strokeOpacity: 0.9,
               strokeStyle: "solid",
               zIndex: 2,
             }),
           },
         );
+
+        for (const segment of selected.trafficSegments ?? []) {
+          if (segment.path.length < 2) continue;
+          lines.push({kind: "stroke", line: new sdk.Polyline({
+            map,
+            path: [segment.path.map(([latitude, longitude]) => new sdk.LatLng(latitude, longitude))],
+            strokeWeight: strokeWeight("stroke"),
+            strokeColor: trafficColors[segment.state] ?? trafficColors[0],
+            strokeOpacity: 1,
+            strokeStyle: "solid",
+            zIndex: 3,
+          })});
+        }
 
         const startCoord = selected.path[0];
         const endCoord = selected.path[selected.path.length - 1];
@@ -138,7 +168,9 @@ export function createDrivingRouteLayer(
       map.setBounds(bounds, 85, 45, 240, 45);
     },
     dispose() {
+      if (disposed) return;
       disposed = true;
+      sdk.event.removeListener(map, "zoom_changed", zoomChanged);
       clear();
     },
   };

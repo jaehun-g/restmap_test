@@ -641,9 +641,12 @@ export default function InAppDirectionsPanel({
                         )}
                         <strong>{time.minutes}</strong>
                         <span>분</span>
+                        <span className="ml-2 text-muted">{formatDistance(route.distanceMeters)}</span>
                       </div>
                       <span className="directions-card-meta">
-                        {formatDistance(route.distanceMeters)}
+                        {route.tollFare == null
+                          ? "통행료 정보 없음"
+                          : `통행료 ${route.tollFare.toLocaleString("ko-KR")}원 (대형차)`}
                       </span>
                       <span className="directions-card-sub">
                         {matches.length > 0
