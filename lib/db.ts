@@ -14,6 +14,8 @@ import type {UpdateRequest} from "./rest-area-validation";
 import type {RestAreaRecord} from "./rest-areas";
 import {normalizeHighwayRoute, type HighwayRoute} from "./highway-routes";
 import {canonicalHighwayRouteName} from "./highway-route-name";
+import {nearestHighwayRoute} from "./nearest-highway-route";
+import type {GeoPoint} from "./geo-search";
 import {hasCoordinates as positioned} from "./rest-areas";
 import {
   selectStationColumns,
@@ -131,6 +133,29 @@ export async function queryHighwayRoute(routeName: string): Promise<Result<Highw
     if (error.code === "DB_QUERY_FAILED")
       error.message = "노선 경로를 조회하지 못했습니다. 잠시 후 다시 시도해주세요.";
     return {ok: false, error};
+  }
+}
+
+export async function queryNearestHighwayRoute(point: GeoPoint): Promise<Result<string>> {
+  try {
+    const pool = getPool();
+    if (!pool.ok) return pool;
+    const {rows} = await pool.value.query<QueryResultRow>(
+      `SELECT hr_id AS id, hr_route_name AS route_name, hr_route_number AS route_number,
+              hr_sw_lat AS sw_lat, hr_sw_lng AS sw_lng, hr_ne_lat AS ne_lat,
+              hr_ne_lng AS ne_lng, hr_path_coordinates AS path_coordinates
+       FROM tb_highway_routes ORDER BY hr_id`,
+    );
+    const routes = rows.flatMap(row => {
+      const route = normalizeHighwayRoute(row);
+      return route.ok ? [route.value] : [];
+    });
+    const nearest = nearestHighwayRoute(point, routes);
+    return nearest
+      ? {ok: true, value: nearest.routeName}
+      : {ok: false, error: {code: "NOT_FOUND", message: "가까운 노선을 찾지 못했습니다."}};
+  } catch (error) {
+    return {ok: false, error: databaseError(error)};
   }
 }
 
