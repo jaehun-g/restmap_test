@@ -211,3 +211,33 @@ test("모바일은 선택 노선과 내 위치 범위를 건너뛰고 검색 결
   const lastBounds = await page.evaluate(() => window.__kakaoMapMock.boundsFits.at(-1)?.sort((a, b) => a[0] - b[0]));
   expect(lastBounds).toEqual([[35.2, 126.3], [38.2, 129.2]]);
 });
+
+test("노선 조회가 끝나면 지도 범위를 맞춘 뒤 선과 마커를 함께 갱신한다", async ({page}) => {
+  await mockMapData(page);
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  let requested = false;
+  await page.route("**/api/highway-routes**", async route => {
+    requested = true;
+    await pending;
+    await route.fulfill({json: {route: {
+      id: 1, routeName: "경부선", routeNumber: "1",
+      bounds: {south: 35, west: 126, north: 39, east: 130},
+      paths: [[[35, 126], [39, 130]]],
+    }}});
+  });
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  await page.getByRole("button", {name: "전체 노선", exact: true}).click();
+  await page.evaluate(() => { window.__kakaoMapMock.overlayEvents.length = 0; });
+  await page.locator(".route-options button").filter({hasText: "경부선"}).click();
+  await expect.poll(() => requested).toBe(true);
+  expect(await page.evaluate(() => window.__kakaoMapMock.overlayEvents.includes("line"))).toBe(false);
+  release();
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayEvents.filter(event => event === "line").length)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.overlayEvents.includes("attach"))).toBe(true);
+  const events = await page.evaluate(() => window.__kakaoMapMock.overlayEvents);
+  expect(events.indexOf("bounds")).toBeGreaterThanOrEqual(0);
+  expect(events.indexOf("bounds")).toBeLessThan(events.indexOf("line"));
+  expect(events.indexOf("markers")).toBeGreaterThan(events.indexOf("line"));
+});

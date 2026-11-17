@@ -65,3 +65,20 @@ test("map cleanup detaches the overlay and prevents later updates from drawing o
   assert.equal(lines.length, 2);
   assert.ok(lines.every(line => line.map === null));
 });
+
+test("refresh reattaches the current lines and never restores a cleared route", () => {
+  const { sdk, map, lines } = mockKakao();
+  const layer = createHighwayRouteLayer(sdk, map);
+  layer.update(route());
+  const calls: Array<KakaoMap | null> = [];
+  for (const line of lines) {
+    const original = line.setMap.bind(line);
+    line.setMap = value => { calls.push(value); original(value); };
+  }
+  layer.refresh();
+  assert.deepEqual(calls, [null, map, null, map]);
+  layer.update(null);
+  calls.length = 0;
+  layer.refresh();
+  assert.deepEqual(calls, []);
+});

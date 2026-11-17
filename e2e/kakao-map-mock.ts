@@ -12,6 +12,7 @@ type KakaoMapMockMetrics = {
   boundsFits: number[][][];
   centerFits: number[][];
   panPositions: number[][];
+  overlayEvents: string[];
 };
 
 declare global {
@@ -59,7 +60,7 @@ export const installKakaoMapsMock = `
       setMapTypeId(type) { this.mapType = type; }
       getMapTypeId() { return this.mapType; }
       click() { emit(this, "click"); }
-      setBounds(bounds) { this.bounds = bounds; window.__kakaoMapMock.boundsFits.push(bounds.points.map(point => [point.getLat(), point.getLng()])); emit(this, "idle"); }
+      setBounds(bounds) { this.bounds = bounds; window.__kakaoMapMock.overlayEvents.push("bounds"); window.__kakaoMapMock.boundsFits.push(bounds.points.map(point => [point.getLat(), point.getLng()])); emit(this, "idle"); }
       setBoundsSilent(south, west, north, east) {
         this.bounds = new LatLngBounds();
         this.bounds.extend(new LatLng(south, west));
@@ -96,14 +97,14 @@ export const installKakaoMapsMock = `
     }
     class Clusterer {
       constructor() { window.__kakaoMapMock.clusterers++; window.__kakaoMapMock.activeClusterers++; }
-      addMarkers(_markers, nodraw) { window.__kakaoMapMock.addCalls.push(nodraw); }
+      addMarkers(_markers, nodraw) { window.__kakaoMapMock.overlayEvents.push("markers"); window.__kakaoMapMock.addCalls.push(nodraw); }
       addMarker() {}
       removeMarker() {}
       redraw() { window.__kakaoMapMock.redraws++; }
       setMinLevel() {}
       clear() { window.__kakaoMapMock.activeClusterers--; }
     }
-    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, activeClusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: [], panPositions: []};
+    window.__kakaoMapMock = {map: null, mapCreates: 0, initialViews: [], markerCreates: 0, clusterers: 0, activeClusterers: 0, markers: [], overlayContents: [], addCalls: [], redraws: 0, boundsFits: [], centerFits: [], panPositions: [], overlayEvents: []};
     window.kakao = {maps: {
       MapTypeId: {ROADMAP: 1, HYBRID: 3},
       Map: MapView,
@@ -118,6 +119,8 @@ export const installKakaoMapsMock = `
       CustomOverlay: Overlay,
       Circle,
       Polyline: class extends Overlay {
+        constructor(options) { super(); this.options = options; window.__kakaoMapMock.overlayEvents.push("line"); }
+        setMap(map) { window.__kakaoMapMock.overlayEvents.push(map ? "attach" : "detach"); }
         setOptions(options) { this.options = {...this.options, ...options}; }
       },
       load: callback => callback(),

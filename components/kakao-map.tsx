@@ -312,6 +312,7 @@ export default function KakaoMap({
   ]);
   const [prevPlaces, setPrevPlaces] = useState(places);
   const [committedPlaces, setCommittedPlaces] = useState(places);
+  const highway = useHighwayRoute(selectedRouteName, !!map && !error);
 
   const radius = mobileLocation?.scope.kind === "radius" ? mobileLocation.scope.radiusMeters : null;
   const [prevRadius, setPrevRadius] = useState(radius);
@@ -320,7 +321,7 @@ export default function KakaoMap({
   // 줌아웃(반경 확대) 시: 새 영역의 주유소가 서버에서 올 때까지 stationsLoading 동안 대기하여 단일 핀 중간 노출을 방지한다.
   const isZoomingIn = radius !== null && prevRadius !== null && radius < prevRadius;
   // 최초에는 두 조회가 모두 끝난 뒤 마커를 함께 반영한다. 길찾기 모드에서는 경로상 마커만 즉시 반영한다.
-  const canCommitPlaces = isDirectionsOpen || (!areasLoading && (!stationsLoading || isZoomingIn));
+  const canCommitPlaces = isDirectionsOpen || (!areasLoading && (!stationsLoading || isZoomingIn) && (!selectedRouteName || !highway.loading));
 
   if (places !== prevPlaces) {
     if (canCommitPlaces) {
@@ -332,8 +333,6 @@ export default function KakaoMap({
     setPrevRadius(radius);
   }
 
-  const latestPlaces = useRef(committedPlaces);
-  useEffect(() => { latestPlaces.current = committedPlaces; }, [committedPlaces]);
   const positionedItems = useMemo(() => committedPlaces.map(place => place.record), [committedPlaces]);
   const linkedStationsRef = useRef<ReadonlyMap<number, GasStation[]> | undefined>(linkedStationsByRestId);
   useEffect(() => {
@@ -392,7 +391,6 @@ export default function KakaoMap({
   useEffect(() => {
     placeSelected.current = selectedId !== null || selectedStationId !== null;
   }, [selectedId, selectedStationId]);
-  const highway = useHighwayRoute(selectedRouteName, !!map && !error);
   const positionRef = useRef(mobileLocation?.position ?? null);
   useEffect(() => {
     positionRef.current = mobileLocation?.position ?? null;
@@ -518,7 +516,7 @@ export default function KakaoMap({
     const current = createPlaceMarkers(
       sdk,
       map,
-      latestPlaces.current,
+      [],
       place => selectPlaceRef.current(place),
       place => cardRef.current(place),
       () => {
@@ -544,9 +542,6 @@ export default function KakaoMap({
       layer.current = null;
     };
   }, [map, audience]);
-  useEffect(() => {
-    layer.current?.update(committedPlaces);
-  }, [map, committedPlaces]);
   useEffect(() => {
     layer.current?.setPinned(pinnedStationId);
   }, [map, pinnedStationId]);
@@ -582,9 +577,6 @@ export default function KakaoMap({
       highwayLayerRef.current = null;
     };
   }, [map]);
-  useEffect(() => {
-    highwayLayerRef.current?.update(activeNavTarget ? null : highway.route);
-  }, [map, highway.route, activeNavTarget]);
   const drivingLayerRef = useRef<ReturnType<typeof createDrivingRouteLayer> | null>(null);
   const selectNavRouteRef = useRef(navDriving.selectRoute);
   useEffect(() => {
@@ -787,16 +779,50 @@ export default function KakaoMap({
     stationsLoading,
     selectedRouteName,
   ]);
+  const routeLayersReady = !selectedRouteName || isDirectionsOpen || canCommitPlaces;
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
     if (routeViewport.current?.map !== map)
       routeViewport.current = {map, view: createHighwayRouteViewport(sdk, map)};
+    if (!routeLayersReady) {
+      highwayLayerRef.current?.update(null);
+      layer.current?.update([]);
+      return;
+    }
     routeViewport.current.view.update(selectedRouteName, highway.route, positionedItems, action => {
       if (locationLayer.current) locationLayer.current.fitRoute(action);
       else action();
     }, false, highway.loading);
-  }, [map, selectedRouteName, highway.route, highway.loading, positionedItems]);
+    highwayLayerRef.current?.update(activeNavTarget ? null : highway.route);
+    layer.current?.update(committedPlaces);
+  }, [map, selectedRouteName, highway.route, highway.loading, positionedItems, committedPlaces, routeLayersReady, activeNavTarget]);
+  useEffect(() => {
+    const sdk = window.kakao?.maps;
+    const highwayLayer = highwayLayerRef.current;
+    if (!map || !sdk || !routeLayersReady || !highway.route || activeNavTarget || !highwayLayer) return;
+    let pending = true;
+    const refresh = () => {
+      if (pending) highwayLayer.refresh();
+    };
+    const onIdle = () => {
+      refresh();
+      pending = false;
+      sdk.event.removeListener(map, "idle", onIdle);
+    };
+    sdk.event.addListener(map, "idle", onIdle);
+    const frame = requestAnimationFrame(refresh);
+    const timeout = window.setTimeout(() => {
+      pending = false;
+      sdk.event.removeListener(map, "idle", onIdle);
+    }, 2000);
+    return () => {
+      pending = false;
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+      sdk.event.removeListener(map, "idle", onIdle);
+    };
+  }, [map, highway.route, routeLayersReady, activeNavTarget]);
   const selectedKey =
     selectedStationId !== null
       ? (places.find(

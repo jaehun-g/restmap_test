@@ -42,6 +42,13 @@ export function createHighwayRouteLayer(sdk: KakaoMaps, map: KakaoMap) {
       );
       active = route;
     },
+    refresh() {
+      if (disposed || !active) return;
+      lines.forEach(line => {
+        line.setMap(null);
+        line.setMap(map);
+      });
+    },
     dispose() {
       disposed = true;
       clear();
