@@ -32,6 +32,11 @@ export const tooCloseDirectionsMessage = "3km 이내의 거리는 경로 안내�
 const earthRadius = 6_371_008.8;
 const radians = (value: number) => (value * Math.PI) / 180;
 
+// 방향 방위각을 계산해서 오른쪽에 위치한 휴게소인지 판별한다
+// 주행 방위각: 선분의 시작점 -> 끝점이 이루는 각도 (ex 90도 -> 동쪽)
+// 휴게소 방위각: 선분의 시작점 -> 휴게소 위치가 이루는 각도 (ex 145도 -> 남동쪽)
+// 각도 차이 계산: 휴게소 방위각 (135도) - 주행 방위각 (90도) = 45도
+// 우측통행(sin) 판별: 해당 값이 양수면 오른쪽, 음수면 왼쪽에 위치한 휴게소로 판별 후 필터링
 function bearing(from: GeoPoint, to: GeoPoint) {
   const delta = radians(to.longitude - from.longitude);
   const left = radians(from.latitude);
@@ -133,9 +138,7 @@ function extractMajorRoadName(sections: Array<{roads?: RawRoad[]}>): string | nu
   return bestName;
 }
 
-export function parseKakaoDirectionsRoutes(
-  payload: unknown,
-): Result<DrivingRoute[]> {
+export function parseKakaoDirectionsRoutes(payload: unknown): Result<DrivingRoute[]> {
   if (!payload || typeof payload !== "object") {
     return {
       ok: false,
@@ -198,6 +201,14 @@ export function parseKakaoDirectionsRoutes(
     const roundedDur = Math.round(duration);
     const summaryRoad = extractMajorRoadName(sections);
 
+    // 완전히 동일한 경로 중복 제거
+    const isDuplicate = parsedRoutes.some(
+      existing =>
+        existing.path.length === path.length &&
+        existing.path.every(([lat, lng], index) => lat === path[index][0] && lng === path[index][1]),
+    );
+    if (isDuplicate) continue;
+
     const index = parsedRoutes.length;
     parsedRoutes.push({
       id: `route-${index}`,
@@ -238,10 +249,14 @@ export function parseKakaoDirectionsRoutes(
     let minDurationIdx = 0;
     let minDistanceIdx = 0;
     for (let i = 1; i < validDistanceRoutes.length; i++) {
-      if (validDistanceRoutes[i].durationSeconds < validDistanceRoutes[minDurationIdx].durationSeconds) {
+      if (
+        validDistanceRoutes[i].durationSeconds < validDistanceRoutes[minDurationIdx].durationSeconds
+      ) {
         minDurationIdx = i;
       }
-      if (validDistanceRoutes[i].distanceMeters < validDistanceRoutes[minDistanceIdx].distanceMeters) {
+      if (
+        validDistanceRoutes[i].distanceMeters < validDistanceRoutes[minDistanceIdx].distanceMeters
+      ) {
         minDistanceIdx = i;
       }
     }
@@ -262,9 +277,7 @@ export function parseKakaoDirectionsRoutes(
   return {ok: true, value: validDistanceRoutes};
 }
 
-export function parseKakaoDirectionsResponse(
-  payload: unknown,
-): Result<DrivingRoute> {
+export function parseKakaoDirectionsResponse(payload: unknown): Result<DrivingRoute> {
   const result = parseKakaoDirectionsRoutes(payload);
   if (!result.ok) return result;
   return {ok: true, value: result.value[0]};
@@ -473,20 +486,22 @@ export function findRestAreasAlongDrivingRoute(
   excludeRestAreaId?: number | null,
 ): RouteRestAreaMatch[] {
   const filtered =
-    excludeRestAreaId != null
-      ? areas.filter(area => area.id !== excludeRestAreaId)
-      : areas;
-  return findItemsAlongDrivingRoute(route, filtered, maxDistanceMeters, area =>
-    isBidirectionalDirection(area.directionLabel) ||
-    isBidirectionalDirection(area.routeDirection) ||
-    [...area.name.matchAll(/[（(]([^()（）]*)[）)]/g)].some(match => isBidirectionalDirection(match[1])),
-  ).map(
-    ({item, alongMeters, offsetMeters}) => ({
-      area: item,
-      alongMeters,
-      offsetMeters,
-    }),
-  );
+    excludeRestAreaId != null ? areas.filter(area => area.id !== excludeRestAreaId) : areas;
+  return findItemsAlongDrivingRoute(
+    route,
+    filtered,
+    maxDistanceMeters,
+    area =>
+      isBidirectionalDirection(area.directionLabel) ||
+      isBidirectionalDirection(area.routeDirection) ||
+      [...area.name.matchAll(/[（(]([^()（）]*)[）)]/g)].some(match =>
+        isBidirectionalDirection(match[1]),
+      ),
+  ).map(({item, alongMeters, offsetMeters}) => ({
+    area: item,
+    alongMeters,
+    offsetMeters,
+  }));
 }
 
 /** 출발·도착 휴게소는 지도에 유지하고 경유 휴게소 개수와 목록에서만 제외합니다. */
@@ -499,8 +514,9 @@ export function collectRouteRestAreas(
     route,
     areas.filter(area => area.operationStatus !== "closed"),
   );
-  const stops = matches.filter(({area}) =>
-    area.id !== endpoints.originRestAreaId && area.id !== endpoints.destinationRestAreaId,
+  const stops = matches.filter(
+    ({area}) =>
+      area.id !== endpoints.originRestAreaId && area.id !== endpoints.destinationRestAreaId,
   );
   return {matches, stops};
 }

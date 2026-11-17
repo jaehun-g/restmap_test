@@ -196,6 +196,14 @@ test("거리와 시간이 비슷한 대안도 카카오 응답 순서대로 유�
   assert.deepEqual(result.value.map(route => route.path[1][1]), [127.1, 127.11, 127.12]);
 });
 
+test("동일한 좌표의 중복 대안은 한 번만 표시한다", () => {
+  const route = {result_code: 0, summary: {distance: 10000, duration: 600},
+    sections: [{roads: [{vertexes: [127, 37, 127.1, 37.1]}]}]};
+  const result = parseKakaoDirectionsRoutes({routes: [route, structuredClone(route)]});
+  assert.ok(result.ok);
+  assert.equal(result.value.length, 1);
+});
+
 test("카카오 길찾기는 대형차 기준으로 통행료를 요청한다", async () => {
   const previousKey = process.env.KAKAO_REST_API_KEY;
   process.env.KAKAO_REST_API_KEY = "test-api-key";
