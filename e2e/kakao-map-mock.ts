@@ -89,8 +89,9 @@ export const installKakaoMapsMock = `
       setMap() {}
     }
     class Circle extends Overlay {
-      constructor(options) { super(); this.center = options.center; this.radius = options.radius; }
+      constructor(options) { super(); this.center = options.center; this.radius = options.radius; window.__kakaoMapMock.overlayEvents.push("circle-create"); }
       setOptions(options) { this.options = {...this.options, ...options}; }
+      setMap(map) { window.__kakaoMapMock.overlayEvents.push(map ? "circle-attach" : "circle-detach"); }
       setPosition(position) { this.center = position; }
       setRadius(radius) { this.radius = radius; }
       getBounds() { const bounds = new LatLngBounds(); bounds.extend(this.center); return bounds; }

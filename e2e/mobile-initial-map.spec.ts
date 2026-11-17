@@ -16,6 +16,7 @@ for (const mode of ["success", "denied", "delayed"] as const) {
     }, mode);
     await page.route("**/api/rest-areas", route => route.fulfill({json: restAreaResponse}));
     await page.route("**/api/gas-stations**", route => route.fulfill({json: gasStationResponse}));
+    await page.route("**/api/highway-routes/nearest", route => route.fulfill({status: 503, json: {error: {message: "노선 조회 실패"}}}));
     await page.setViewportSize({width: 390, height: 844});
     await page.goto("/mobile");
     await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.initialViews.length)).toBe(1);

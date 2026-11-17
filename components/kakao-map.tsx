@@ -2,6 +2,7 @@
 import {Button, IconButton} from "@/components/ui/button";
 import {sharedClasses} from "@/lib/shared-classes";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import dynamic from "next/dynamic";
 import {loadKakaoMaps, type KakaoMap as MapInstance} from "@/lib/kakao-sdk";
 import {createPlaceMarkers} from "@/lib/kakao-place-markers";
 import {restPlace, stationPlace, type MapPlace} from "@/lib/map-places";
@@ -29,7 +30,7 @@ import {
   type MobileMapMemory,
 } from "@/lib/kakao-location";
 import type {GeoBounds} from "@/lib/geo-search";
-import InAppDirectionsPanel from "./in-app-directions-panel";
+const InAppDirectionsPanel = dynamic(() => import("./in-app-directions-panel"));
 import Icon from "./icon";
 const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY?.trim();
 const emptyStations: GasStation[] = [];
@@ -62,7 +63,9 @@ export default function KakaoMap({
   cardViewport,
   viewportVersion,
   mobileLocation,
+  deferInitialSelection = false,
   selectedRouteName = null,
+  preserveRouteViewport = false,
   onClearRoute,
   onLocate,
   onViewportChange,
@@ -102,7 +105,9 @@ export default function KakaoMap({
   cardViewport?: (canvas: DOMRect) => DOMRect;
   viewportVersion?: string;
   mobileLocation?: MobileMapLocation;
+  deferInitialSelection?: boolean;
   selectedRouteName?: string | null;
+  preserveRouteViewport?: boolean;
   onClearRoute?: () => void;
   onLocate?: () => void;
   onViewportChange?: (bounds: GeoBounds) => void;
@@ -550,6 +555,9 @@ export default function KakaoMap({
     layer.current?.setRouteMode(isRouteMode);
   }, [map, isRouteMode]);
   useEffect(() => {
+    layer.current?.setDirectionsMode(isDirectionsOpen);
+  }, [map, isDirectionsOpen]);
+  useEffect(() => {
     if (!map || !container.current) return;
     const adjust = () => layer.current?.adjustCard();
     const observer = new ResizeObserver(adjust);
@@ -713,7 +721,8 @@ export default function KakaoMap({
   const locationRadius = mobileLocation?.locationRadius;
   useEffect(() => {
     locationLayer.current?.setSatellite(satellite);
-    locationLayer.current?.setRouteMode(!!selectedRouteName || !!activeNavTarget);
+    locationLayer.current?.setRouteMode(deferInitialSelection || !!selectedRouteName || !!activeNavTarget);
+    if (deferInitialSelection) return;
     if (scope)
       locationLayer.current?.update(
         position ?? null,
@@ -730,6 +739,7 @@ export default function KakaoMap({
     satellite,
     selectedRouteName,
     activeNavTarget,
+    deferInitialSelection,
     cameraReady,
     radiusReady,
     zoomChanged,
@@ -752,6 +762,7 @@ export default function KakaoMap({
         return;
       }
       if (
+        !deferInitialSelection &&
         !selectedRouteName &&
         scope?.kind === "all" &&
         dataVersion &&
@@ -778,8 +789,9 @@ export default function KakaoMap({
     searchFitPlaces,
     stationsLoading,
     selectedRouteName,
+    deferInitialSelection,
   ]);
-  const routeLayersReady = !selectedRouteName || isDirectionsOpen || canCommitPlaces;
+  const routeLayersReady = !deferInitialSelection && (!selectedRouteName || isDirectionsOpen || canCommitPlaces);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     if (!map || !sdk) return;
@@ -790,13 +802,13 @@ export default function KakaoMap({
       layer.current?.update([]);
       return;
     }
-    routeViewport.current.view.update(selectedRouteName, highway.route, positionedItems, action => {
+    if (!preserveRouteViewport) routeViewport.current.view.update(selectedRouteName, highway.route, positionedItems, action => {
       if (locationLayer.current) locationLayer.current.fitRoute(action);
       else action();
     }, false, highway.loading);
     highwayLayerRef.current?.update(activeNavTarget ? null : highway.route);
     layer.current?.update(committedPlaces);
-  }, [map, selectedRouteName, highway.route, highway.loading, positionedItems, committedPlaces, routeLayersReady, activeNavTarget]);
+  }, [map, selectedRouteName, highway.route, highway.loading, positionedItems, committedPlaces, routeLayersReady, activeNavTarget, preserveRouteViewport]);
   useEffect(() => {
     const sdk = window.kakao?.maps;
     const highwayLayer = highwayLayerRef.current;
@@ -993,11 +1005,11 @@ export default function KakaoMap({
           )}
         </div>
       )}
-      {ready && (mobileLocation || !isDirectionsOpen) && (
+      {(ready || (mobileEnabled && !isDirectionsOpen)) && (mobileLocation || !isDirectionsOpen) && (
         <div
           className={`map-bottom-controls absolute z-[3] left-[14px] right-[14px] bottom-[36px] flex flex-col items-start gap-[10px] pointer-events-none ${isDirectionsOpen ? (activeNavOrigin && activeNavTarget ? "is-directions-dock" : "is-directions-open") : ""}`}
         >
-          {mobileLocation && (
+          {ready && mobileLocation && (
             <div className="location-control pointer-events-auto flex flex-col [border:1px_solid_var(--line)] rounded-[8px] bg-white [box-shadow:0_4px_12px_#1d314d22] overflow-hidden">
               <button
                 type="button"
@@ -1039,12 +1051,13 @@ export default function KakaoMap({
           {!isDirectionsOpen && (
             <div
               ref={legend}
+              aria-label="마커 색상 안내"
               className="map-legend flex flex-wrap gap-x-[10px] gap-y-[5px] items-center max-w-full p-[5px_9px] rounded-[6px] bg-overlay [border:1px_solid_#e4ebf4] text-ui-10 text-muted pointer-events-none"
             >
-              <span>
+              {!mobileEnabled && <span>
                 <i />
                 일반
-              </span>
+              </span>}
               <span>
                 <i className="legend-lounge" />
                 화물차 라운지
@@ -1055,13 +1068,13 @@ export default function KakaoMap({
                   GS 주유소
                 </span>
               )}
-              {stations.some(station => station.brand === "EX") && (
+              {!mobileEnabled && stations.some(station => station.brand === "EX") && (
                 <span>
                   <i className="legend-ex-station" />
                   고속도로 주유소
                 </span>
               )}
-              {stations.length > 0 && areas.length > 0 && (
+              {!mobileEnabled && stations.length > 0 && areas.length > 0 && (
                 <span>
                   <i className="legend-mixed" />
                   휴게소+주유소

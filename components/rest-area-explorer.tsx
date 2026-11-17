@@ -3,6 +3,7 @@ import {sharedClasses} from "@/lib/shared-classes";
 import {IconButton, Button} from "@/components/ui/button";
 import {FilterChip} from "@/components/ui/filter-chip";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from "react";
+import dynamic from "next/dynamic";
 import {useRestAreas} from "@/hooks/use-rest-areas";
 import {useSearchQuery} from "@/hooks/use-search-query";
 import {useInfiniteScroll} from "@/hooks/use-infinite-scroll";
@@ -28,12 +29,12 @@ import {detailSheetSwipe} from "@/lib/mobile-sheet-gesture";
 import {prioritizedFacilities, routeDescription} from "@/lib/rest-areas";
 import type {InitialMapData} from "@/lib/initial-map-data";
 import KakaoMap from "./kakao-map";
-import RestAreaDetails from "./rest-area-details";
 import QueryState from "./query-state";
 import SearchBox from "./search-box";
-import MobileFilterSheet from "./mobile-filter-sheet";
 import Icon from "./icon";
-import GasStationDetails from "./gas-station-details";
+const RestAreaDetails = dynamic(() => import("./rest-area-details"));
+const MobileFilterSheet = dynamic(() => import("./mobile-filter-sheet"));
+const GasStationDetails = dynamic(() => import("./gas-station-details"));
 type Panel = "collapsed" | "list" | "detail" | "routes" | "directions" | "facilities";
 export default function MobileExplorer({initialData}: {
   initialData?: InitialMapData;
@@ -48,6 +49,53 @@ export default function MobileExplorer({initialData}: {
   const view = useMapFitRequest();
   const search = useSearchQuery(view.requestSearchFit, true);
   const [filters, setFilters] = useState(initialFilters);
+  const [automaticRouteName, setAutomaticRouteName] = useState<string | null>(null);
+  const initialRouteAttempted = useRef(false);
+  const userInteracted = useRef(false);
+  const [initialRoutePending, setInitialRoutePending] = useState(true);
+  useEffect(() => {
+    if (initialRouteAttempted.current) return;
+    if (!location.position) {
+      if (location.error) {
+        const timer = window.setTimeout(() => {
+          initialRouteAttempted.current = true;
+          setInitialRoutePending(false);
+        }, 0);
+        return () => window.clearTimeout(timer);
+      }
+      return;
+    }
+    const controller = new AbortController();
+    const position = location.position;
+    let timeout: number | undefined;
+    const timer = window.setTimeout(() => {
+      if (initialRouteAttempted.current || userInteracted.current) return;
+      initialRouteAttempted.current = true;
+      timeout = window.setTimeout(() => {
+        controller.abort();
+        setInitialRoutePending(false);
+      }, 8000);
+      void fetch("/api/highway-routes/nearest", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(position),
+        signal: controller.signal,
+      }).then(async response => response.ok ? response.json() : null)
+        .then((body: unknown) => {
+          if (controller.signal.aborted || userInteracted.current || !body || typeof body !== "object") return;
+          const routeName = (body as {routeName?: unknown}).routeName;
+          if (typeof routeName !== "string" || !routeName.trim()) return;
+          setAutomaticRouteName(routeName);
+          setFilters(current => current.routeName ? current : {...current, routeName});
+        })
+        .catch(() => {})
+        .finally(() => {
+          window.clearTimeout(timeout);
+          if (!controller.signal.aborted) setInitialRoutePending(false);
+        });
+    }, 0);
+    return () => { window.clearTimeout(timer); window.clearTimeout(timeout); controller.abort(); };
+  }, [location.position, location.error]);
   const [placeView, setPlaceView] = useState<PlaceView>("all");
   // 위치·줌 변경은 공통 목록을 필터링하고, 노선 검색만 서버의 근접 조건을 적용한다.
   const gas = useGasStations(
@@ -187,6 +235,12 @@ export default function MobileExplorer({initialData}: {
     return new DOMRect(area.left, area.top, area.width, area.height);
   }, []);
   const [viewportBounds, setViewportBounds] = useState<GeoBounds | null>(null);
+  const [initialViewportWaitExpired, setInitialViewportWaitExpired] = useState(false);
+  useEffect(() => {
+    if (viewportBounds) return;
+    const timer = window.setTimeout(() => setInitialViewportWaitExpired(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [viewportBounds]);
   const updateViewport = useCallback((bounds: GeoBounds) => {
     setViewportBounds(current => current && current.south === bounds.south && current.west === bounds.west && current.north === bounds.north && current.east === bounds.east ? current : bounds);
   }, []);
@@ -295,6 +349,10 @@ export default function MobileExplorer({initialData}: {
       : panel;
   const expanded = effectivePanel !== "collapsed";
   const resultCount = listPlaces.length;
+  const initialViewportUnavailable = !hasActiveFilter && !viewportBounds && initialViewportWaitExpired;
+  const initialCountPending = initialRoutePending ||
+    (!hasActiveFilter && !viewportBounds && !initialViewportWaitExpired) ||
+    (!!automaticRouteName && filters.routeName === automaticRouteName && gas.loading);
   const select = useCallback((id: number | null) => {
     setSelectedStationId(null);
     setSelectedId(id);
@@ -411,6 +469,8 @@ export default function MobileExplorer({initialData}: {
     <main
       className="mobile-shell relative w-full max-w-[480px] m-[0_auto] flex flex-col bg-white [box-shadow:0_0_28px_#24364a0c] overflow-hidden"
       ref={shellRef}
+      onPointerDownCapture={() => { userInteracted.current = true; setInitialRoutePending(false); }}
+      onKeyDownCapture={() => { userInteracted.current = true; setInitialRoutePending(false); }}
     >
       <header
         hidden={isDirectionsMode}
@@ -526,6 +586,7 @@ export default function MobileExplorer({initialData}: {
               void gas.reload();
             }}
             selectedRouteName={filters.routeName}
+            preserveRouteViewport={!!filters.routeName && filters.routeName === automaticRouteName}
             onClearRoute={clearRoute}
             onViewportChange={updateViewport}
             onMapClick={() => {
@@ -540,6 +601,7 @@ export default function MobileExplorer({initialData}: {
             cardViewport={cardViewport}
             viewportVersion={`${effectivePanel}:${isDirectionsMode}:${viewportRevision}`}
             mobileLocation={location}
+            deferInitialSelection={initialRoutePending && !location.error}
             navigationTarget={navigationTarget}
             onNavigationChange={handleNavigationChange}
             directionsOpen={isDirectionsMode}
@@ -657,12 +719,16 @@ export default function MobileExplorer({initialData}: {
                 <span>
                   <strong>
                     {loading
-                      ? "휴게소를 찾고 있어요"
+                      ? "주변 장소를 찾고 있어요"
                       : error
                         ? "휴게소 조회 확인"
+                        : initialCountPending
+                          ? "주변 장소를 찾고 있어요"
+                        : initialViewportUnavailable
+                          ? "지도 영역을 확인할 수 없어요"
                         : `${placeView === "rest" ? "휴게소" : placeView === "ex" ? "고속도로 주유소" : "휴게소·주유소"} ${resultCount}곳`}
                   </strong>
-                  {(error || !filters.routeName) && <small>
+                  {(error || (!filters.routeName && !initialCountPending && !initialViewportUnavailable)) && <small>
                     {error
                       ? "목록에서 조회 상태를 확인해주세요"
                       : search.query.trim()
@@ -692,6 +758,7 @@ export default function MobileExplorer({initialData}: {
                   areas={areas}
                   filters={filters}
                   onChange={next => {
+                    if (effectivePanel === "routes") setAutomaticRouteName(null);
                     setFilters(next);
                   }}
                   onClose={collapse}

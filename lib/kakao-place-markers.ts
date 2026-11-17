@@ -135,6 +135,7 @@ export function createPlaceMarkers(
     activeKey: string | null = null;
   let pinnedKey: string | null = null;
   let routeClusterMode = false;
+  let directionsMode = false;
   let allowAdjustment = true;
   let zoomPending = false;
   // Kakao Maps can emit its map click immediately after a marker/overlay click.
@@ -403,7 +404,7 @@ export function createPlaceMarkers(
     }
   };
   if (typeof window !== "undefined") window.addEventListener("keydown", escape);
-  const markerScale = () => !routeClusterMode || map.getLevel() < 7 ? 1 : map.getLevel() < 10 ? 0.75 : 0.625;
+  const markerScale = () => !directionsMode || map.getLevel() < 7 ? 1 : map.getLevel() < 10 ? 0.75 : 0.625;
   const placeImage = (place: MapPlace, selected: boolean) => {
     const base = place.kind === "station"
       ? place.record.brand === "EX" ? "/marker-ex-station" : "/marker-station"
@@ -728,11 +729,16 @@ export function createPlaceMarkers(
     setRouteMode(active: boolean) {
       if (routeClusterMode === active) return;
       routeClusterMode = active;
-      refreshMarkerSizes();
       if (!clusterer) return;
       clusterer.setMinLevel(active ? 10 : 7);
       clusterer.setGridSize?.(active ? 28 : 48);
       clusterer.redraw();
+    },
+    setDirectionsMode(active: boolean) {
+      if (directionsMode === active) return;
+      directionsMode = active;
+      refreshMarkerSizes();
+      clusterer?.redraw();
     },
     suspendCardAdjustment() {
       allowAdjustment = false;
