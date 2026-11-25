@@ -107,7 +107,8 @@ export default function MobileExplorer({initialData}: {
   const [detailExpanded, setDetailExpanded] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
   const touchStart = useRef<{x: number; y: number; canCollapse: boolean} | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [restSelection, setRestSelection] = useState<{id: number; fromSearch: boolean} | null>(null);
+  const selectedId = restSelection?.id ?? null;
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [selectedGeneralPlace, setSelectedGeneralPlace] = useState<PlaceSearchItem | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<NavigationTarget | null>(null);
@@ -259,17 +260,20 @@ export default function MobileExplorer({initialData}: {
     () => mergedFacilities.facilities.map(({area}) => area),
     [mergedFacilities.facilities],
   );
+  const searchSelectedArea = restSelection?.fromSearch
+    ? areas.find(area => area.id === restSelection.id)
+    : undefined;
   const baseStations = mergedFacilities.stations;
-  const baseLinkedStations = useMemo(
-    () =>
-      linkedStationsByArea(
-        isDirectionsMode ? sourceFacilities.facilities : mergedFacilities.facilities,
-        sourceFacilities.stations,
-      ),
-    [isDirectionsMode, sourceFacilities, mergedFacilities.facilities],
-  );
+  const baseLinkedStations = useMemo(() => {
+    let facilities = isDirectionsMode ? sourceFacilities.facilities : mergedFacilities.facilities;
+    if (searchSelectedArea && !facilities.some(({area}) => area.id === searchSelectedArea.id)) {
+      facilities = [...facilities, {area: searchSelectedArea}];
+    }
+    return linkedStationsByArea(facilities, sourceFacilities.stations);
+  }, [isDirectionsMode, sourceFacilities, mergedFacilities.facilities, searchSelectedArea]);
   const selectedBaseArea =
     baseVisibleAreas.find(area => area.id === selectedId) ??
+    searchSelectedArea ??
     (isDirectionsMode && selectedId !== null
       ? areas.find(area => area.id === selectedId)
       : undefined);
@@ -304,11 +308,9 @@ export default function MobileExplorer({initialData}: {
     return places;
   }, [visibleAreas, stationResults, location.position, placeView]);
   const mobileList = useInfiniteScroll(listPlaces);
-  const selected =
-    visibleAreas.find(area => area.id === selectedId) ??
-    (isDirectionsMode && selectedBaseArea
-      ? ((restDetails.items[selectedBaseArea.id] as RestAreaRecord | undefined) ?? selectedBaseArea)
-      : undefined);
+  const selected = selectedBaseArea
+    ? ((restDetails.items[selectedBaseArea.id] as RestAreaRecord | undefined) ?? selectedBaseArea)
+    : undefined;
   const selectedStation = useMemo(
     () =>
       stationResults.find(station => stationKey(station) === selectedStationId) ??
@@ -331,10 +333,13 @@ export default function MobileExplorer({initialData}: {
       stationDetailsData.items,
     ],
   );
-  const mapAreas = useMemo(
-    () => listPlaces.flatMap(place => place.kind === "rest" ? [place.record] : []),
-    [listPlaces],
-  );
+  const mapAreas = useMemo(() => {
+    const listedAreas = listPlaces.flatMap(place => place.kind === "rest" ? [place.record] : []);
+    if (searchSelectedArea && selected && !listedAreas.some(area => area.id === selected.id)) {
+      listedAreas.push(selected);
+    }
+    return listedAreas;
+  }, [listPlaces, searchSelectedArea, selected]);
   const mapStations = useMemo(
     () => listPlaces.flatMap(place => place.kind === "station" ? [place.record] : []),
     [listPlaces],
@@ -353,15 +358,17 @@ export default function MobileExplorer({initialData}: {
   const initialCountPending = initialRoutePending ||
     (!hasActiveFilter && !viewportBounds && !initialViewportWaitExpired) ||
     (!!automaticRouteName && filters.routeName === automaticRouteName && gas.loading);
-  const select = useCallback((id: number | null) => {
+  const select = useCallback((id: number | null, fromSearch = false) => {
     setSelectedStationId(null);
-    setSelectedId(id);
+    setRestSelection(current => id === null ? null : (
+      current?.id === id && current.fromSearch ? current : {id, fromSearch}
+    ));
     setPanel("collapsed");
   }, []);
   const details = useCallback((id: number) => {
     setDetailExpanded(false);
     setSelectedStationId(null);
-    setSelectedId(id);
+    setRestSelection(current => current?.id === id ? current : {id, fromSearch: false});
     setPanel("detail");
   }, []);
   const collapse = useCallback(() => {
@@ -373,7 +380,7 @@ export default function MobileExplorer({initialData}: {
     (target: NavigationTarget) => {
       setDirectionsOpen(true);
       setNavigationTarget(target);
-      setSelectedId(null);
+      setRestSelection(null);
       setSelectedStationId(null);
       setSelectedGeneralPlace(null);
       collapse();
@@ -394,13 +401,13 @@ export default function MobileExplorer({initialData}: {
     setSelectedGeneralPlace(null);
   }, []);
   const selectStation = useCallback((id: string | null) => {
-    setSelectedId(null);
+    setRestSelection(null);
     setSelectedStationId(id);
     setPanel("collapsed");
   }, []);
   const stationDetails = useCallback((id: string) => {
     setDetailExpanded(false);
-    setSelectedId(null);
+    setRestSelection(null);
     setSelectedStationId(id);
     setPanel("detail");
   }, []);
@@ -419,7 +426,7 @@ export default function MobileExplorer({initialData}: {
     let active = true;
     queueMicrotask(() => {
       if (active) {
-        setSelectedId(null);
+        setRestSelection(null);
         setPanel(current => (current === "detail" ? "list" : current));
       }
     });
@@ -455,14 +462,14 @@ export default function MobileExplorer({initialData}: {
   const reset = () => {
     search.clear(false);
     setFilters(initialFilters());
-    setSelectedId(null);
+    setRestSelection(null);
     setSelectedStationId(null);
     setSelectedGeneralPlace(null);
     setPlaceView("all");
   };
   const clearRoute = useCallback(() => {
     setFilters(current => ({...current, routeName: null, direction: null}));
-    setSelectedId(null);
+    setRestSelection(null);
     setSelectedStationId(null);
   }, []);
   return (
@@ -487,14 +494,14 @@ export default function MobileExplorer({initialData}: {
           stations={gas.stations}
           onSelectRestArea={id => {
             setSelectedGeneralPlace(null);
-            select(id);
+            select(id, true);
           }}
           onSelectStation={stationId => {
             setSelectedGeneralPlace(null);
             selectStation(stationId);
           }}
           onSelectGeneralPlace={place => {
-            setSelectedId(null);
+            setRestSelection(null);
             setSelectedStationId(null);
             setSelectedGeneralPlace(place);
             collapse();
@@ -538,7 +545,7 @@ export default function MobileExplorer({initialData}: {
               const next = placeView === "ex" ? "all" : "ex";
               setPlaceView(next);
               if (next === "ex") setFilters(current => ({...current, facilities: [], lounge: "all"}));
-              setSelectedId(null);
+              setRestSelection(null);
               setSelectedStationId(null);
               setPanel("collapsed");
             }}
@@ -795,7 +802,7 @@ export default function MobileExplorer({initialData}: {
                     <button
                       className="back-to-list flex items-center gap-[5px] min-h-[40px] p-0 [border:0] bg-[transparent] text-muted text-ui-12"
                       onClick={() => {
-                        setSelectedId(null);
+                        setRestSelection(null);
                         setPanel("list");
                       }}
                     >

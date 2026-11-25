@@ -212,6 +212,34 @@ test("모바일은 선택 노선과 내 위치 범위를 건너뛰고 검색 결
   expect(lastBounds).toEqual([[35.2, 126.3], [38.2, 129.2]]);
 });
 
+test("모바일 휴게소 자동완성은 지도 범위 안팎의 휴게소로 이동하고 카드를 연다", async ({page, context}) => {
+  await mockMapData(page);
+  await page.route("**/api/places?**", route => route.fulfill({json: {items: []}}));
+  await page.route("**/api/highway-routes/nearest", route => route.fulfill({json: {routeName: null}}));
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({latitude: 35.2, longitude: 126.3});
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto("/mobile");
+  await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.mapCreates)).toBeGreaterThan(0);
+  await page.evaluate(() => window.__kakaoMapMock.map!.moveBounds(35.1, 126.2, 35.3, 126.4));
+  await expect(page.locator(".sheet-summary")).toContainText("1곳");
+
+  const search = page.getByRole("searchbox");
+  const suggestions = page.getByRole("listbox", {name: "통합 검색 자동완성"});
+  for (const [name, coordinates] of [
+    ["E2E 휴게소 A", [35.2, 126.3]],
+    ["E2E 휴게소 B", [38.2, 129.2]],
+  ] as const) {
+    await search.fill(name);
+    await suggestions.getByRole("button", {name: new RegExp(name)}).click();
+    await expect(suggestions).toBeHidden();
+    await expect.poll(() => page.evaluate(() => window.__kakaoMapMock.panPositions.at(-1))).toEqual(coordinates);
+    await expect.poll(() => page.evaluate(() =>
+      window.__kakaoMapMock.overlayContents.some(content => content.includes("상세보기") && content.includes(name)),
+    name)).toBe(true);
+  }
+});
+
 test("노선 조회가 끝나면 지도 범위를 맞춘 뒤 선과 마커를 함께 갱신한다", async ({page}) => {
   await mockMapData(page);
   let release!: () => void;
